@@ -1,0 +1,48 @@
+#include <lua.h>
+#include <windows.h>
+#include "resource.h"
+
+WINICON ICON "resources\\box.ico"
+102 ICON "..\\setup\\img\\luart.ico"
+103 ICON "..\\setup\\img\\logo.ico"
+
+1 24 "Application.manifest.xml"
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+/////////////////////////////////////////////////////////////////////// 
+// 
+// Version
+// 
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION LUART_MAJOR,LUART_MINOR,LUART_RELEASE
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "LuaRT - Windows programming framework for Lua"
+            VALUE "CompanyName", "https:\\www.luart.org"
+            VALUE "FileDescription", "LuaRT Desktop application"
+            VALUE "FileVersion", LUA_VERSION_MAJOR " ," LUA_VERSION_MINOR " ," LUA_VERSION_RELEASE
+            VALUE "InternalName", "LuaRT"
+            VALUE "LegalCopyright", "Copyright (C) Samir Tine 2022"
+            VALUE "ProductName", "LuaRT"
+            VALUE "ProductVersion", LUA_VERSION_MAJOR " ," LUA_VERSION_MINOR " ," LUA_VERSION_RELEASE
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
