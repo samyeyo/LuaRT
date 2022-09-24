@@ -1,0 +1,9 @@
+[submodule "tools/LuaRT-Studio"]
+	path = tools/LuaRT-Studio
+	url = https://github.com/samyeyo/LuaRT-Studio
+[submodule "tools/QuickRT"]
+	path = tools/QuickRT
+	url = https://github.com/samyeyo/QuickRT
+[submodule "tools/rtc"]
+	path = tools/rtc
+	url = https://github.com/samyeyo/rtc
