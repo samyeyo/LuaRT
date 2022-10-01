@@ -384,19 +384,27 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 				}
 				goto peek;
 			} else {				 
-				Widget *w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
-				while(w && (w->wtype != UIWindow))
-					w = (Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA);
-				if (w)
-					if (!TranslateAcceleratorW(w->handle, w->accel_table, &msg))
-						if (IsDialogMessageW(w->handle, &msg))
+				Widget *wp = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
+				while(wp && (wp->wtype != UIWindow))
+					wp = (Widget*)GetWindowLongPtr(GetParent(wp->handle), GWLP_USERDATA);					
+				if (wp) {
+					if ((msg.message == WM_KEYDOWN) && (msg.wParam == VK_TAB)) {
+						HWND h;
+						Widget *w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
+						if (w && (w->wtype != UIEdit) && (h = GetNextDlgTabItem(wp->handle, msg.hwnd, GetAsyncKeyState(VK_SHIFT) & 0x8000 ? TRUE : FALSE))) {
+							SetFocus(h);
 							continue;
-do_msg:				TranslateMessage(&msg);
-					DispatchMessageW(&msg);
-				}	
-		}
-		Sleep(1);
+						}
+					}
+					if (TranslateAcceleratorW(wp->handle, wp->accel_table, &msg))
+						goto dispatch;
+				}
+do_msg:			TranslateMessage(&msg);
+dispatch:		DispatchMessage(&msg);
+			}
+		}	
 	}
+	Sleep(1);
 	return 0;
 }
 
