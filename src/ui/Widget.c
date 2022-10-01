@@ -278,9 +278,7 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 			case WM_SIZE:
 				if (w->wtype == UITab) 
 					page_resize(w, FALSE);
-			case WM_GETDLGCODE:   if (w->wtype == UIEdit || w->wtype == UIEntry)
-									return DLGC_WANTCHARS|DLGC_HASSETSEL|DLGC_WANTALLKEYS|DLGC_WANTARROWS;
-								  break;
+				break;
 			case WM_PAINT:
 				if (w->wtype == UITab) { //----- Tab control transparency hack
 					RECT r, rr;
