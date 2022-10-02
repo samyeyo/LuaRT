@@ -2,6 +2,7 @@
 
 ![LuaRT][title] 
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/03c5cb71ac944498a3e4da9026255480)](https://app.codacy.com/gh/samyeyo/LuaRT?utm_source=github.com&utm_medium=referral&utm_content=samyeyo/LuaRT&utm_campaign=Badge_Grade_Settings)
 [![Lua VM 5.4.4](https://badgen.net/badge/Lua%20VM/5.4/yellow)](https://www.lua.org/)
 ![Windows](https://badgen.net/badge/Windows/Vista%20and%20later/blue?icon=windows)
 [![LuaRT license](https://badgen.net/badge/License/MIT/green)](#license)
