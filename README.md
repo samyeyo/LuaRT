@@ -5,11 +5,16 @@
 [![Lua VM 5.4.4](https://badgen.net/badge/Lua%20VM/5.4/yellow)](https://www.lua.org/)
 ![Windows](https://badgen.net/badge/Windows/Vista%20and%20later/blue?icon=windows)
 [![LuaRT license](https://badgen.net/badge/License/MIT/green)](#license)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/af54881b3d764f5ea210a5419fb96086)](https://www.codacy.com/gh/samyeyo/LuaRT/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=samyeyo/LuaRT&amp;utm_campaign=Badge_Grade)  
+[![Twitter Follow](https://img.shields.io/twitter/follow/__LuaRT__?style=social)](https://www.twitter.com/__LuaRT__)
 
 Lua multipurpose programming framework to develop Windows applications
 
+![Banner][banner] 
+
 [Features](#small_blue_diamondfeatures) |
 [Installation](#small_blue_diamondinstallation) |
+[Documentation](https://www.luart.org/doc/index.html) |
 [Links](#small_blue_diamondlinks) |
 [License](#small_blue_diamondlicense)
 
@@ -84,9 +89,9 @@ For more details, check the LuaRT documentation.
   
 ## :small_blue_diamond:Links
   
-- :house_with_garden:[LuaRT Homepage](http://www.luart.org/index.html)
-- :speech_balloon:[LuaRT Community](http://community.luart.org)
-- :book:[LuaRT Documentation](http://www.luart.org/doc/index.html)
+- :house_with_garden: [LuaRT Homepage](http://www.luart.org/index.html)
+- :speech_balloon: [LuaRT Community](http://community.luart.org)
+- :book: [LuaRT Documentation](http://www.luart.org/doc/index.html)
   
 ## :small_blue_diamond:License
   
@@ -95,3 +100,4 @@ LuaRT is open source, released under the MIT License.
 See full copyright notice in the LICENSE.txt file.
 
 [title]: examples/LuaRT.png
+[banner]: https://luart.org/img/features.png
