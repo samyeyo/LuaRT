@@ -25,11 +25,6 @@ LUA_METHOD(embed, File) {
     return 1;
 }
 
-LUALIB_API int embed_finalize(lua_State *L) {
-
-	return 0;
-}
-
 static const luaL_Reg embedlib[] = {
 	{"File",	embed_File},
 	{NULL, NULL}
@@ -41,7 +36,7 @@ static const luaL_Reg embed_properties[] = {
 
 //-------------------------------------------------[luaopen_embed() "embed" module]
 int luaopen_embed(lua_State *L) {
-	lua_regmodulefinalize(L, embed);
+	lua_registermodule(L, "embed", embedlib, embed_properties, luaL_embedclose);
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "loaded");
     lua_getfield(L, -1, "zip");

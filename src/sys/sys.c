@@ -48,6 +48,7 @@ LUA_METHOD(sys, clock) {
 LUA_METHOD(sys, exit) {
 	int ret = (int)luaL_optinteger(L, 1, EXIT_SUCCESS);
 	lua_close(L);
+	CoUninitialize();
 	exit(ret);
 	return 0;
 }

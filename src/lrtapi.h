@@ -11,6 +11,10 @@
 #define FDSET_SIZE 1024
 #include <lua.h>
 #include <luart.h>
+#include <zip\lib\zip.h>
+
+extern struct zip_t *fs;
+extern BYTE *datafs;
 
 //--- Utility macro to calculate UTF8 char size in bytes
 #define utf8_charsize(c) (((0xE5000000 >> ((((unsigned char)*c) >> 3) & 0x1E)) & 3) + 1)
