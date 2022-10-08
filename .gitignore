@@ -4,3 +4,5 @@
 *.a
 *.o
 .vscode/*.*
+setup/install.wlua
+setup/uninstall.wlua
