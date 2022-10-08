@@ -1,5 +1,17 @@
 ------------------------ LuaRT CHANGELOG -------------------------
 
+08/10/2022 -------- LuaRT 1.0.1 (bugfix)
+
+----------- General
+[ BUG ]			Fixed GCC 10+ warnings during compilation
+[ BUG ]			Fixed build error because of "bin\" and "bin\std" folders missing
+
+---------- rtc
+[ BUG ] 		Lua compiled scripts silently crash after execution
+
+----------- ui module
+[ BUG ]			Fixed strange characters with IME input when using Entry and Combobox widgets
+
 25/09/2022 -------- LuaRT 1.0.0
 
 ----------- General
