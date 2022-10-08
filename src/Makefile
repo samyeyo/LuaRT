@@ -23,7 +23,7 @@ PLATFORM = x86
 #---- LuaRT version
 LUART_MAJOR= 1
 LUART_MINOR= 0
-LUART_RELEASE= 0
+LUART_RELEASE= 1
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 
 ifeq ($(PLATFORM), x86)
@@ -154,7 +154,7 @@ $(LUAWRT_T): $(LUA_A) $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) luart.c ui\ui.
 	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 -flto=auto
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
-quickrt:
+quickrt: rtc compat
 	@rtc -w -i ..\tools\QuickRT\contrib\quickrt.ico ..\tools\QuickRT\src\quickrt.lua -o ..\tools\QuickRT\QuickRT.exe ..\tools\QuickRT\src
 	@-copy /Y ..\bin\std\lua54.dll ..\tools\QuickRT\lua54.dll >nul
 
