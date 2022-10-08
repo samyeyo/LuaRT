@@ -228,7 +228,7 @@ static const luaL_Reg baselib_ext[] = {
 //-------------------------------------------------[luaRT embeded package loader]
 
 struct zip_t *fs = NULL;
-static BYTE *datafs  = NULL;
+BYTE *datafs  = NULL;
 
 static void *fsload(lua_State *L, const char *fname) {
 	 void *buff = NULL; 
@@ -317,7 +317,6 @@ LUALIB_API void luaL_openlibs(lua_State *L) {
 //-------------------------------------------------[luaL_embedclose() luaRT C API]
 LUALIB_API int luaL_embedclose(lua_State *L) {
 	free(datafs);
-	zip_close(fs);
 	return 0;
 }
 
