@@ -14,9 +14,6 @@
 #define _GNU_SOURCE
 #include <string.h>
 
-#define MINIZ_HEADER_FILE_ONLY
-#include <zip\lib\miniz.h>
-
 static const char* encodings[] = { "utf8", "unicode", "base64", "hex", NULL };
 luart_type TBuffer;
 
@@ -231,30 +228,6 @@ LUA_METHOD(Buffer, unpack) {
 	return lua_gettop(L)-nargs;
 }
 
-LUA_METHOD(Buffer, compress) {
-	Buffer *b = lua_self(L, 1, Buffer);
-	unsigned long cmp_len = compressBound(b->size);
-	unsigned char *buff = malloc(cmp_len+sizeof(size_t));
-	int result = compress2(buff+sizeof(size_t), &cmp_len, b->bytes, b->size, (int)luaL_optinteger(L, 2, MZ_DEFAULT_COMPRESSION));
-	if ( result == Z_OK ) {
-		*((size_t *)buff) = b->size;
-		lua_toBuffer(L, buff, cmp_len+sizeof(size_t));
-	}
-	free(buff);
-	return result == Z_OK;
-}
-
-LUA_METHOD(Buffer, decompress) {
-	Buffer *b = lua_self(L, 1, Buffer);
-	unsigned long uncmp_len = *((size_t *)(b->bytes));
-	unsigned char *buff = malloc(uncmp_len);
-	int result = uncompress(buff, &uncmp_len, b->bytes+sizeof(size_t), b->size);
-	if ( result == Z_OK )
-		lua_toBuffer(L, buff, uncmp_len);
-	free(buff);
-	return result == Z_OK;
-}
-
 LUA_METHOD(Buffer, contains) {
 	Buffer *b = lua_self(L, 1, Buffer);
 	size_t len;
@@ -418,8 +391,6 @@ const luaL_Reg Buffer_methods[] = {
 	{"append",		Buffer_append},
 	{"contains",	Buffer_contains},
 	{"encode",		Buffer_encode},
-	{"compress",	Buffer_compress},
-	{"decompress",	Buffer_decompress},
 	{"set_size",	Buffer_setlen},
 	{"get_size",	Buffer_getlen},
 	{NULL, NULL}

@@ -10,7 +10,7 @@
 #pragma once
 
 #include <luart.h>
-#include <zip\lib\zip.h>
+#include <compression\lib\zip.h>
 
 
 typedef struct {
@@ -21,6 +21,10 @@ typedef struct {
 	char			mode;
 } Zip;
 
+//---------------------------------------- Zip type
+
 extern luart_type TZip;
 
 LUA_CONSTRUCTOR(Zip);
+extern const luaL_Reg Zip_methods[];
+extern const luaL_Reg Zip_metafields[];

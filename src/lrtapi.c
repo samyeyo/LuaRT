@@ -9,8 +9,6 @@
 #include "lua.h"
 #include "luart.h"
 #include "lrtapi.h"
-#include "Zip.h"
-#include "zip\lib\zip.h"
 #include <windows.h>
 
 //-------------------------------------------------[UTF8 strings conversion functions]
@@ -225,47 +223,6 @@ static const luaL_Reg baselib_ext[] = {
 	{NULL, NULL}
 };
 
-//-------------------------------------------------[luaRT embeded package loader]
-
-struct zip_t *fs = NULL;
-BYTE *datafs  = NULL;
-
-static void *fsload(lua_State *L, const char *fname) {
-	 void *buff = NULL; 
-	 int idx = 0;
-	 size_t size;
-
-	 if (zip_entry_open(fs, fname) == 0) {
-        zip_entry_read(fs, &buff, &size);
-		if (memcmp(buff, "\xEF\xBB\xBF", 3)==0)
-			idx = 3;
-		if (luaL_loadbuffer(L, buff+idx, size-idx, fname))
-			lua_error(L);
-		zip_entry_close(fs);
-		return buff;
-    }
-	return NULL;
-}
-
-static int luart_fsloader(lua_State *L) {
-	const char *modname = luaL_gsub(L, luaL_checkstring(L, 1), ".", "/");
-	size_t len = strlen(modname)+6;
-	void *buff;
-	char *fname;
-
-	fname = calloc(1, len);
-	_snprintf(fname, len, "%s.lua", modname);
-	if ( !(buff = fsload(L, fname)) ) {
-		_snprintf(fname, len, "%s.wlua", modname);
-		buff = fsload(L, fname);
-	}
-	if (!buff)
-		lua_pushfstring(L, "no embedded module '%s' found", modname);
- 	free(fname);
-	free(buff);
-	return 1;
- }
-
 static void register_module(lua_State *L, const char *modname, lua_CFunction openf) {
 	luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
 	lua_pushcfunction(L, openf);
@@ -289,6 +246,7 @@ static const luaL_Reg def_libs[] = {
   {"ui",		luaopen_ui },
   {"crypto",	luaopen_crypto },
   {"net",		luaopen_net },
+  {"compression",	luaopen_compression },
 #endif
   {"sys",		luaopen_sys},
   {NULL, NULL}
@@ -301,8 +259,7 @@ LUALIB_API void luaL_openlibs(lua_State *L) {
 		lua_pop(L, 1);
 	}
 	register_module(L, "console", luaopen_console);
-	luaL_requiref(L, "zip", luaopen_zip, 0);
-	lua_pop(L, 1);
+	// lua_pop(L, 1);
 	lua_pushglobaltable(L);
 	luaL_setfuncs(L, baselib_ext, 0);
 	/* set global _ARCH */
@@ -312,68 +269,4 @@ LUALIB_API void luaL_openlibs(lua_State *L) {
 	lua_pushliteral(L, LUA_VERSION);
 	lua_setfield(L, -2, "_VERSION");
 	lua_pop(L, 1);
-}
-
-//-------------------------------------------------[luaL_embedclose() luaRT C API]
-LUALIB_API int luaL_embedclose(lua_State *L) {
-	free(datafs);
-	return 0;
-}
-
-//-------------------------------------------------[luaL_embedopen() luaRT C API]
-LUALIB_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
-  DWORD read;
-  HANDLE hFile;
-  BYTE buff[4096];
-  IMAGE_DOS_HEADER* dosheader;
-#ifdef _WIN64
-#define HEADERS	IMAGE_NT_HEADERS64
-#else
-#define HEADERS	IMAGE_NT_HEADERS32
-#endif
-  HEADERS* header;
-  DWORD maxpointer = 0, exesize = 0;
-  int i;  
-  DWORD filesize;
-  size_t fssize;
-  IMAGE_SECTION_HEADER* sectiontable;
-
-  luaL_embedclose(L);
-  hFile = CreateFileW(exename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(INVALID_HANDLE_VALUE == hFile)
-      return FALSE;
-  ReadFile(hFile, buff, sizeof(buff), &read, NULL);
-  dosheader = (IMAGE_DOS_HEADER*)buff;
-
-  // Locate PE header
-  header = (HEADERS*)((DWORD_PTR)buff + dosheader->e_lfanew);
-  if(dosheader->e_magic != IMAGE_DOS_SIGNATURE || header->Signature != IMAGE_NT_SIGNATURE) {
-    CloseHandle(hFile);
-    return FALSE;
-  }
-  sectiontable = (IMAGE_SECTION_HEADER*)((BYTE*)header + sizeof(HEADERS));
-  for(i = 0; i < header->FileHeader.NumberOfSections; i++) {
-    if(sectiontable->PointerToRawData > maxpointer) {
-      maxpointer = sectiontable->PointerToRawData;
-      exesize = sectiontable->PointerToRawData +
-        sectiontable->SizeOfRawData;
-    }
-    sectiontable++;
-  }
-  filesize = GetFileSize(hFile, NULL);
-  SetFilePointer(hFile, exesize, NULL, FILE_BEGIN);
-  if ((fssize = filesize - exesize)) {
-	  datafs = malloc(fssize);
-	  ReadFile(hFile, datafs, fssize, &read, NULL);
-	  CloseHandle(hFile);
-	  if ((fs = open_fs(datafs, fssize))) {
-	  	lua_getglobal(L, "package");
-		lua_getfield(L, -1, "searchers");
-		lua_pushcfunction(L, luart_fsloader);
-		lua_rawseti(L, -2, luaL_len(L, -2)+1);
-		lua_pop(L, 2);
-		return TRUE;
-	  }
-  }
-  return FALSE;
 }

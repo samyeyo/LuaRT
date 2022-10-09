@@ -70,6 +70,14 @@ BOOL make_path(wchar_t *folder) {
 
 }
 
+//------- Append path utility
+static wchar_t *append_path(wchar_t *str, wchar_t* path) {
+	size_t len = wcslen(str) + wcslen(path)+2;
+	wchar_t *result = calloc(sizeof(wchar_t)*len, 1);
+	_snwprintf(result, len, L"%s/%s", str, path);
+	return result;
+}
+
 LUA_METHOD(Directory, make) {
 	Directory *dir = lua_self(L, 1, Directory);
 	wchar_t *trailing = append_path(dir->fullpath, L"");;
