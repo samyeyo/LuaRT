@@ -177,15 +177,15 @@ int get_response(lua_State *L, Http *http) {
 	size_t len;
 	const char *uri = lua_tolstring(L, 2, &len);
 	const char *fname = uri[len-1] == '/' ? NULL : PathFindFileName(uri);
-	
+	luaL_Buffer b;
+
 	luaL_pushfail(L);
 	if (http->request) {
 		char buffer[2048];
 		DWORD written, count = 0;		
 	
-		if ((http->type == TFtp) || ((get_field(L, NULL, HTTP_QUERY_CONTENT_TYPE, FALSE) && strstr(lua_tostring(L, -1), "text/")) || !fname)) {  //-------------------> File content
-			luaL_Buffer b;
-			
+		if ((http->type == TFtp) || ((get_field(L, NULL, HTTP_QUERY_CONTENT_TYPE, FALSE) && strstr(lua_tostring(L, -1), "text/")) || !fname)) {  //-------------------> text content		
+text:
 			luaL_buffinit(L, &b);
 			do 	if (InternetReadFile(http->request, buffer, 2048, &count))
 					luaL_addlstring(&b, buffer, count);
@@ -223,7 +223,8 @@ int get_response(lua_State *L, Http *http) {
 				CloseHandle(h);
 				lua_pushstring(L, fname);
 				lua_pushinstance(L, File, 1);
-			}
+			} else if (GetLastError() == ERROR_INVALID_NAME)
+				goto text;
 			free((char *)fname);
 		}
 	}
