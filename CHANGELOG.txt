@@ -15,8 +15,8 @@
 [ BUG ] 		Http:get() method might return wrong results
 
 ----------- ui module
-[ NEW ]			Runtime error when compiling to executable without a project set 
-[ BUG ]			Fixed strange characters with IME input when using Entry and Combobox widgets
+[ UPDATE ]		Segoe UI font is now used by default, as recommended since Windows Vista
+[ BUG ]			Fixed Runtime error when compiling to executable without a project set 
 [ BUG ]			Runtime error when compiling to executable without a project set 
 
 08/10/2022 -------- LuaRT 1.0.1 (bugfix)
