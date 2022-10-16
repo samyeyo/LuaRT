@@ -518,7 +518,7 @@ LUA_CONSTRUCTOR(Radiobutton) {
 }
 
 LUA_CONSTRUCTOR(Groupbox) {
-	Widget_create(L, UIGroup, 0, WC_BUTTONW, ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE);
+	Widget_create(L, UIGroup, 0, WC_BUTTONW, ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE)->brush = GetSysColorBrush(COLOR_BTNFACE);
 	return 1;
 }
 

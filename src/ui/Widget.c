@@ -296,8 +296,14 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 					ExtFloodFill(hdc, rr.right+r.left-2, rr.top+r.top+2, cr, FLOODFILLSURFACE);
 					ReleaseDC(hwnd, hdc);
 					return 0;
+				} break;
+			case WM_ERASEBKGND:
+				if (w->wtype == UIGroup) {
+					HDC hdc = (HDC)(wParam); 
+					RECT rc; GetClientRect(w->handle, &rc); 
+					FillRect(hdc, &rc, w->brush); 
+					return TRUE;
 				}
-			default: break;
 		}			
 	}
 	return DefSubclassProc(hwnd, uMsg, wParam, lParam);
