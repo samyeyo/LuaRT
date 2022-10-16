@@ -17,7 +17,7 @@
 ----------- ui module
 [ UPDATE ]		Segoe UI font is now used by default, as recommended since Windows Vista
 [ BUG ]			Fixed Runtime error when compiling to executable without a project set 
-[ BUG ]			Runtime error when compiling to executable without a project set 
+[ BUG ]			Fixed Groupbox painted with white background color when redrawn
 
 08/10/2022 -------- LuaRT 1.0.1 (bugfix)
 
