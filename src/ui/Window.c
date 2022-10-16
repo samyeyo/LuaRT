@@ -167,7 +167,7 @@ LUA_CONSTRUCTOR(Window) {
 	DWORD style; RECT r = {0};
 	static HINSTANCE hInstance = NULL;
 	NOTIFYICONDATAW *nid;
-
+	NONCLIENTMETRICS ncm;
 	if (!hInstance)
 		hInstance = GetModuleHandle(NULL);
 	title = lua_towstring(L, 2);
@@ -185,8 +185,10 @@ LUA_CONSTRUCTOR(Window) {
 	w->brush = GetSysColorBrush(COLOR_BTNFACE);
 	w->wtype = UIWindow;
 	w->hcursor = (HCURSOR)LoadCursor(NULL, IDC_ARROW);
-	w->font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-	lua_newinstance(L, w, Widget);
+	ncm.cbSize = sizeof(NONCLIENTMETRICS);
+	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
+	w->font = CreateFontIndirect(&ncm.lfMessageFont);
+	SendMessage(w->handle, WM_SETFONT, (WPARAM)w->font, MAKELPARAM(TRUE, 0));	lua_newinstance(L, w, Widget);
 	lua_pushvalue(L, 1);
 	w->ref = luaL_ref(L, LUA_REGISTRYINDEX);
 	nid = calloc(1, sizeof(NOTIFYICONDATAW));
