@@ -64,8 +64,8 @@ LUA_A=		lua54.dll
 CORE_O=		lua\lapi.o lrtapi.o lrtobject.o lua\lcode.o lua\lctype.o lua\ldebug.o lua\ldo.o lua\ldump.o lua\lfunc.o lua\lgc.o lua\llex.o lua\lmem.o lua\lobject.o lua\lopcodes.o lua\lparser.o lua\lstate.o lua\lstring.o lua\ltable.o lua\ltm.o lua\lundump.o lua\lvm.o lua\lzio.o
 OBJECTS_O=	sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o
 LIB_O=		$(LIBOBJ_O) lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o sys\sys.o console\console.o
-LUART_LIB_O= crypto\crypto.o net\net.o lembed.o 
-LUART_OBJ_O= crypto\Cipher.o net\Socket.o net\Http.o net\Ftp.o compression\Zip.o compression\compression.o compression\lib\miniz.o compression\lib\zip.o
+LUART_LIB_O= crypto\crypto.o net\net.o lembed.o compression\compression.o
+LUART_OBJ_O= crypto\Cipher.o net\Socket.o net\Http.o net\Ftp.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o
 LUART_UI_O=  ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o
 BASE_O= 	$(CORE_O) $(LIB_O) $(OBJECTS_O)
 
