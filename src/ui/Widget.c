@@ -413,9 +413,8 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
 	w = calloc(1, sizeof(Widget));
 	w->handle = h;
 	SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
-	w->font = wp->font ?: GetStockObject(DEFAULT_GUI_FONT);
+	w->font = wp->font;
 	SendMessage(h, WM_SETFONT, (WPARAM)w->font, FALSE);
-	UpdateWindow(h);
 	if (type != UIEdit)
 		w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
 	w->wtype = type;
@@ -763,14 +762,12 @@ LOGFONTW *Font(Widget *w) {
 	return l;
 }
 
-static void UpdateFont(Widget *w, LOGFONTW *l);
-
 static BOOL CALLBACK SetChildFont(HWND h, LPARAM lParam) {
 	UpdateFont((Widget*)GetWindowLongPtr(h, GWLP_USERDATA), (LOGFONTW *)lParam);
 	return TRUE;
 }
 
-static void UpdateFont(Widget *w, LOGFONTW *l) {
+void UpdateFont(Widget *w, LOGFONTW *l) {
 	HFONT f = CreateFontIndirectW(l);
 	if (f) {
 		if (w->wtype) {

@@ -133,8 +133,10 @@ void copy_menuitems(lua_State *L, HMENU from, HMENU to);
 
 HBITMAP LoadImg(wchar_t *filename);
 BOOL SaveImg(wchar_t *fname, HBITMAP hBitmap);
-extern BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf);
-extern int fontsize_fromheight(int height);
+BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf);
+int fontsize_fromheight(int height);
+LOGFONTW *Font(Widget *w);
+void UpdateFont(Widget *w, LOGFONTW *l);
 
 LUA_METHOD(Widget, __metanewindex); //----- for event registration
 LUA_METHOD(Widget, show);
