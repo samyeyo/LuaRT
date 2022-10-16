@@ -15,10 +15,28 @@
 #include <richedit.h>
 #include <wincodec.h>
 
-typedef enum {UIWindow, UIButton, UILabel, UIEntry, UIEdit, UIStatus, UICheck, UIRadio, UIGroup, UIDate, UIList, UICombo, UITree, UITab, UIItem, UIMenu, UIMenuItem, UIPicture} WidgetType;
+extern int UIWindow;
+extern int UIButton;
+extern int UIGroup;
+extern int UICheck;
+extern int UIRadio;
+extern int UILabel;
+extern int UIEntry;
+extern int UIPicture;
+extern int UIDate;
+extern int UIMenu;
+extern int UIMenuItem;
+extern int UITab;
+extern int UIList;
+extern int UICombo;
+extern int UITree;
+extern int UIEdit;
+extern int UIItem;
 
-LUA_API void widget_noinherit(lua_State *L, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
-LUA_API void widget_type_new(lua_State *L, WidgetType type, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip);
+// typedef enum {UIWindow, UIButton, UILabel, UIEntry, UIEdit, UIStatus, UICheck, UIRadio, UIGroup, UIDate, UIList, UICombo, UITree, UITab, UIItem, UIMenu, UIMenuItem, UIPicture} WidgetType;
+
+LUA_API void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
+LUA_API void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip);
 
 #define lua_newtype_widget(L, typename) widget_type_new(L, #typename, typename##_constructor, Widget_methods, Widget_metafields, NULL)
 #define lua_newtype_extwidget(L, typename) widget_type_new(L, #typename, typename##_constructor, Widget_methods, Widget_metafields, typename##_methods)
@@ -74,6 +92,8 @@ typedef enum{
 #define WM_LUATRAYHOVER 	(WM_LUAMIN + onTrayHover)
 #define WM_LUAMENU 			(WM_LUAMIN + onMenu)
 #define WM_LUAMAX 			(WM_LUAMENU+1)
+
+typedef int WidgetType;
 
 typedef struct WidgetItem {
 	WidgetType	itemtype;
