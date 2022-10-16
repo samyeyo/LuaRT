@@ -1,5 +1,24 @@
 ------------------------ LuaRT CHANGELOG -------------------------
 
+16/10/2022 -------- LuaRT 1.0.2 (bugfix)
+
+----------- General
+[ NEW ]			New examples img_viewer.wlua and binary.wlua
+
+----------- QuickRT
+[ BUG ]			Fixed nil variable names with underscore character "_" outputs no result 
+
+----------- LuaRT Studio
+[ BUG ]			Fixed runtime error when compiling to executable without a project set 
+
+---------- net module
+[ BUG ] 		Http:get() method might return wrong results
+
+----------- ui module
+[ NEW ]			Runtime error when compiling to executable without a project set 
+[ BUG ]			Fixed strange characters with IME input when using Entry and Combobox widgets
+[ BUG ]			Runtime error when compiling to executable without a project set 
+
 08/10/2022 -------- LuaRT 1.0.1 (bugfix)
 
 ----------- General
