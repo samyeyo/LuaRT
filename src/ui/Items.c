@@ -314,36 +314,35 @@ void __free_item(Widget *w, size_t idx, HTREEITEM hti) {
 }
 
 LUA_CONSTRUCTOR(Item) {
-	Widget *w = (Widget*)calloc(1, sizeof(Widget));
-	void *ptr;
-	
-	ptr = lua_touserdata(L, 2);
-	if ( (w->item.itemtype = (int)lua_tointeger(L, 3)) != UITree)
-		w->index = (int)lua_tointeger(L, 4);
-	w->wtype = UIItem;
-	switch(w->item.itemtype) {
-		case UITree :	w->item.treeitem = ptr;
-						w->handle = (HWND)w->item.treeitem->lParam;
-						w->icon = ImageList_GetIcon(w->imglist, w->item.treeitem->iImage, ILD_NORMAL);
-						break;
-		case UITab :	w->item.tabitem = ptr;
-						w->handle = (HWND)(w->item.tabitem->lParam);
-						w->icon = ImageList_GetIcon(w->imglist, w->item.tabitem->iImage, ILD_NORMAL);						
-						break;
-		case UIList :	w->item.listitem = ptr;
-						w->handle = (HWND)w->item.listitem->lParam;
-						w->icon = ImageList_GetIcon(w->imglist, w->item.listitem->iImage, ILD_NORMAL);
-						break;
-		case UICombo :	w->item.cbitem = ptr;
-						w->handle = (HWND)w->item.cbitem->lParam;
-						w->icon = ImageList_GetIcon(w->imglist, w->item.cbitem->iImage, ILD_NORMAL);
-		default:		break;
-	}
-	w->imglist = ((Widget*)GetWindowLongPtr(w->handle, GWLP_USERDATA))->imglist;
-	lua_newinstance(L, w, Widget);
-	lua_pop(L, 1);
-	lua_pushvalue(L, 1);
-	return 1;
+    Widget *wp, *w = (Widget*)calloc(1, sizeof(Widget));
+    void *ptr;
+    
+    ptr = lua_touserdata(L, 2);
+    if ( (w->item.itemtype = (int)lua_tointeger(L, 3)) != UITree)
+        w->index = (int)lua_tointeger(L, 4);
+    w->wtype = UIItem;
+    switch(w->item.itemtype) {
+        case UITree :   w->item.treeitem = ptr;
+                        w->handle = (HWND)w->item.treeitem->lParam;
+                        break;
+        case UITab :    w->item.tabitem = ptr;
+                        w->handle = (HWND)(w->item.tabitem->lParam);
+                        break;                                              
+        case UIList :   w->item.listitem = ptr;
+                        w->handle = (HWND)w->item.listitem->lParam;
+                        break;
+        case UICombo :  w->item.cbitem = ptr;
+                        w->handle = (HWND)w->item.cbitem->lParam;
+        default:        break;
+    }
+    wp = (Widget*)GetWindowLongPtr(w->handle, GWLP_USERDATA);
+    w->imglist = wp->imglist;
+    if (w->item.itemtype == UITab) 
+        SetFontFromWidget(w, wp);
+    lua_newinstance(L, w, Widget);
+    lua_pop(L, 1);
+    lua_pushvalue(L, 1);
+    return 1;
 }
 
 LUA_METHOD(Items, __len) {
@@ -936,22 +935,22 @@ LUA_METHOD(Item, __eq) {
 }
 
 LUA_METHOD(Item, __gc) {
-	Widget *w = lua_self(L, 1, Widget);
-	wchar_t *text = NULL;
-	switch(w->item.itemtype) {
-		case UITree : text = w->item.treeitem->pszText; break;
-		case UITab :  text = w->item.tabitem->pszText; break;
-		case UIList:  text = w->item.listitem->pszText; break;
-		case UICombo: text = w->item.cbitem->pszText;
-		default: break;
-	}
-	free(text);
-	free(w->item.listitem);
-	DestroyIcon(w->icon);
-	free(w);
-	return 0;
+    Widget *w = lua_self(L, 1, Widget);
+    wchar_t *text = NULL;
+    switch(w->item.itemtype) {
+        case UITree : text = w->item.treeitem->pszText; break;
+        case UITab :  text = w->item.tabitem->pszText; break;
+        case UIList:  text = w->item.listitem->pszText; break;
+        case UICombo: text = w->item.cbitem->pszText;
+        default: break;
+    }
+    free(text);
+    free(w->item.listitem);
+    DestroyIcon(w->icon);
+    DeleteObject(w->font);
+    free(w);
+    return 0;
 }
-
 
 luaL_Reg ItemWidget_methods[] = {
 	{"set_items",		Listbox_setitems},

@@ -762,7 +762,9 @@ LOGFONTW *Font(Widget *w) {
 }
 
 static BOOL CALLBACK SetChildFont(HWND h, LPARAM lParam) {
-	UpdateFont((Widget*)GetWindowLongPtr(h, GWLP_USERDATA), (LOGFONTW *)lParam);
+	Widget *w;
+	if ((w = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA)))
+		UpdateFont(w, (LOGFONTW *)lParam);
 	return TRUE;
 }
 
@@ -780,7 +782,17 @@ void UpdateFont(Widget *w, LOGFONTW *l) {
 		WidgetAutosize(w);
 	if (w->wtype == UIList)
 		ListView_Arrange(w->handle, LVA_DEFAULT);	
-	if (w->wtype == UIGroup || (w->wtype == UIItem && w->item.itemtype == UITab) || w->wtype == UIWindow)
+	else if (w->wtype == UITab) {
+        int i = get_count(w);
+        TCITEM item;
+        item.mask = TCIF_PARAM;
+        while (--i > -1) {
+            TabCtrl_GetItem(w->handle, i, &item);
+            EnumChildWindows((HWND)item.lParam, SetChildFont, (LPARAM)l); 
+        }
+    }
+    else if (w->wtype == UIGroup || (w->wtype == UIItem && w->item.itemtype == UITab) || (w->wtype == UIWindow))
+
 		EnumChildWindows(w->handle, SetChildFont, (LPARAM)l); 
 	RedrawWindow(w->handle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
