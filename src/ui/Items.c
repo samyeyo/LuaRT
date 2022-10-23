@@ -409,50 +409,51 @@ static int find_item_bytext(lua_State *L, Widget *w, int idx, HTREEITEM *hti) {
 }
 
 static void set_newitems(lua_State *L, Widget *w, int idx, HTREEITEM subitem) {
-	static int resetmsg[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, LVM_DELETEALLITEMS, CB_RESETCONTENT, TVM_DELETEITEM, TCM_DELETEALLITEMS};
-
-	SendMessageW(w->handle, resetmsg[w->wtype], 0, (LPARAM)TVI_ROOT);
-	if (lua_isstring(L, idx))
-		__add_item(w, lua_towstring(L, idx), subitem);
-	else if (!lua_istable(L, idx))
-		luaL_error(L, "incompatible value in table (table expected, found %s)", lua_objectname(L, -1));
-	else {
-		lua_pushvalue(L, idx);
-		lua_pushnil(L);
-		while (lua_next(L, -2)) {
-			int keytype = lua_type(L, -2);
-			if ((w->wtype == UITree || w->item.itemtype == UITree) && keytype == LUA_TSTRING) {
-				HTREEITEM hti, new;
-				find_item_bytext(L, w, -2, &hti);
-				if (hti)
-					__free_item(w, 0, hti);
-				new = (HTREEITEM)__add_item(w, lua_towstring(L, -2), (w->wtype == UIItem && subitem == NULL) ? w->item.treeitem->hItem : subitem);
-				set_newitems(L, w, -1, new);			
-			} else if ((keytype == LUA_TNUMBER) && lua_isinteger(L, -2)) {
-				if (lua_isstring(L, -1))
-					__add_item(w, lua_towstring(L, -1), subitem);
-				else luaL_error(L, "incompatible value in table (string expected, found %s)", lua_objectname(L, -1));
-			} else luaL_error(L, "incompatible index in table (%s expected, found %s)", w->wtype == UITree ? "string or integer" : "integer", lua_objectname(L, -2));
-			lua_pop(L, 1);
-		}
-		lua_pop(L, 1);
-	}
+ 
+    if (lua_isstring(L, idx))
+        __add_item(w, lua_towstring(L, idx), subitem);
+    else if (!lua_istable(L, idx))
+        luaL_error(L, "incompatible value in table (table expected, found %s)", lua_objectname(L, -1));
+    else {
+        lua_pushvalue(L, idx);
+        lua_pushnil(L);
+        while (lua_next(L, -2)) {
+            int keytype = lua_type(L, -2);
+            if ((w->wtype == UITree || w->item.itemtype == UITree) && keytype == LUA_TSTRING) {
+                HTREEITEM hti, new;
+                find_item_bytext(L, w, -2, &hti);
+                if (hti)
+                    __free_item(w, 0, hti);
+                new = (HTREEITEM)__add_item(w, lua_towstring(L, -2), (w->wtype == UIItem && subitem == NULL) ? w->item.treeitem->hItem : subitem);
+                set_newitems(L, w, -1, new);            
+            } else if ((keytype == LUA_TNUMBER) && lua_isinteger(L, -2)) {
+                if (lua_isstring(L, -1))
+                    __add_item(w, lua_towstring(L, -1), subitem);
+                else luaL_error(L, "incompatible value in table (string expected, found %s)", lua_objectname(L, -1));
+            } else luaL_error(L, "incompatible index in table (%s expected, found %s)", w->wtype == UITree ? "string or integer" : "integer", lua_objectname(L, -2));
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+    }
 }
 
 LUA_METHOD(Items, __index) {
-	Widget *w;
-	lua_Integer idx = -1;
-	int isnum = 0;
-	HTREEITEM hti = NULL;
-	luaL_getmetafield(L, 1, "__widget");
-	w = lua_self(L, -1, Widget);
-	if (w->wtype != UITree)
-		idx = (idx = lua_tointegerx(L, 2, &isnum)) || isnum ? idx-1 : find_item_bytext(L, w, 2, &hti);
-	if ((idx >= 0) && ((w->wtype == UIItem) || (hti) || (idx < (int)get_count(w))))
-		__push_item(L, w, idx, hti);
-	else lua_pushnil(L);
-	return 1; 
+    Widget *w;
+    lua_Integer idx = -1;
+    int isnum = 0;
+    HTREEITEM hti = NULL;
+    luaL_getmetafield(L, 1, "__widget");
+    w = lua_self(L, -1, Widget);
+    if (w->wtype == UITree)
+        idx = find_item_bytext(L, w, 2, &hti);
+    else
+        idx = (idx = lua_tointegerx(L, 2, &isnum)) || isnum ? idx-1 : find_item_bytext(L, w, 2, &hti);      
+    if ((idx >= 0) && ((w->wtype == UIItem) || (hti) || (idx < (int)get_count(w))))
+        __push_item(L, w, idx, hti);
+    else lua_pushnil(L);
+    return 1; 
 }
+
 
 LUA_METHOD(Items, __newindex) {
 	Widget *w;
@@ -653,19 +654,21 @@ LUA_PROPERTY_GET(Listbox, count) {
 }
 
 LUA_PROPERTY_SET(Listbox, items) {
-	Widget *w = lua_self(L, 1, Widget);
-
-	set_newitems(L, w, 2, w->item.itemtype == UITree ? w->item.treeitem->hItem : NULL);
-	if (w->wtype == UITab && get_count(w)) {
-		TCITEMW *item = get_item(w, 0);
-		BringWindowToTop((HWND)item->lParam);
-		free(item->pszText);
-		free(item);
-	}
-	InvalidateRect(w->handle, NULL, FALSE);
-	return 0;
+    Widget *w = lua_self(L, 1, Widget);
+    static int resetmsg[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, LVM_DELETEALLITEMS, CB_RESETCONTENT, TVM_DELETEITEM, TCM_DELETEALLITEMS};
+ 
+    SendMessageW(w->handle, resetmsg[w->wtype], 0, (LPARAM)TVI_ROOT);
+    set_newitems(L, w, 2, w->item.itemtype == UITree ? w->item.treeitem->hItem : NULL);
+    if (w->wtype == UITab && get_count(w)) {
+        TCITEMW *item = get_item(w, 0);
+        BringWindowToTop((HWND)item->lParam);
+        free(item->pszText);
+        free(item);
+    }
+    InvalidateRect(w->handle, NULL, FALSE);
+    return 0;
 }
-
+ 
 LUA_PROPERTY_GET(Listbox, items) {
 	lua_createtable(L,  0, 0);
 	lua_createtable(L, 0, 3);
