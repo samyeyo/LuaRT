@@ -56,7 +56,7 @@ LUA_PROPERTY_SET(File, created);
 LUA_PROPERTY_SET(File, modified);
 LUA_PROPERTY_SET(File, accessed);
 
-wchar_t *luaL_checkFilename(lua_State *L, int idx);
+LUALIB_API wchar_t *luaL_checkFilename(lua_State *L, int idx);
 
 //---------------------------------------- TemporaryFile type
 LUA_CONSTRUCTOR(TemporaryFile);
