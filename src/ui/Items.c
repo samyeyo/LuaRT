@@ -578,7 +578,7 @@ LUA_METHOD(Listbox, remove) {
 		else {
 			Widget *item = check_widget(L, 2, UIItem);
 			if (w->wtype != item->item.itemtype)
-				luaL_typeerror(L, 2, types[w->wtype-10]);
+				luaL_typeerror(L, 2, types[w->wtype-UIList]);
 			if (item->item.itemtype == UITree)
 				hti = item->item.treeitem->hItem;
 			else idx = item->index;
@@ -726,7 +726,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		}
 	}
 	else 
-		luaL_error(L, "cannot select an item that don't belong to this %s object", luart_wtypes[w->wtype]);
+		luaL_error(L, "cannot select an item that don't belong to this %s object", luart_wtypes[w->wtype-UIWindow]);
 	if (w->wtype == UITab) {
 		NMHDR lparam = {0};
 		lparam.code = TCN_SELCHANGE;

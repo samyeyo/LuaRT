@@ -339,7 +339,7 @@ static void WidgetAutosize(Widget *w) {
         r.right += 12;
         r.bottom += 12;
     }
-    SetWindowPos(w->handle, 0, 0, 0, max(r.right + margins[w->wtype]*2, orig.right), max(r.bottom + margins[w->wtype], orig.bottom), SWP_NOMOVE | SWP_NOZORDER);
+    SetWindowPos(w->handle, 0, 0, 0, max(r.right + margins[w->wtype-UIWindow]*2, orig.right), max(r.bottom + margins[w->wtype-UIWindow], orig.bottom), SWP_NOMOVE | SWP_NOZORDER);
     free(str);
 }
 
@@ -390,7 +390,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
             
     if (lua_isuserdata(L, 2)) {
         w = lua_touserdata(L, 2);
-        lua_pushnewinstance(L, luart_wtypes[w->wtype], 1);
+        lua_pushnewinstance(L, luart_wtypes[w->wtype-UIWindow], 1);
         return lua_self(L, -1, Widget);
     }
     wp = luaL_checkcinstance(L, 2, Widget);
