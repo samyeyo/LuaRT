@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 #define MINIZ_HEADER_FILE_ONLY
-#include <zip\lib\miniz.h>
+#include <compression\lib\miniz.h>
 
 luart_type TCipher;
 
