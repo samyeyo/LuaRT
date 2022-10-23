@@ -44,16 +44,17 @@ int getStyle(Widget *w, const int *values, const char *names[]) {
 static const char *align[] = {"left", "right", "center", NULL};
 static const int align_values[] = {SS_LEFT, SS_RIGHT, SS_CENTER};
 
-LUA_API void widget_noinherit(lua_State *L, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
-	lua_registerobject(L, NULL, typename, constructor, methods, mt);
-	lua_pushstring(L, typename);
-	lua_pushvalue(L, -2);
-	lua_rawset(L, -4);
-	lua_setfield(L, LUA_REGISTRYINDEX, typename);
+LUA_API void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
+	lua_registerobject(L, type, typename, constructor, methods, mt);
+	// lua_pushstring(L, typename);
+	// lua_pushvalue(L, -2);
+	// lua_rawset(L, -4);
+	// lua_setfield(L, LUA_REGISTRYINDEX, typename);
 }
 
-LUA_API void widget_type_new(lua_State *L, WidgetType type, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip) {
-	lua_registerobject(L, NULL, luart_wtypes[type], constructor, Widget_methods, mt ?: Widget_metafields);
+LUA_API void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip) {
+	lua_registerobject(L, type, typename, constructor, Widget_methods, mt ?: Widget_metafields);
+	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 	if (methods)
 		luaL_setrawfuncs(L, methods);	
 	if (has_text)
@@ -76,10 +77,11 @@ LUA_API void widget_type_new(lua_State *L, WidgetType type, lua_CFunction constr
 		luaL_setrawfuncs(L, WidgetTextAlign_methods);
 	if (has_tooltip)
 		luaL_setrawfuncs(L, WidgetTooltip_methods);
-	lua_pushstring(L, luart_wtypes[type]);
-	lua_pushvalue(L, -2);
-	lua_rawset(L, -4);
-	lua_setfield(L, LUA_REGISTRYINDEX, luart_wtypes[type]);
+	lua_pop(L, 1);
+	// lua_pushstring(L, typename);
+	// lua_pushvalue(L, -2);
+	// lua_rawset(L, -4);
+	// lua_setfield(L, LUA_REGISTRYINDEX, typename);
 }
 
 static void page_resize(Widget *w, BOOL isfocused) {
@@ -113,39 +115,34 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 				WPARAM cmd = HIWORD(wParam);
 				if (w->wtype == UIGroup)
 					w = (Widget*)GetWindowLongPtr(GetDlgItem(w->handle, LOWORD(wParam)), GWLP_USERDATA);
-				switch (w->wtype) { 
-					case UIGroup: 	
-					case UILabel:
-					case UIPicture:
-					case UICheck:
-					case UIRadio:
-					case UIButton : switch (cmd) {
-										case BN_CLICKED: 	lua_callevent(w, onClick); break;										
-										case BN_DOUBLECLICKED: 
-										case STN_DBLCLK:	lua_callevent(w, onDoubleClick);
-									} return 0;
-					case UIEdit:					
-					case UIEntry :	if (cmd == EN_CHANGE || (w->wtype == UIEntry && cmd == EN_SELCHANGE)) {
-									  lua_callevent(w, onChange);
-									  return 0;
-									}
-								   break;
-					case UICombo : 	if ((cmd == CBN_SELCHANGE)) {
-										int idx = ComboBox_GetCurSel(w->handle);
-										if (idx != CB_ERR) {
-											wchar_t *text = calloc(SendMessageW(w->status, CB_GETLBTEXTLEN, idx, 0)+1, sizeof(wchar_t));
-											SendMessageW((HWND)w->status, CB_GETLBTEXT, idx, (LPARAM)text);
-											SendMessageW((HWND)w->handle, WM_SETTEXT, 0, (LPARAM)text);
-											SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
-											InvalidateRect(w->handle, NULL, TRUE);
-										 	free(text);
-											lua_indexevent(w, onSelect, idx);
-											return FALSE;
-										}
-									}
-									return TRUE;	
-					default:		break;																																
+				if ((w->wtype == UIButton) || (w->wtype == UILabel) || (w->wtype >= UICheck && w->wtype <= UIGroup) || (w->wtype == UIPicture)) {
+					switch (cmd) {
+						case BN_CLICKED: 	lua_callevent(w, onClick); break;										
+						case BN_DOUBLECLICKED: 
+						case STN_DBLCLK:	lua_callevent(w, onDoubleClick);
+					}
+					return 0;
+				} 
+				else if (((w->wtype == UIEntry) || (w->wtype == UIEdit)) && (cmd == EN_CHANGE || (w->wtype == UIEntry && cmd == EN_SELCHANGE))) {
+					lua_callevent(w, onChange);
+					return 0;
 				}
+				else if (w->wtype == UICombo) {
+					if (cmd == CBN_SELCHANGE) {
+						int idx = ComboBox_GetCurSel(w->handle);
+						if (idx != CB_ERR) {
+							wchar_t *text = calloc(SendMessageW(w->status, CB_GETLBTEXTLEN, idx, 0)+1, sizeof(wchar_t));
+							SendMessageW((HWND)w->status, CB_GETLBTEXT, idx, (LPARAM)text);
+							SendMessageW((HWND)w->handle, WM_SETTEXT, 0, (LPARAM)text);
+							SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
+							InvalidateRect(w->handle, NULL, TRUE);
+							free(text);
+							lua_indexevent(w, onSelect, idx);
+							return FALSE;
+						}
+					}
+					return TRUE;	
+				}						
 			} break;
 			case WM_LBUTTONDBLCLK:
 				if (w->wtype == UIList) {
@@ -160,76 +157,73 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 				break;	
 			case WM_NOTIFY:	
 				lpNmHdr = (LPNMHDR) lParam;
-				switch (w->wtype) {
-					case UIEdit: 	if (lpNmHdr->code == EN_SELCHANGE) {
-									 	SELCHANGE *sc = (SELCHANGE *)lParam;
-										if (sc->seltyp == SEL_EMPTY)
-											lua_callevent(w, onCaret); 
-										else
-											lua_paramevent(w, onSelect, sc->chrg.cpMin+1, sc->chrg.cpMax+1);
-										return TRUE;
-								 	}
-								 break;
-					case UIDate: if (lpNmHdr->code == MCN_SELECT) {
-									w = (Widget*)GetWindowLongPtr(lpNmHdr->hwndFrom, GWLP_USERDATA);
-									SendMessage(w->handle, WM_CHANGEUISTATE, MAKEWPARAM(UIS_SET, UISF_HIDEFOCUS), 0);
-									lua_callevent(w, onSelect);
-								}
-								return TRUE;
-					case UITab:
-						if (lpNmHdr->code == TCN_SELCHANGE) {
-							page_resize(w, TRUE);
-							lua_indexevent(w, onSelect, TabCtrl_GetCurSel(w->handle));
+				if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
+					SELCHANGE *sc = (SELCHANGE *)lParam;
+					if (sc->seltyp == SEL_EMPTY)
+						lua_callevent(w, onCaret); 
+					else
+						lua_paramevent(w, onSelect, sc->chrg.cpMin+1, sc->chrg.cpMax+1);
+					return TRUE;
+				}
+				else if (w->wtype == UIDate) {
+					if (lpNmHdr->code == MCN_SELECT) {
+						w = (Widget*)GetWindowLongPtr(lpNmHdr->hwndFrom, GWLP_USERDATA);
+						SendMessage(w->handle, WM_CHANGEUISTATE, MAKEWPARAM(UIS_SET, UISF_HIDEFOCUS), 0);
+						lua_callevent(w, onSelect);
+					}
+					return TRUE;
+				}
+				else if (w->wtype == UITab) {
+					if (lpNmHdr->code == TCN_SELCHANGE) {
+						page_resize(w, TRUE);
+						lua_indexevent(w, onSelect, TabCtrl_GetCurSel(w->handle));
+						return TRUE;
+					} else if (lpNmHdr->code == NM_RCLICK) {
+						TCHITTESTINFO hti;
+						lua_indexevent(w, onContext, HitTest(&hti, w->handle, TCM_HITTEST, TCHT_ONITEM | TCHT_ONITEMICON, GetMessagePos())+1);
+					}
+				}
+				else if (w->wtype == UIList) {
+					if ((lpNmHdr->code == NM_CLICK) || (lpNmHdr->code == LVN_ITEMCHANGED && (((LPNMLISTVIEW)lParam)->uNewState & LVNI_SELECTED))) {
+						int i = ListView_GetNextItem(w->handle, -1, LVNI_SELECTED | LVNI_FOCUSED);
+						if (i != -1) {
+							SendMessage(w->handle, WM_CHANGEUISTATE, MAKEWPARAM(UIS_SET, UISF_HIDEFOCUS), 0);
+							lua_indexevent(w, onSelect, i);
 							return TRUE;
-						} else if (lpNmHdr->code == NM_RCLICK) {
-							TCHITTESTINFO hti;
-							lua_indexevent(w, onContext, HitTest(&hti, w->handle, TCM_HITTEST, TCHT_ONITEM | TCHT_ONITEMICON, GetMessagePos())+1);
 						}
-						break;
-					case UIList: 	if ((lpNmHdr->code == NM_CLICK) || (lpNmHdr->code == LVN_ITEMCHANGED && (((LPNMLISTVIEW)lParam)->uNewState & LVNI_SELECTED))) {
-										int i = ListView_GetNextItem(w->handle, -1, LVNI_SELECTED | LVNI_FOCUSED);
-										if (i != -1) {
-											SendMessage(w->handle, WM_CHANGEUISTATE, MAKEWPARAM(UIS_SET, UISF_HIDEFOCUS), 0);
-											lua_indexevent(w, onSelect, i);
-											return TRUE;
-										}
-									} 
-									else if ((lpNmHdr->code == LVN_ITEMCHANGED && (((LPNMLISTVIEW)lParam)->uChanged & LVIF_TEXT)) || (lpNmHdr->code == LVN_INSERTITEM) || (lpNmHdr->code == LVN_DELETEITEM)) {
-										lua_callevent(w, onChange);
-										return TRUE;
-									} 
-									else if (lpNmHdr->code == NM_RCLICK) {
-										lua_indexevent(w, onContext, ((NMITEMACTIVATE*)lParam)->iItem+1);
-										return TRUE;
-									}
-									break;
-					case UICombo:	if (lpNmHdr->code == CBEN_ENDEDITW) { 
-										lua_callevent(w, onChange);
-										return FALSE;
-									}
-									break;
-					case UITree:	{
-										TVHITTESTINFO hti;
-										switch(lpNmHdr->code) { 
-											case TVN_SELCHANGEDW:	lua_paramevent(w, onSelect, 0, ((LPNMTREEVIEW)lParam)->itemNew.hItem); return TRUE;
-											case NM_RCLICK:			lua_indexevent(w, onContext, HitTest((TCHITTESTINFO *)&hti, w->handle, TVM_HITTEST, TVHT_ONITEM, GetMessagePos())); return TRUE;
-											case NM_DBLCLK:			lua_indexevent(w, onDoubleClick, HitTest((TCHITTESTINFO *)&hti, w->handle, TVM_HITTEST, TVHT_ONITEM, GetMessagePos())); return TRUE;
-											case TVN_ENDLABELEDITW:	lua_paramevent(w, onChange, 0, (LPARAM)((LPNMTVDISPINFOW)lParam)->item.hItem); return TRUE;
-											case TVN_DELETEITEMW:	{
-																		TVITEMW *item = __get_item(w, 0, ((LPNMTREEVIEW)lParam)->itemOld.hItem);
-																		lua_paramevent(w, onChange, 1, (LPARAM)(item->pszText)); break;
-																		free(item);
-																	}	
-										}
-								 	}
-					default: break;
-				};
+					} 
+					else if ((lpNmHdr->code == LVN_ITEMCHANGED && (((LPNMLISTVIEW)lParam)->uChanged & LVIF_TEXT)) || (lpNmHdr->code == LVN_INSERTITEM) || (lpNmHdr->code == LVN_DELETEITEM)) {
+						lua_callevent(w, onChange);
+						return TRUE;
+					} 
+					else if (lpNmHdr->code == NM_RCLICK) {
+						lua_indexevent(w, onContext, ((NMITEMACTIVATE*)lParam)->iItem+1);
+						return TRUE;
+					}
+				}
+				else if ((w->wtype == UICombo) && (lpNmHdr->code == CBEN_ENDEDITW)) {
+					lua_callevent(w, onChange);
+					return FALSE;
+				}
+				else if (w->wtype == UITree) {
+					TVHITTESTINFO hti;
+					switch(lpNmHdr->code) { 
+						case TVN_SELCHANGEDW:	lua_paramevent(w, onSelect, 0, ((LPNMTREEVIEW)lParam)->itemNew.hItem); return TRUE;
+						case NM_RCLICK:			lua_indexevent(w, onContext, HitTest((TCHITTESTINFO *)&hti, w->handle, TVM_HITTEST, TVHT_ONITEM, GetMessagePos())); return TRUE;
+						case NM_DBLCLK:			lua_indexevent(w, onDoubleClick, HitTest((TCHITTESTINFO *)&hti, w->handle, TVM_HITTEST, TVHT_ONITEM, GetMessagePos())); return TRUE;
+						case TVN_ENDLABELEDITW:	lua_paramevent(w, onChange, 0, (LPARAM)((LPNMTVDISPINFOW)lParam)->item.hItem); return TRUE;
+						case TVN_DELETEITEMW:	{
+													TVITEMW *item = __get_item(w, 0, ((LPNMTREEVIEW)lParam)->itemOld.hItem);
+													lua_paramevent(w, onChange, 1, (LPARAM)(item->pszText)); break;
+													free(item);
+												}	
+					}
+				}
 				return 0;
 			case WM_CONTEXTMENU:
 				if (((w->wtype < UIList) || (w->wtype > UITab)) || (wParam == 0))
 					lua_indexevent(w, onContext, 0);
 				return TRUE;
-
 			case WM_CHAR:
 				if (wParam == VK_RETURN && (w->wtype == UIEntry)) {
 					lua_callevent(w, onSelect);
@@ -244,10 +238,10 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 				CallWindowProc(WindowProc, hwnd, uMsg, wParam, lParam);				
 				break;
 			case WM_SETCURSOR:	
-					if (w->wtype != UIEdit || ((w->wtype == UIEdit) && ((BOOL)w->cursor == TRUE))) {
-						SetCursor(w->hcursor);
-						return TRUE;
-					} break;
+				if (w->wtype != UIEdit || ((w->wtype == UIEdit) && ((BOOL)w->cursor == TRUE))) {
+					SetCursor(w->hcursor);
+					return TRUE;
+				} break;
 			case WM_WINDOWPOSCHANGED:	
 				if (((WINDOWPOS*)lParam)->flags & SWP_HIDEWINDOW)
 					lua_callevent(w, onHide);
@@ -318,11 +312,11 @@ int GetText(lua_State *L, HANDLE h) {
 	return len;
 }
 
-static int width[] = {0, 20, 0, 60, 250, 16, 24, 24, 180, 226, 80, 100, 120, 300};
-static int height[] = {0, 24, 0, 20, 200, 9, 9, 9, 200, 160, 100, 150, 160, 200};
-static int margins[] = {0, 0, 2, 7, 100, 9, 9, 9, 10, 0, 150, 20, 100, 0, 160};
+static int width[] = {0, 20, 0, 60, 250, 0, 24, 24, 180, 226, 80, 100, 120, 300};
+static int height[] = {0, 24, 0, 20, 200, 0, 9, 9, 200, 160, 100, 150, 160, 200};
+static int margins[] = {0, 0, 2, 7, 100, 0, 9, 9, 10, 0, 150, 20, 100, 0, 160};
 
-static void WidgetAutosize(Widget *w) { 
+static void WidgetAutosize(Widget *w) {	
     HDC dc = GetWindowDC(w->handle);
     int len = GetWindowTextLengthW(w->handle);
     wchar_t *str = malloc((len + 1)*sizeof(wchar_t));
@@ -981,18 +975,16 @@ LUA_METHOD(Widget, loadicon) {
 	BOOL result = FALSE;
 	if (w->icon)
 		DestroyIcon(w->icon);
-	// if (icon) {
-		w->icon = icon; 
-		switch(w->wtype) {
-			case UIWindow:		result = SendMessage(w->handle, WM_SETICON, (WPARAM)ICON_SMALL,(LPARAM)icon);
-								SendMessage(w->handle, WM_SETICON, (WPARAM)ICON_BIG,(LPARAM)icon);
-								break;
-			case UIButton:		result = SendMessage(w->handle, BM_SETIMAGE, IMAGE_ICON, (LPARAM)icon); 
-								SetWindowPos(w->handle, NULL, 0, 0, 24, 24, SWP_NOMOVE | SWP_NOZORDER);
-								WidgetAutosize(w);
-			default:			break;
-		}	
-	// }
+	w->icon = icon; 
+	if (w->wtype == UIWindow) {
+		result = SendMessage(w->handle, WM_SETICON, (WPARAM)ICON_SMALL,(LPARAM)icon);
+		SendMessage(w->handle, WM_SETICON, (WPARAM)ICON_BIG,(LPARAM)icon);
+	} 
+	else if (w->wtype == UIButton) {
+		result = SendMessage(w->handle, BM_SETIMAGE, IMAGE_ICON, (LPARAM)icon); 
+		SetWindowPos(w->handle, NULL, 0, 0, 24, 24, SWP_NOMOVE | SWP_NOZORDER);
+		WidgetAutosize(w);
+	}	
 	lua_pushboolean(L, result);
 	return 1;
 }
@@ -1004,7 +996,7 @@ LUA_METHOD(Widget, center) {
     GetClientRect(hParent, &rp);
     GetWindowRect(w->handle, &rw);
 	
-	if (w->wtype) {
+	if (w->wtype != UIWindow) {
 		rw.bottom -= rw.top;
 		rw.right -= rw.left;
 		rw.left = rw.top = 0;

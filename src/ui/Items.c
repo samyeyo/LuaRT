@@ -86,14 +86,14 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 //---- utility functions for Windows control with items
 
 size_t get_count(Widget *w) {
-	static int msg[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, LVM_GETITEMCOUNT, CB_GETCOUNT, TVM_GETCOUNT, TCM_GETITEMCOUNT};
+	static int msg[] = {LVM_GETITEMCOUNT, CB_GETCOUNT, TVM_GETCOUNT, TCM_GETITEMCOUNT};
 	WidgetType type = w->wtype == UIItem ? w->item.itemtype : w->wtype;
 	HWND h = w->handle;
 	if (type == UITree)
 		return w->item.treeitem ? (size_t)w->item.treeitem->cChildren : TreeView_GetCount(h);
 	if ((w->wtype == UIItem) && type == UITab)
 		h = GetParent(h);
-	return SendMessage(w->status ?: h, msg[type], 0, 0); 
+	return SendMessage(w->status ?: h, msg[type-UIList], 0, 0); 
 }
 
 static wchar_t *get_text(HWND h, void *item, wchar_t **buff, int *len, UINT msg, int idx) { 
@@ -116,39 +116,41 @@ void *__get_item(Widget *w, int idx, HTREEITEM hti) {
 	void *result;
 	int i = 0;
 	UINT msg;
+	int t = w->wtype == UIItem ? w->item.itemtype : w->wtype;
 
-	switch(w->wtype == UIItem ? w->item.itemtype : w->wtype) {
-		case UITree: if(!hti)
-						return NULL;
-					result = calloc(1, sizeof(TVITEMW));
-					((TVITEMW*)result)->hItem = hti;
-					((TVITEMW*)result)->mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_CHILDREN;
-					text = &(((TVITEMW*)result)->pszText);
-					len = &(((TVITEMW*)result)->cchTextMax);
-					msg = TVM_GETITEMW;
-					break;
-		case UITab:	result = calloc(1, sizeof(TCITEMW));
-					((TCITEMW*)result)->mask = TCIF_TEXT | TCIF_PARAM | TCIF_IMAGE;
-					text = &(((TCITEMW*)result)->pszText);
-					len = &(((TCITEMW*)result)->cchTextMax);
-					msg = TCM_GETITEMW;		
-					i = idx;			
-					break;
-		case UIList:result = calloc(1, sizeof(LVITEMW));
-					((LVITEMW*)result)->mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE;
-					((LVITEMW*)result)->iItem = idx;
-					text = &(((LVITEMW*)result)->pszText);
-					len = &(((LVITEMW*)result)->cchTextMax);
-					msg = LVM_GETITEMW;
-					break;
-		case UICombo: 
-					result = calloc(1, sizeof(COMBOBOXEXITEMW));
-					((COMBOBOXEXITEMW*)result)->mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
-					((COMBOBOXEXITEMW*)result)->iItem = idx;
-					text = &(((COMBOBOXEXITEMW*)result)->pszText);
-					len = &(((COMBOBOXEXITEMW*)result)->cchTextMax);
-					msg = CBEM_GETITEMW;		
-		default:	break;			
+	if (t == UITree) {
+		if(!hti)
+			return NULL;
+		result = calloc(1, sizeof(TVITEMW));
+		((TVITEMW*)result)->hItem = hti;
+		((TVITEMW*)result)->mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_CHILDREN;
+		text = &(((TVITEMW*)result)->pszText);
+		len = &(((TVITEMW*)result)->cchTextMax);
+		msg = TVM_GETITEMW;
+	}
+	else if (t == UITab) {
+		result = calloc(1, sizeof(TCITEMW));
+		((TCITEMW*)result)->mask = TCIF_TEXT | TCIF_PARAM | TCIF_IMAGE;
+		text = &(((TCITEMW*)result)->pszText);
+		len = &(((TCITEMW*)result)->cchTextMax);
+		msg = TCM_GETITEMW;		
+		i = idx;			
+	}
+	else if (t == UIList) {
+		result = calloc(1, sizeof(LVITEMW));
+		((LVITEMW*)result)->mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE;
+		((LVITEMW*)result)->iItem = idx;
+		text = &(((LVITEMW*)result)->pszText);
+		len = &(((LVITEMW*)result)->cchTextMax);
+		msg = LVM_GETITEMW;
+	}
+	else if (t == UICombo) {
+		result = calloc(1, sizeof(COMBOBOXEXITEMW));
+		((COMBOBOXEXITEMW*)result)->mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
+		((COMBOBOXEXITEMW*)result)->iItem = idx;
+		text = &(((COMBOBOXEXITEMW*)result)->pszText);
+		len = &(((COMBOBOXEXITEMW*)result)->cchTextMax);
+		msg = CBEM_GETITEMW;		
 	}
 	get_text(w->handle, result, text, len, msg, i);
 	return result;
@@ -202,52 +204,57 @@ static int __add_item(Widget *w, wchar_t *str, HTREEITEM hti) {
 	int idx = 0, result = 0;
 	void *item = NULL;
 	
-	switch(w->wtype) {
-		case UIItem:			hti = hti ?: w->item.treeitem->hItem;
-		case UITree:			item = calloc(1, sizeof(TVINSERTSTRUCTW));
-								((TVINSERTSTRUCTW*)item)->item.mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-								((TVINSERTSTRUCTW*)item)->item.pszText = str;
-								((TVINSERTSTRUCTW*)item)->item.lParam =(LPARAM)h;
-								((TVINSERTSTRUCTW*)item)->hParent = hti;
-								((TVINSERTSTRUCTW*)item)->hInsertAfter = TVI_LAST;
-								((TVINSERTSTRUCTW*)item)->item.iImage = __INT16_MAX__;
-								((TVINSERTSTRUCTW*)item)->item.iSelectedImage = __INT16_MAX__;								
-								msg = TVM_INSERTITEMW;
-								break;
-		case UITab:				item = calloc(1, sizeof(TCITEMW));
-								RECT r; 
-								GetClientRect(w->handle, &r);
-								hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 22, r.right-r.left-4, r.bottom-r.top-24, h, NULL, GetModuleHandle(NULL), NULL);
-								SetWindowLongPtr(hh, GWLP_WNDPROC, (ULONG_PTR)PageProc);
-								SetWindowLongPtr(hh, GWLP_USERDATA, (ULONG_PTR)w);
-								BringWindowToTop(hh);
-								((TCITEMW*)item)->mask = TCIF_TEXT | TCIF_PARAM;
-								((TCITEMW*)item)->pszText = str;
-								((TCITEMW*)item)->lParam = (LPARAM)hh;
-								((TCITEMW*)item)->iImage = -1;
-								msg = TCM_INSERTITEMW;
-								idx = count;
-								break;
-		case UIList:			item = calloc(1, sizeof(LVITEMW));	
-								((LVITEMW*)item)->mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE | LVIF_STATE;
-								((LVITEMW*)item)->pszText = str;
-								((LVITEMW*)item)->lParam = (LPARAM)h;
-								((LVITEMW*)item)->iImage = -1;
-								((LVITEMW*)item)->iSubItem = 0;
-								((LVITEMW*)item)->iItem = count;
-								((LVITEMW*)item)->state = LVIS_FOCUSED;
-								((LVITEMW*)item)->stateMask = LVIS_FOCUSED;
-								msg = LVM_INSERTITEMW;
-								break;
-		case UICombo:			item = calloc(1, sizeof(COMBOBOXEXITEMW));	
-								((COMBOBOXEXITEMW*)item)->mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
-								((COMBOBOXEXITEMW*)item)->pszText = str;
-								((COMBOBOXEXITEMW*)item)->lParam =(LPARAM)h;
-								((COMBOBOXEXITEMW*)item)->iItem = count;
-								((COMBOBOXEXITEMW*)item)->iImage = -1;
-								((COMBOBOXEXITEMW*)item)->iSelectedImage = -1;
-								msg = CBEM_INSERTITEMW;
-		default:				break;
+	if (w->wtype == UIItem) {
+		hti = hti ?: w->item.treeitem->hItem;
+		goto tree;
+	}
+	else if (w->wtype == UITree) {
+tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
+		((TVINSERTSTRUCTW*)item)->item.mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+		((TVINSERTSTRUCTW*)item)->item.pszText = str;
+		((TVINSERTSTRUCTW*)item)->item.lParam =(LPARAM)h;
+		((TVINSERTSTRUCTW*)item)->hParent = hti;
+		((TVINSERTSTRUCTW*)item)->hInsertAfter = TVI_LAST;
+		((TVINSERTSTRUCTW*)item)->item.iImage = __INT16_MAX__;
+		((TVINSERTSTRUCTW*)item)->item.iSelectedImage = __INT16_MAX__;								
+		msg = TVM_INSERTITEMW;	
+	}
+	else if (w->wtype == UITab) {
+		item = calloc(1, sizeof(TCITEMW));
+		RECT r; 
+		GetClientRect(w->handle, &r);
+		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 22, r.right-r.left-4, r.bottom-r.top-24, h, NULL, GetModuleHandle(NULL), NULL);
+		SetWindowLongPtr(hh, GWLP_WNDPROC, (ULONG_PTR)PageProc);
+		SetWindowLongPtr(hh, GWLP_USERDATA, (ULONG_PTR)w);
+		BringWindowToTop(hh);
+		((TCITEMW*)item)->mask = TCIF_TEXT | TCIF_PARAM;
+		((TCITEMW*)item)->pszText = str;
+		((TCITEMW*)item)->lParam = (LPARAM)hh;
+		((TCITEMW*)item)->iImage = -1;
+		msg = TCM_INSERTITEMW;
+		idx = count;
+	}
+	else if (w->wtype == UIList) {
+		item = calloc(1, sizeof(LVITEMW));	
+		((LVITEMW*)item)->mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE | LVIF_STATE;
+		((LVITEMW*)item)->pszText = str;
+		((LVITEMW*)item)->lParam = (LPARAM)h;
+		((LVITEMW*)item)->iImage = -1;
+		((LVITEMW*)item)->iSubItem = 0;
+		((LVITEMW*)item)->iItem = count;
+		((LVITEMW*)item)->state = LVIS_FOCUSED;
+		((LVITEMW*)item)->stateMask = LVIS_FOCUSED;
+		msg = LVM_INSERTITEMW;
+	}
+	else if (w->wtype == UICombo) {
+		item = calloc(1, sizeof(COMBOBOXEXITEMW));	
+		((COMBOBOXEXITEMW*)item)->mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
+		((COMBOBOXEXITEMW*)item)->pszText = str;
+		((COMBOBOXEXITEMW*)item)->lParam =(LPARAM)h;
+		((COMBOBOXEXITEMW*)item)->iItem = count;
+		((COMBOBOXEXITEMW*)item)->iImage = -1;
+		((COMBOBOXEXITEMW*)item)->iSelectedImage = -1;
+		msg = CBEM_INSERTITEMW;
 	}
 	ImageList_SetImageCount(w->imglist, ImageList_GetImageCount(w->imglist)+1);
 	result = SendMessageW(h, msg, idx, (LPARAM)item);
@@ -276,73 +283,71 @@ void __free_item(Widget *w, size_t idx, HTREEITEM hti) {
 	} else if (idx < (size_t)get_count(w)) {
 		if(w->wtype == UIItem)
 			w = ((Widget*)GetWindowLongPtr(w->item.itemtype == UITab ? GetParent(w->handle) : w->handle, GWLP_USERDATA));
-		switch(w->wtype) {
-			case UITab : 	{
-								TCITEMW *item = get_item(w, idx);
-								size_t n;
-								DestroyWindow((HWND)item->lParam);
-								free(item->pszText);
-								free(item);
-								TabCtrl_DeleteItem(w->handle, idx);
-								ImageList_Remove(w->imglist, idx);
-								if ((n = get_count(w))) {
-									idx = idx < n ? idx : idx-1;
-									TCITEMW *newitem = get_item(w, idx);
-									TabCtrl_SetCurFocus(w->handle, idx);
-									BringWindowToTop((HWND)newitem->lParam);
-									SetFocus((HWND)newitem->lParam);
-									free(newitem->pszText);
-									free(newitem);
-								}
-							} break;
-			case UIList: 	{
-								sort_info si;
-								ListView_DeleteItem(w->handle, idx);
-								ImageList_Remove(w->imglist, idx);
-								si.w = w;
-								si.mode = -1;
-								ListView_SortItemsEx(w->handle, sort_func, &si);
-								ListView_SetColumnWidth(w->handle, 0, adjust_listvscroll(w, -1, 0));
-							} break;
-			case UICombo: 	{
-								SendMessage(w->handle, CBEM_DELETEITEM, idx, 0);
-								ImageList_Remove(w->imglist, idx);
-							}	
-			default:		break;
+		if (w->wtype == UITab) {
+			TCITEMW *item = get_item(w, idx);
+			size_t n;
+			DestroyWindow((HWND)item->lParam);
+			free(item->pszText);
+			free(item);
+			TabCtrl_DeleteItem(w->handle, idx);
+			ImageList_Remove(w->imglist, idx);
+			if ((n = get_count(w))) {
+				idx = idx < n ? idx : idx-1;
+				TCITEMW *newitem = get_item(w, idx);
+				TabCtrl_SetCurFocus(w->handle, idx);
+				BringWindowToTop((HWND)newitem->lParam);
+				SetFocus((HWND)newitem->lParam);
+				free(newitem->pszText);
+				free(newitem);
+			}
+		} 
+		else if (w->wtype == UIList) {
+			sort_info si;
+			ListView_DeleteItem(w->handle, idx);
+			ImageList_Remove(w->imglist, idx);
+			si.w = w;
+			si.mode = -1;
+			ListView_SortItemsEx(w->handle, sort_func, &si);
+			ListView_SetColumnWidth(w->handle, 0, adjust_listvscroll(w, -1, 0));
 		}
+		else if (w->wtype == UICombo) {
+			SendMessage(w->handle, CBEM_DELETEITEM, idx, 0);
+			ImageList_Remove(w->imglist, idx);
+		}	
 	}
 }
 
 LUA_CONSTRUCTOR(Item) {
     Widget *wp, *w = (Widget*)calloc(1, sizeof(Widget));
-    void *ptr;
-    
-    ptr = lua_touserdata(L, 2);
-    if ( (w->item.itemtype = (int)lua_tointeger(L, 3)) != UITree)
-        w->index = (int)lua_tointeger(L, 4);
-    w->wtype = UIItem;
-    switch(w->item.itemtype) {
-        case UITree :   w->item.treeitem = ptr;
-                        w->handle = (HWND)w->item.treeitem->lParam;
-                        break;
-        case UITab :    w->item.tabitem = ptr;
-                        w->handle = (HWND)(w->item.tabitem->lParam);
-                        break;                                              
-        case UIList :   w->item.listitem = ptr;
-                        w->handle = (HWND)w->item.listitem->lParam;
-                        break;
-        case UICombo :  w->item.cbitem = ptr;
-                        w->handle = (HWND)w->item.cbitem->lParam;
-        default:        break;
-    }
+    void *ptr = lua_touserdata(L, 2);
+
+	if ( (w->item.itemtype = (int)lua_tointeger(L, 3)) != UITree)
+		w->index = (int)lua_tointeger(L, 4);
+	w->wtype = UIItem;
+	if (w->item.itemtype == UITree) {
+		w->item.treeitem = ptr;
+		w->handle = (HWND)w->item.treeitem->lParam;
+	}
+	else if (w->item.itemtype == UITab) {
+		w->item.tabitem = ptr;
+		w->handle = (HWND)(w->item.tabitem->lParam);
+	}
+	if (w->item.itemtype == UIList) {
+		w->item.listitem = ptr;
+		w->handle = (HWND)w->item.listitem->lParam;
+	}
+	if (w->item.itemtype == UICombo) {
+		w->item.cbitem = ptr;
+		w->handle = (HWND)w->item.cbitem->lParam;
+	}
     wp = (Widget*)GetWindowLongPtr(w->handle, GWLP_USERDATA);
     w->imglist = wp->imglist;
-    if (w->item.itemtype == UITab) 
+	if (w->item.itemtype == UITab) 
         SetFontFromWidget(w, wp);
-    lua_newinstance(L, w, Widget);
-    lua_pop(L, 1);
-    lua_pushvalue(L, 1);
-    return 1;
+	lua_newinstance(L, w, Widget);
+	lua_pop(L, 1);
+	lua_pushvalue(L, 1);
+	return 1;
 }
 
 LUA_METHOD(Items, __len) {
@@ -364,45 +369,46 @@ static int find_item_bytext(lua_State *L, Widget *w, int idx, HTREEITEM *hti) {
 	DWORD start = TVGN_ROOT;
 	wchar_t *text = lua_towstring(L, idx);
 	idx = -1;
-	switch(w->wtype) {
-		case UIItem:	result = w->item.treeitem->hItem;
-						start = TVGN_CHILD;
-		case UITree: 	{	
-							while((idx == -1) && (result = (HTREEITEM)SendMessageW(w->handle, TVM_GETNEXTITEM, (WPARAM)start, (LPARAM)result))) {
-								if (result) {
-									TVITEMW *item = __get_item(w, 0, result);
-									if ( wcscmp(item->pszText, text) == 0 ) {
-										result = item->hItem;
-										idx = TRUE;
-									}
-									free(item->pszText);
-									free(item);
-									start = TVGN_NEXT;
-								} else break;
-							}
-
-						} break;
-		case UITab:		{
-							int i = get_count(w);
-							while (--i > -1) {
-								TCITEMW *item = get_item(w, i);
-								if ( wcscmp(item->pszText, text) == 0 )
-									idx = i;
-								free(item->pszText);
-								free(item);
-								if (idx > -1)
-									break;
-							}
-						} break;
-		case UIList: 	{ 
-							LVFINDINFOW fi;
-							fi.flags = LVFI_STRING;
-							fi.psz = text;
-							idx = SendMessageW(w->handle, LVM_FINDITEMW, -1, (LPARAM)&fi);
-						}	break;
-		case UICombo:	idx = SendMessageW(w->handle, CB_FINDSTRINGEXACT, -1, (LPARAM)text);
-		default:		break;
+	if (w->wtype == UIItem) {
+		result = w->item.treeitem->hItem;
+		start = TVGN_CHILD;
+		goto start;
 	}
+	else if (w->wtype == UITree) {	
+start:		
+		while((idx == -1) && (result = (HTREEITEM)SendMessageW(w->handle, TVM_GETNEXTITEM, (WPARAM)start, (LPARAM)result))) {
+			if (result) {
+				TVITEMW *item = __get_item(w, 0, result);
+				if ( wcscmp(item->pszText, text) == 0 ) {
+					result = item->hItem;
+					idx = TRUE;
+				}
+				free(item->pszText);
+				free(item);
+				start = TVGN_NEXT;
+			} else break;
+		}
+	}
+	else if (w->wtype == UIItem) {
+		int i = get_count(w);
+		while (--i > -1) {
+			TCITEMW *item = get_item(w, i);
+			if ( wcscmp(item->pszText, text) == 0 )
+				idx = i;
+			free(item->pszText);
+			free(item);
+			if (idx > -1)
+				break;
+		}
+	}
+	else if (w->wtype == UIList) { 
+		LVFINDINFOW fi;
+		fi.flags = LVFI_STRING;
+		fi.psz = text;
+		idx = SendMessageW(w->handle, LVM_FINDITEMW, -1, (LPARAM)&fi);
+	}
+	else if (w->wtype == UICombo)
+		idx = SendMessageW(w->handle, CB_FINDSTRINGEXACT, -1, (LPARAM)text);
 	free(text);
 	*hti = result;
 	return idx;
@@ -538,23 +544,22 @@ void add_column(Widget *w) {
 
 LUA_METHOD(Listbox, clear) {
 	Widget *w = lua_self(L, 1, Widget);
-	switch(w->wtype) {
-		case UITree:	TreeView_DeleteAllItems(w->handle);
-						w->index = 0;
-						break;
-		case UITab:	{
-						int i, count = get_count(w);
-						for (i = count; i >= 0; i--)
-							free_item(w, i);
-						TabCtrl_DeleteAllItems(w->handle);
-					} break;				
-		case UIList:	ListView_DeleteAllItems(w->handle);
-						adjust_listvscroll(w, -1, 0);
-						break;
-		case UICombo:	ComboBox_SetText(w->handle, "");
-		default: 		break;
-
+	if (w->wtype == UITree) {
+		TreeView_DeleteAllItems(w->handle);
+		w->index = 0;
 	}
+	else if (w->wtype == UITab)	{
+		int i, count = get_count(w);
+		for (i = count; i >= 0; i--)
+			free_item(w, i);
+		TabCtrl_DeleteAllItems(w->handle);
+	}				
+	else if(w->wtype == UIList) {
+		ListView_DeleteAllItems(w->handle);
+		adjust_listvscroll(w, -1, 0);
+	}
+	else if (w->wtype == UICombo)
+		ComboBox_SetText(w->handle, "");		
 	ImageList_RemoveAll(w->imglist);
 	return 0;
 }
@@ -655,9 +660,9 @@ LUA_PROPERTY_GET(Listbox, count) {
 
 LUA_PROPERTY_SET(Listbox, items) {
     Widget *w = lua_self(L, 1, Widget);
-    static int resetmsg[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, LVM_DELETEALLITEMS, CB_RESETCONTENT, TVM_DELETEITEM, TCM_DELETEALLITEMS};
- 
-    SendMessageW(w->handle, resetmsg[w->wtype], 0, (LPARAM)TVI_ROOT);
+    static int resetmsg[] = {LVM_DELETEALLITEMS, CB_RESETCONTENT, TVM_DELETEITEM, TCM_DELETEALLITEMS};
+
+	SendMessageW(w->handle, resetmsg[w->wtype-UIList], 0, (LPARAM)TVI_ROOT);
     set_newitems(L, w, 2, w->item.itemtype == UITree ? w->item.treeitem->hItem : NULL);
     if (w->wtype == UITab && get_count(w)) {
         TCITEMW *item = get_item(w, 0);
@@ -685,13 +690,14 @@ LUA_PROPERTY_GET(Listbox, selected) {
 	HTREEITEM hti = NULL;
 	
 	lua_pushnil(L);
-	switch(w->wtype) {
-		case UITree:	hti = (HTREEITEM)SendMessageW(w->handle, TVM_GETNEXTITEM, TVGN_CARET, 0); break;
-		case UITab:		i = SendMessageW(w->handle, TCM_GETCURSEL, 0, 0); break;
-		case UIList:	i = SendMessage(w->handle, LVM_GETNEXTITEM, -1,  LVNI_SELECTED | LVNI_FOCUSED); break;
-		case UICombo:	i = SendMessage(w->status, CB_GETCURSEL, 0, 0);
-		default:		break;
-	}
+	if (w->wtype == UITree)
+		hti = (HTREEITEM)SendMessageW(w->handle, TVM_GETNEXTITEM, TVGN_CARET, 0);
+	else if (w->wtype == UITab)		
+		i = SendMessageW(w->handle, TCM_GETCURSEL, 0, 0);
+	else if (w->wtype == UIList)
+		i = SendMessage(w->handle, LVM_GETNEXTITEM, -1,  LVNI_SELECTED | LVNI_FOCUSED);
+	else if (w->wtype == UICombo)
+		i = SendMessage(w->status, CB_GETCURSEL, 0, 0);
 	if ( hti || (i != -1 && (LONG)get_count(w) >= i))
 		__push_item(L, w, i, hti);
 	return 1;
@@ -706,33 +712,30 @@ LUA_PROPERTY_SET(Listbox, selected) {
 	if (w->wtype != sel->item.itemtype)
 		luaL_typeerror(L, 2, w->wtype == UITab ? "TabItem" : (w->wtype == UICombo ? "ComboItem" : "ListItem"));
 	if ((w->handle == sel->handle || w->handle == GetParent(sel->handle)) && (sel->index >= 0 && sel->index <= (int)get_count(w))) {
-		switch(w->wtype) {
-			case UITree:	TreeView_SelectItem(w->handle, sel->item.treeitem->hItem);
-							break;
-			case UIList:	ListView_SetItemState(w->handle, sel->index,LVIS_FOCUSED | LVIS_SELECTED,LVIS_FOCUSED | LVIS_SELECTED);
-							SetFocus(w->handle);
-							break;
-			case UITab:		SendMessageW(GetParent(w->handle), TCM_SETCURSEL, sel->index, 1);
-							break;
-			case UICombo:	SendMessageW(w->status ?: w->handle, CB_SETCURSEL, sel->index, 1);
-							SetWindowTextW(w->handle, sel->item.cbitem->pszText);
-			default:		break;
+		if (w->wtype == UITree)
+			TreeView_SelectItem(w->handle, sel->item.treeitem->hItem);
+		else if (w->wtype == UIList) {
+			ListView_SetItemState(w->handle, sel->index,LVIS_FOCUSED | LVIS_SELECTED,LVIS_FOCUSED | LVIS_SELECTED);
+			SetFocus(w->handle);
+		}
+		else if (w->wtype == UITab)
+			SendMessageW(GetParent(w->handle), TCM_SETCURSEL, sel->index, 1);
+		else if (w->wtype == UICombo) {
+			SendMessageW(w->status ?: w->handle, CB_SETCURSEL, sel->index, 1);
+			SetWindowTextW(w->handle, sel->item.cbitem->pszText);
 		}
 	}
 	else 
 		luaL_error(L, "cannot select an item that don't belong to this %s object", luart_wtypes[w->wtype]);
-	switch(w->wtype) {
-		case UITab: {
-						NMHDR lparam = {0};
-						lparam.code = TCN_SELCHANGE;
-						lparam.idFrom = id;
-						lparam.hwndFrom = w->handle;
-						SendMessageW(h, WM_NOTIFY, (WPARAM)lparam.hwndFrom, (LPARAM)&lparam );
-						break;
-					}
-		case UICombo:	SendMessageW(h , WM_COMMAND, MAKEWPARAM(id, CBN_SELCHANGE), (LPARAM)w->handle);
-		default: 		break;
+	if (w->wtype == UITab) {
+		NMHDR lparam = {0};
+		lparam.code = TCN_SELCHANGE;
+		lparam.idFrom = id;
+		lparam.hwndFrom = w->handle;
+		SendMessageW(h, WM_NOTIFY, (WPARAM)lparam.hwndFrom, (LPARAM)&lparam );
 	}
+	else if (w->wtype == UICombo)
+		SendMessageW(w->handle , WM_COMMAND, MAKEWPARAM(id, CBN_SELCHANGE), (LPARAM)w->handle);
 	return 0;
 }	
 
@@ -765,34 +768,36 @@ LUA_METHOD(Item, loadicon) {
 	if (icon) {
 		if (w->icon)
 			DestroyIcon(w->icon);
-		switch(w->item.itemtype) {
-			case UITree:	msg = TVM_SETITEMW;
-							item = w->item.treeitem;
-							w->item.treeitem->mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-							if (w->item.treeitem->iImage == __INT16_MAX__) {
-								w->index = ((Widget*)GetWindowLongPtr(h, GWLP_USERDATA))->index++;
-								w->item.treeitem->iImage = w->index;
-							} else 
-								w->index = w->item.treeitem->iImage;
-							w->item.treeitem->iSelectedImage = w->index;
-							idx = 0;
-							break;
-			case UITab:		msg = TCM_SETITEMW;
-							w->item.tabitem->iImage = w->index;
-							item = w->item.tabitem;
-							h = GetParent(h);
-							break;
-			case UIList:	msg = LVM_SETITEMW;
-							w->item.listitem->iImage = w->index;
-							idx = 0;
-							item = w->item.listitem;
-							break;
-			case UICombo:	msg = CBEM_SETITEMW;
-							w->item.cbitem->iImage = w->index;
-							w->item.cbitem->iSelectedImage = w->index;
-							idx = 0;
-							item = w->item.cbitem;
-			default:		break;
+		if(w->item.itemtype == UITree) {
+			msg = TVM_SETITEMW;
+			item = w->item.treeitem;
+			w->item.treeitem->mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+			if (w->item.treeitem->iImage == __INT16_MAX__) {
+				w->index = ((Widget*)GetWindowLongPtr(h, GWLP_USERDATA))->index++;
+				w->item.treeitem->iImage = w->index;
+			} else 
+				w->index = w->item.treeitem->iImage;
+			w->item.treeitem->iSelectedImage = w->index;
+			idx = 0;
+		}
+		else if(w->item.itemtype == UITab) {
+			msg = TCM_SETITEMW;
+			w->item.tabitem->iImage = w->index;
+			item = w->item.tabitem;
+			h = GetParent(h);
+		}
+		else if(w->item.itemtype == UIList) {
+			msg = LVM_SETITEMW;
+			w->item.listitem->iImage = w->index;
+			idx = 0;
+			item = w->item.listitem;
+		}
+		else if(w->item.itemtype == UICombo) {
+			msg = CBEM_SETITEMW;
+			w->item.cbitem->iImage = w->index;
+			w->item.cbitem->iSelectedImage = w->index;
+			idx = 0;
+			item = w->item.cbitem;
 		}
 		SendMessageW(h, msg, (WPARAM)idx, (LPARAM) item);
 		if (ImageList_ReplaceIcon(w->imglist, w->index, icon) == -1) {
@@ -818,23 +823,24 @@ LUA_PROPERTY_SET(Item, index) {
 	sort_info si;
 	int idx = (int)luaL_checkinteger(L, 2)-1;
 	if (idx >= 0 && idx < (int)get_count(w)) {
-		switch(w->item.itemtype) {
-			case UITab : 	SendMessage(GetParent(w->handle), TCM_DELETEITEM, w->index, 0);
-							SendMessageW(w->handle, TCM_INSERTITEMW, (WPARAM)idx, (LPARAM)w->item.tabitem);
-							break;
-			case UIList : 	SendMessage(w->handle, LVM_DELETEITEM, (WPARAM)w->index, 0); 
-							w->item.listitem->iItem = idx;
-							SendMessageW(w->handle, LVM_INSERTITEMW, 0, (LPARAM)w->item.listitem);
-							si.w = w;
-							si.mode = -1;
-							ListView_SortItemsEx(w->handle, sort_func, &si);
-							ListView_SetItemState(w->handle, idx, LVIS_FOCUSED | LVIS_SELECTED,LVIS_FOCUSED | LVIS_SELECTED);
-							SetFocus(w->handle);
-							break;
-			case UICombo : 	SendMessage(w->handle, CBEM_DELETEITEM, (WPARAM)w->index, 0);
-							w->item.cbitem->iItem = idx;
-							SendMessageW(w->handle, CBEM_INSERTITEMW, 0, (LPARAM)w->item.cbitem);
-			default:		break;
+		if(w->item.itemtype == UITab) {
+			SendMessage(GetParent(w->handle), TCM_DELETEITEM, w->index, 0);
+			SendMessageW(w->handle, TCM_INSERTITEMW, (WPARAM)idx, (LPARAM)w->item.tabitem);
+		}
+		else if(w->item.itemtype == UIList) {
+		 	SendMessage(w->handle, LVM_DELETEITEM, (WPARAM)w->index, 0); 
+			w->item.listitem->iItem = idx;
+			SendMessageW(w->handle, LVM_INSERTITEMW, 0, (LPARAM)w->item.listitem);
+			si.w = w;
+			si.mode = -1;
+			ListView_SortItemsEx(w->handle, sort_func, &si);
+			ListView_SetItemState(w->handle, idx, LVIS_FOCUSED | LVIS_SELECTED,LVIS_FOCUSED | LVIS_SELECTED);
+			SetFocus(w->handle);	
+		}
+		else if(w->item.itemtype == UICombo) {
+			SendMessage(w->handle, CBEM_DELETEITEM, (WPARAM)w->index, 0);
+			w->item.cbitem->iItem = idx;
+			SendMessageW(w->handle, CBEM_INSERTITEMW, 0, (LPARAM)w->item.cbitem);
 		}
 		w->index = idx;
 	}
@@ -872,13 +878,14 @@ LUA_PROPERTY_GET(Item, text) {
 	Widget *w = lua_self(L, 1, Widget);
 	wchar_t *text = NULL;
 	
-	switch(w->item.itemtype) {
-		case UITree:  text = w->item.treeitem->pszText; break;
-		case UITab :  text = w->item.tabitem->pszText; break;
-		case UIList:  text = w->item.listitem->pszText; break;
-		case UICombo: text = w->item.cbitem->pszText;
-		default: break;
-	}
+	if (w->item.itemtype == UITree)
+		text = w->item.treeitem->pszText;
+	else if(w->item.itemtype == UITab)
+	  	text = w->item.tabitem->pszText;
+	else if(w->item.itemtype == UIList)
+		text = w->item.listitem->pszText;
+	else if(w->item.itemtype == UICombo)
+		text = w->item.cbitem->pszText;
 	lua_pushwstring(L, text);
 	return 1;
 }
@@ -891,37 +898,39 @@ LUA_PROPERTY_SET(Item, text) {
 	int idx = 0;
 	void *item = NULL;
 	
-	switch(w->item.itemtype) {
-		case UITree:	w->item.treeitem->mask = TVIF_TEXT | TVIF_PARAM;
-						free(w->item.treeitem->pszText);
-						w->item.treeitem->pszText = str;
-						w->item.treeitem->lParam = (LPARAM)w->handle;
-						item = w->item.treeitem;
-						msg = TVM_SETITEMW;
-						break;
-		case UITab:		w->item.tabitem->mask = TCIF_TEXT | TCIF_PARAM;
-						free(w->item.tabitem->pszText);
-						w->item.tabitem->pszText = str;
-						w->item.tabitem->lParam = (LPARAM)w->handle;
-						h = GetParent(h);
-						item = w->item.tabitem;
-						idx = w->index;
-						msg = TCM_SETITEMW;
-						break;
-		case UIList:	w->item.listitem->mask = LVIF_TEXT | LVIF_PARAM;
-						free(w->item.listitem->pszText);
-						w->item.listitem->pszText = str;
-						w->item.listitem->lParam = (LPARAM)w->handle;
-						item = w->item.listitem;
-						msg = LVM_SETITEMW;
-						break;
-		case UICombo:	w->item.cbitem->mask = CBEIF_TEXT | LVIF_PARAM;
-						free(w->item.cbitem->pszText);
-						w->item.cbitem->pszText = str;
-						w->item.cbitem->lParam = (LPARAM)w->handle;
-						item = w->item.cbitem;
-						msg = CBEM_SETITEMW;
-		default:		break;		
+	if(w->item.itemtype == UITree) {
+		w->item.treeitem->mask = TVIF_TEXT | TVIF_PARAM;
+		free(w->item.treeitem->pszText);
+		w->item.treeitem->pszText = str;
+		w->item.treeitem->lParam = (LPARAM)w->handle;
+		item = w->item.treeitem;
+		msg = TVM_SETITEMW;
+	}
+	else if(w->item.itemtype == UITab) {
+		w->item.tabitem->mask = TCIF_TEXT | TCIF_PARAM;
+		free(w->item.tabitem->pszText);
+		w->item.tabitem->pszText = str;
+		w->item.tabitem->lParam = (LPARAM)w->handle;
+		h = GetParent(h);
+		item = w->item.tabitem;
+		idx = w->index;
+		msg = TCM_SETITEMW;
+	}
+	else if(w->item.itemtype == UIList) {
+		w->item.listitem->mask = LVIF_TEXT | LVIF_PARAM;
+		free(w->item.listitem->pszText);
+		w->item.listitem->pszText = str;
+		w->item.listitem->lParam = (LPARAM)w->handle;
+		item = w->item.listitem;
+		msg = LVM_SETITEMW;
+	}
+	else if(w->item.itemtype == UICombo) {
+		w->item.cbitem->mask = CBEIF_TEXT | LVIF_PARAM;
+		free(w->item.cbitem->pszText);
+		w->item.cbitem->pszText = str;
+		w->item.cbitem->lParam = (LPARAM)w->handle;
+		item = w->item.cbitem;
+		msg = CBEM_SETITEMW;
 	}
 	SendMessageW(h, msg, (WPARAM)idx, (LPARAM)item);	
 	return 1;
@@ -938,21 +947,22 @@ LUA_METHOD(Item, __eq) {
 }
 
 LUA_METHOD(Item, __gc) {
-    Widget *w = lua_self(L, 1, Widget);
-    wchar_t *text = NULL;
-    switch(w->item.itemtype) {
-        case UITree : text = w->item.treeitem->pszText; break;
-        case UITab :  text = w->item.tabitem->pszText; break;
-        case UIList:  text = w->item.listitem->pszText; break;
-        case UICombo: text = w->item.cbitem->pszText;
-        default: break;
-    }
-    free(text);
-    free(w->item.listitem);
-    DestroyIcon(w->icon);
-    DeleteObject(w->font);
-    free(w);
-    return 0;
+	Widget *w = lua_self(L, 1, Widget);
+	wchar_t *text = NULL;
+	if (w->item.itemtype == UITree)
+		text = w->item.treeitem->pszText;
+	else if(w->item.itemtype == UITab)
+	  	text = w->item.tabitem->pszText;
+	else if(w->item.itemtype == UIList)
+		text = w->item.listitem->pszText;
+	else if(w->item.itemtype == UICombo)
+		text = w->item.cbitem->pszText;
+	free(text);
+	free(w->item.listitem);
+	DestroyIcon(w->icon);
+	DeleteObject(w->font);
+	free(w);
+	return 0;
 }
 
 luaL_Reg ItemWidget_methods[] = {

@@ -314,7 +314,7 @@ int usertype_constructor(lua_State *L) {
 	return 1;
 }
 
-int lua_registerobject(lua_State *L, luart_type *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
+int lua_registerobject(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
 	luart_type t;
 	int count = lua_gettop(L);
 
@@ -386,7 +386,7 @@ int lua_registerobject(lua_State *L, luart_type *type, const char *typename, lua
 		lua_rawset(L, -4);
 		lua_setfield(L, LUA_REGISTRYINDEX, typename);
 	}
-	return 1;
+	return t;
 }
 
 int lua_createinstance(lua_State *L, int idx) {

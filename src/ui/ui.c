@@ -28,6 +28,23 @@
 #include "..\resources\resource.h"
 
 static HMODULE richeditlib;
+int UIWindow;
+int UIButton;
+int UIGroup;
+int UICheck;
+int UIRadio;
+int UILabel;
+int UIEntry;
+int UIPicture;
+int UIDate;
+int UIMenu;
+int UIMenuItem;
+int UITab;
+int UIList;
+int UICombo;
+int UITree;
+int UIEdit;
+int UIItem;
 
 BOOL SaveImg(wchar_t *fname, HBITMAP hBitmap) {
 	BITMAP Bitmap;
@@ -287,15 +304,14 @@ LUA_METHOD(ui, remove) {
 		w = lua_self(L, 1, Widget);
 		if (w->ref)
 			luaL_unref(L, LUA_REGISTRYINDEX, w->ref);
-		switch (w->wtype) {
-			case UIMenu:	FreeMenu(L, w); break;
-			case UIItem:	{
-								Widget *parent = (Widget*)GetWindowLongPtr(w->item.itemtype == UITab ? GetParent(w->handle) : w->handle, GWLP_USERDATA);
-								free_item(parent, w->index);
-							} break;
-			case UIMenuItem:remove_menuitem(L, w, -1); break;
-			default:		DestroyWindow(w->handle);
-		}
+		if (w->wtype == UIMenu)
+			FreeMenu(L, w);
+		else if (w->wtype == UIItem) {
+			Widget *parent = (Widget*)GetWindowLongPtr(w->item.itemtype == UITab ? GetParent(w->handle) : w->handle, GWLP_USERDATA);
+			free_item(parent, w->index);
+		} else if (w->wtype == UIMenuItem)
+			remove_menuitem(L, w, -1);
+		else DestroyWindow(w->handle);
 		w->handle = NULL;
 		w->ref = 0;
 	}
@@ -627,33 +643,33 @@ LUAMOD_API int luaopen_ui(lua_State *L)
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(WINICON));
 	RegisterClassEx(&wcex);
 	lua_regmodulefinalize(L, ui); 
-	widget_type_new(L, UIWindow, Window_constructor, Window_methods, NULL, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE);
-	widget_type_new(L, UIButton, Button_constructor, NULL, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE);
-	widget_type_new(L, UIGroup, Groupbox_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
-	widget_type_new(L, UICheck, Checkbox_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
-	widget_type_new(L, UIRadio, Radiobutton_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
-	widget_type_new(L, UILabel, Label_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
-	widget_type_new(L, UIEntry, Entry_constructor, Entry_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
-	widget_type_new(L, UIPicture, Picture_constructor, Picture_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
-	widget_type_new(L, UIDate, Calendar_constructor, Calendar_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
-	widget_noinherit(L, "Menu", Menu_constructor, Menu_methods, Menu_metafields);
-	lua_registerobject(L, NULL, "MenuItem", MenuItem_constructor, MenuItem_methods, MenuItem_metafields);
-	lua_setfield(L, LUA_REGISTRYINDEX, "MenuItem");
-	widget_type_new(L, UITab, Tab_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
-	lua_registerobject(L, NULL, "TabItem", Item_constructor, Item_methods, Item_metafields);
-	luaL_setrawfuncs(L, Page_methods);
-	lua_setfield(L, LUA_REGISTRYINDEX, "TabItem");
-	widget_type_new(L, UICombo, Combobox_constructor, ItemWidget_methods, NULL, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
-	lua_registerobject(L, NULL, "ComboItem", Item_constructor, Item_methods, Item_metafields);
-	lua_setfield(L, LUA_REGISTRYINDEX, "ComboItem");
-	widget_type_new(L, UIList, Listbox_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UIWindow, "Window", Window_constructor, Window_methods, NULL, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE);
+	widget_type_new(L, &UIButton, "Button", Button_constructor, NULL, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE);
+	widget_type_new(L, &UILabel, "Label", Label_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
+	widget_type_new(L, &UIEntry, "Entry", Entry_constructor, Entry_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
+	if ( (richeditlib = LoadLibraryA("Riched20.dll")) )
+		widget_type_new(L, &UIEdit, "Edit", Edit_constructor, Edit_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_noinherit(L, &UIMenu, "Menu", Menu_constructor, Menu_methods, Menu_metafields);
+	widget_type_new(L, &UICheck, "Checkbox", Checkbox_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
+	widget_type_new(L, &UIRadio, "Radiobutton", Radiobutton_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
+	widget_type_new(L, &UIGroup, "Groupbox", Groupbox_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UIDate, "Date", Calendar_constructor, Calendar_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UIList, "List", Listbox_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UICombo, "Combobox", Combobox_constructor, ItemWidget_methods, NULL, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UITree, "Tree",Tree_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UITab, "Tab", Tab_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UIPicture, "Picture", Picture_constructor, Picture_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	lua_registerobject(L, NULL, "ListItem", Item_constructor, Item_methods, Item_metafields);
 	lua_setfield(L, LUA_REGISTRYINDEX, "ListItem");
-	widget_type_new(L, UITree, Tree_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	lua_registerobject(L, NULL, "ComboItem", Item_constructor, Item_methods, Item_metafields);
+	lua_setfield(L, LUA_REGISTRYINDEX, "ComboItem");
 	lua_registerobject(L, NULL, "TreeItem", Item_constructor, TreeItem_methods, Item_metafields);
 	lua_setfield(L, LUA_REGISTRYINDEX, "TreeItem");
-	if ( (richeditlib = LoadLibraryA("Riched20.dll")) )
-		widget_type_new(L, UIEdit, Edit_constructor, Edit_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	UIItem = lua_registerobject(L, NULL, "TabItem", Item_constructor, Item_methods, Item_metafields);
+	luaL_setrawfuncs(L, Page_methods);
+	lua_setfield(L, LUA_REGISTRYINDEX, "TabItem");
+	UIMenuItem = lua_registerobject(L,  NULL, "MenuItem", MenuItem_constructor, MenuItem_methods, MenuItem_metafields);
+	lua_setfield(L, LUA_REGISTRYINDEX, "MenuItem");
 	if (FAILED(CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (LPVOID*)&ui_factory)))
         luaL_error(L, "Failed to open 'ui' module : WIC Imaging Factory could not be created");
 	return 1;
