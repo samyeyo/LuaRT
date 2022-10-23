@@ -653,7 +653,7 @@ LUAMOD_API int luaopen_ui(lua_State *L)
 	widget_type_new(L, &UICheck, "Checkbox", Checkbox_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	widget_type_new(L, &UIRadio, "Radiobutton", Radiobutton_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	widget_type_new(L, &UIGroup, "Groupbox", Groupbox_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
-	widget_type_new(L, &UIDate, "Date", Calendar_constructor, Calendar_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UIDate, "Calendar", Calendar_constructor, Calendar_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UIList, "List", Listbox_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UICombo, "Combobox", Combobox_constructor, ItemWidget_methods, NULL, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UITree, "Tree",Tree_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);

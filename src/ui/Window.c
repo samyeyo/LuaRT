@@ -188,7 +188,8 @@ LUA_CONSTRUCTOR(Window) {
 	ncm.cbSize = sizeof(NONCLIENTMETRICS);
 	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 	w->font = CreateFontIndirect(&ncm.lfMessageFont);
-	SendMessage(w->handle, WM_SETFONT, (WPARAM)w->font, MAKELPARAM(TRUE, 0));	lua_newinstance(L, w, Widget);
+	SendMessage(w->handle, WM_SETFONT, (WPARAM)w->font, MAKELPARAM(TRUE, 0));
+	lua_newinstance(L, w, Widget);
 	lua_pushvalue(L, 1);
 	w->ref = luaL_ref(L, LUA_REGISTRYINDEX);
 	nid = calloc(1, sizeof(NOTIFYICONDATAW));
