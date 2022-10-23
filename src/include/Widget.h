@@ -137,6 +137,7 @@ BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf);
 int fontsize_fromheight(int height);
 LOGFONTW *Font(Widget *w);
 void UpdateFont(Widget *w, LOGFONTW *l);
+void SetFontFromWidget(Widget *w, Widget *wp);
 
 LUA_METHOD(Widget, __metanewindex); //----- for event registration
 LUA_METHOD(Widget, show);

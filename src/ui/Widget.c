@@ -322,31 +322,31 @@ static int width[] = {0, 20, 0, 60, 250, 16, 24, 24, 180, 226, 80, 100, 120, 300
 static int height[] = {0, 24, 0, 20, 200, 9, 9, 9, 200, 160, 100, 150, 160, 200};
 static int margins[] = {0, 0, 2, 7, 100, 9, 9, 9, 10, 0, 150, 20, 100, 0, 160};
 
-static void WidgetAutosize(Widget *w) {	
-	HDC dc = GetWindowDC(w->handle);
-	int len = GetWindowTextLengthW(w->handle);
-	wchar_t *str = malloc((len + 1)*sizeof(wchar_t));
-	RECT r = {0}, orig = {0};
-
-	GetWindowRect(w->handle, &orig);
-	orig.right -= orig.left;
-	orig.bottom -= orig.top;
-	GetWindowTextW(w->handle, str, len + 1);
-	SelectObject(dc, w->font);
-	DrawTextW(dc, str, len, &r, DT_CALCRECT); 
-	if (w->wtype == UIButton) {
-		if ((GetWindowLong(w->handle, GWL_STYLE) & ~BS_ICON) && len) {
-			RECT rr = {0};
-			rr.left = 6;
-			Button_SetTextMargin(w->handle, &rr);
-			if (w->icon)
-				r.right += GetSystemMetrics(SM_CXICON)/2;
-		}
-		r.right += 12;
-		r.bottom += 12;
-	}
-	SetWindowPos(w->handle, 0, 0, 0, max(r.right + margins[w->wtype]*2, orig.right),max(r.bottom + margins[w->wtype], orig.bottom), SWP_NOMOVE | SWP_NOZORDER);
-	free(str);
+static void WidgetAutosize(Widget *w) { 
+    HDC dc = GetWindowDC(w->handle);
+    int len = GetWindowTextLengthW(w->handle);
+    wchar_t *str = malloc((len + 1)*sizeof(wchar_t));
+    RECT r = {0}, orig = {0};
+ 
+    GetWindowRect(w->handle, &orig);
+    orig.right -= orig.left;
+    orig.bottom -= orig.top;
+    GetWindowTextW(w->handle, str, len + 1);
+    SelectObject(dc, w->font);
+    DrawTextW(dc, str, len, &r, DT_CALCRECT); 
+    if (w->wtype == UIButton) {
+        if ((GetWindowLong(w->handle, GWL_STYLE) & ~BS_ICON) && len) {
+            RECT rr = {0};
+            rr.left = 6;
+            Button_SetTextMargin(w->handle, &rr);
+            if (w->icon)
+                r.right += GetSystemMetrics(SM_CXICON)/2;
+        }
+        r.right += 12;
+        r.bottom += 12;
+    }
+    SetWindowPos(w->handle, 0, 0, 0, max(r.right + margins[w->wtype]*2, orig.right), max(r.bottom + margins[w->wtype], orig.bottom), SWP_NOMOVE | SWP_NOZORDER);
+    free(str);
 }
 
 Widget *check_widget(lua_State *L, int idx, WidgetType t) {
@@ -385,49 +385,48 @@ static void init_items(lua_State *L, Widget *w, int idx) {
 
 Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_t *classname, DWORD style, int caption, int autosize)
 {
-	Widget *wp;
-	HWND hParent;
-	static HINSTANCE hInstance;
-	Widget *w;
-	int idx = 3+caption;
-	HANDLE h;
-	wchar_t *text;
-	HMENU id = 0;
-			
-	if (lua_isuserdata(L, 2)) {
-		w = lua_touserdata(L, 2);
-		lua_pushnewinstance(L, luart_wtypes[w->wtype], 1);
-		return lua_self(L, -1, Widget);
-	}
-	wp = luaL_checkcinstance(L, 2, Widget);
-	if ((wp->wtype != UIWindow) && (wp->wtype != UIGroup) && ((wp->wtype != UIItem) || (wp->item.itemtype != UITab)))
-		luaL_typeerror(L, 2, "Groupbox, TabItem or Window");
-	hParent =  wp->wtype == UIItem ? (HWND)wp->item.tabitem->lParam : wp->handle;
-	text = caption && ((type < UIList) || (type > UITab)) ? lua_towstring(L, idx-1) : NULL;
-	if (!hInstance)
-		hInstance = GetModuleHandle(NULL);
-	if (wp->wtype == UIGroup)
-		id = ++wp->status;
-	h = CreateWindowExW(exstyle, classname, text, WS_VISIBLE | WS_CHILD | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type]), (int)luaL_optinteger(L, idx+3, height[type]), hParent, id, hInstance, NULL);
-	free(text);
-	w = calloc(1, sizeof(Widget));
-	w->handle = h;
-	SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
-	w->font = wp->font;
-	SendMessage(h, WM_SETFONT, (WPARAM)w->font, FALSE);
-	if (type != UIEdit)
-		w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
-	w->wtype = type;
-	if ((w->autosize = autosize) && (lua_gettop(L) < 6))
-		WidgetAutosize(w);
-	lua_newinstance(L, w, Widget);
-	lua_pushvalue(L, 1);
-	w->ref = luaL_ref(L, LUA_REGISTRYINDEX);
-	if ((type >= UIList) && (type <= UITab))
-		init_items(L, w, idx-1);
-	SetWindowSubclass(h, WidgetProc, 0, 0);
-	lua_callevent(w, onCreate);
-	return w;
+    Widget *wp;
+    HWND hParent;
+    static HINSTANCE hInstance;
+    Widget *w;
+    int idx = 3+caption;
+    HANDLE h;
+    wchar_t *text;
+    HMENU id = 0;
+            
+    if (lua_isuserdata(L, 2)) {
+        w = lua_touserdata(L, 2);
+        lua_pushnewinstance(L, luart_wtypes[w->wtype], 1);
+        return lua_self(L, -1, Widget);
+    }
+    wp = luaL_checkcinstance(L, 2, Widget);
+    if ((wp->wtype != UIWindow) && (wp->wtype != UIGroup) && ((wp->wtype != UIItem) || (wp->item.itemtype != UITab)))
+        luaL_typeerror(L, 2, "Groupbox, TabItem or Window");
+    hParent =  wp->wtype == UIItem ? (HWND)wp->item.tabitem->lParam : wp->handle;
+    text = caption && ((type < UIList) || (type > UITab)) ? lua_towstring(L, idx-1) : NULL;
+    if (!hInstance)
+        hInstance = GetModuleHandle(NULL);
+    if (wp->wtype == UIGroup)
+        id = ++wp->status;
+    h = CreateWindowExW(exstyle, classname, text, WS_VISIBLE | WS_CHILD | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type]), (int)luaL_optinteger(L, idx+3, height[type]), hParent, id, hInstance, NULL);
+    free(text);
+    w = calloc(1, sizeof(Widget));
+    w->handle = h;
+    SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
+    SetFontFromWidget(w, wp);
+    if (type != UIEdit)
+        w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
+    w->wtype = type;
+    if ((w->autosize = autosize) && (lua_gettop(L) < 6))
+        WidgetAutosize(w);
+    lua_newinstance(L, w, Widget);
+    lua_pushvalue(L, 1);
+    w->ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    if ((type >= UIList) && (type <= UITab))
+        init_items(L, w, idx-1);
+    SetWindowSubclass(h, WidgetProc, 0, 0);
+    lua_callevent(w, onCreate);
+    return w;
 }
 
 LUA_METHOD(Widget, show) {
@@ -784,6 +783,14 @@ void UpdateFont(Widget *w, LOGFONTW *l) {
 	if (w->wtype == UIGroup || (w->wtype == UIItem && w->item.itemtype == UITab) || w->wtype == UIWindow)
 		EnumChildWindows(w->handle, SetChildFont, (LPARAM)l); 
 	RedrawWindow(w->handle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+}
+
+void SetFontFromWidget(Widget *w, Widget *wp) {
+    LOGFONTW *l = Font(wp);
+    w->font = CreateFontIndirectW(l);
+    free(l);
+    SendMessage(w->handle, WM_SETFONT, (WPARAM)w->font, FALSE);
+    UpdateWindow(w->handle);    
 }
 
 LUA_PROPERTY_SET(Widget, font) {
