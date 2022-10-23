@@ -18,7 +18,7 @@
 #---- x86 for 32bits lua54.dll, liblua54.a and executables
 #---- x64 for 64bits lua54.dll, liblua54.a and executables
 
-PLATFORM = x86
+PLATFORM = x64
 
 #---- LuaRT version
 LUART_MAJOR= 1
@@ -62,11 +62,11 @@ RM= del /Q
 
 LUA_A=		lua54.dll
 CORE_O=		lua\lapi.o lrtapi.o lrtobject.o lua\lcode.o lua\lctype.o lua\ldebug.o lua\ldo.o lua\ldump.o lua\lfunc.o lua\lgc.o lua\llex.o lua\lmem.o lua\lobject.o lua\lopcodes.o lua\lparser.o lua\lstate.o lua\lstring.o lua\ltable.o lua\ltm.o lua\lundump.o lua\lvm.o lua\lzio.o
-OBJECTS_O=	sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o zip\Zip.o zip\lib\miniz.o zip\lib\zip.o
+OBJECTS_O=	sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o
 LIB_O=		$(LIBOBJ_O) lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o sys\sys.o console\console.o
-LUART_LIB_O= crypto\crypto.o net\net.o lembed.o
+LUART_LIB_O= crypto\crypto.o net\net.o lembed.o compression\compression.o
+LUART_OBJ_O= crypto\Cipher.o net\Socket.o net\Http.o net\Ftp.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o
 LUART_UI_O=  ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o
-LUART_OBJ_O= crypto\Cipher.o net\Socket.o net\Http.o net\Ftp.o 
 BASE_O= 	$(CORE_O) $(LIB_O) $(OBJECTS_O)
 
 LUART_T=	luart.exe
@@ -280,12 +280,12 @@ sys\Pipe.o: sys\Pipe.c include\Pipe.h include\File.h include\Buffer.h include\lu
 sys\Buffer.o: sys\Buffer.c include\Buffer.h include\luart.h
 sys\Date.o: sys\Date.c include\Date.h include\luart.h
 sys\Com.o: sys\Com.c include\Com.h include\luart.h
-zip\Zip.o: zip\Zip.c include\Zip.h include\luart.h
+compression\Zip.o: compression\Zip.c include\Zip.h include\luart.h
 
  # LuaRT library modules
 sys\sys.o: sys\sys.c include\Date.h include\File.h include\Buffer.h include\luart.h lrtapi.h
 console\console.o: console\console.c include\Date.h include\File.h include\Buffer.h include\luart.h lrtapi.h
-zip\zip.o: zip\zip.c include\File.h zip\lib\zip.h zip\lib\miniz.h \
+compression\zip.o: compression\zip.c include\File.h compression\lib\zip.h compression\lib\miniz.h \
  include\File.h include\Buffer.h include\luart.h lrtapi.h
 ui\Widget.o: ui\Widget.c include\Widget.h include\luart.h lrtapi.h
 ui\ui.o: ui\ui.c include\Widget.h include\luart.h lrtapi.h
