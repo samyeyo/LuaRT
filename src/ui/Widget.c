@@ -312,9 +312,9 @@ int GetText(lua_State *L, HANDLE h) {
 	return len;
 }
 
-static int width[] = {0, 20, 0, 60, 250, 0, 24, 24, 180, 226, 80, 100, 120, 300};
-static int height[] = {0, 24, 0, 20, 200, 0, 9, 9, 200, 160, 100, 150, 160, 200};
-static int margins[] = {0, 0, 2, 7, 100, 0, 9, 9, 10, 0, 150, 20, 100, 0, 160};
+static int width[] = {0, 20, 0, 60, 250, 16, 24, 24, 180, 226, 80, 100, 120, 300};
+static int height[] = {0, 24, 0, 20, 200, 9, 9, 9, 200, 160, 100, 150, 160, 200};
+static int margins[] = {0, 0, 2, 7, 100, 9, 9, 9, 10, 0, 150, 20, 100, 0, 160};
 
 static void WidgetAutosize(Widget *w) {	
     HDC dc = GetWindowDC(w->handle);
