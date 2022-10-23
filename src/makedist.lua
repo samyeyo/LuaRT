@@ -8,7 +8,7 @@
 
 
 local console = require("console")
-local zip = require("zip")
+local compression = require("compression")
 
 local VERSION = arg[2]
 local PLATFORM = arg[3]
@@ -51,7 +51,7 @@ copy(parent.."\\CHANGELOG.txt")
 file_add("../setup/uninstall.wlua", "local VERSION = '"..VERSION.."'")
 sys.cmd('luart-static.exe ../tools/rtc/src/rtc.lua -s -w -o "'..parent..'\\dist\\LuaRT-remove.exe" ../setup/uninstall.wlua ../setup/img >nul', false)
 
-z = zip.Zip(parent.."/setup/luaRT.zip", "write", 9)
+z = compression.Zip(parent.."/setup/luaRT.zip", "write", 9)
 z:write(dist)
 z:write(parent.."/examples", "examples")
 z:write(parent.."/tools/LuaRT-Studio", "LuaRT-Studio")
