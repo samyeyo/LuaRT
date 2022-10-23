@@ -570,9 +570,6 @@ LUA_CONSTRUCTOR(Combobox) {
 	SendMessage(w->handle, CBEM_SETUNICODEFORMAT, 1, 0);
 	SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
 	w->status = (HANDLE)SendMessageW(w->handle, CBEM_GETCOMBOCONTROL, 0, 0);
-	LOGFONTW *l = Font(w);
-	UpdateFont(w, l);
-	free(l);
 	return 1;
 }
 
