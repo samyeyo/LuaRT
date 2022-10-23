@@ -117,7 +117,7 @@ wchar_t *remove_trailing_sep(wchar_t *str) {
 	return str;
 }
 
-wchar_t *append_path(wchar_t *str, wchar_t* path) {
+static wchar_t *append_path(wchar_t *str, wchar_t* path) {
 	size_t len = wcslen(str) + wcslen(path)+2;
 	wchar_t *result = calloc(sizeof(wchar_t)*len, 1);
 	_snwprintf(result, len, L"%s/%s", str, path);
@@ -435,41 +435,3 @@ const luaL_Reg Zip_methods[] = {
 	{NULL, NULL}
 };
 
-LUA_METHOD(zip, isvalid) {
-	wchar_t *fname = luaL_checkFilename(L, 1);
-	struct zip_t *z = NULL;
-	BOOL isvalid = FALSE;
-	if ( (_waccess(fname, 0) == 0) && (z = zip_open(fname, MZ_DEFAULT_COMPRESSION, 'r')) ) {
-		isvalid = TRUE;
-		zip_close(z);
-	}
-	free(fname);
-
-	lua_pushboolean(L, isvalid);
-	return 1;
-}
-
-static const luaL_Reg zip_properties[] = {
-	{NULL, NULL}
-};
-
-static const luaL_Reg ziplib[] = {
-	{"isvalid",		zip_isvalid},
-	{NULL, NULL}
-};
-
-LUAMOD_API int luaopen_zip(lua_State *L) {
-	lua_regmodule(L, zip);
-	lua_regobjectmt(L, Zip);
-	return 1;
-}
-
-struct zip_t *open_fs(void *ptr, size_t size) {
-	struct zip_t *zip = (struct zip_t *)calloc((size_t)1, sizeof(struct zip_t));
-	zip->level = MZ_DEFAULT_LEVEL;
-	if (mz_zip_reader_init_mem(&zip->archive, ptr, size,  MZ_DEFAULT_LEVEL | MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY) == FALSE) {
-		free(zip);
-		zip = NULL;
-	}
-	return zip;
-}

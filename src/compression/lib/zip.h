@@ -336,7 +336,6 @@ extern int zip_extract(const wchar_t *zipname, const wchar_t *dir,
 /** @} */
 
 extern const char *zip_lasterror(struct zip_t *zip);
-struct zip_t *open_fs(void *ptr, size_t size);
 
 #ifdef __cplusplus
 }

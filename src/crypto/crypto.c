@@ -12,7 +12,7 @@
 #include <stdlib.h>
 
 #define MINIZ_HEADER_FILE_ONLY
-#include <zip\lib\miniz.h>
+#include <compression\lib\miniz.h>
 
 HCRYPTPROV hProv = 0;
 UNCRYPT uncrypt = NULL;

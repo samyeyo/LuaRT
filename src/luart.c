@@ -21,6 +21,9 @@
 extern int _CRT_glob;
 void __wgetmainargs(int*,wchar_t***,wchar_t***,int,int*);
 
+extern struct zip_t *fs;
+extern BYTE *datafs;
+
 #ifdef RTC
 
 #include <stdio.h>
@@ -132,11 +135,12 @@ static int update_exe_icon(lua_State *L) {
 wchar_t temp[MAX_PATH] = {0};
 static luaL_Reg luaRT_libs[] = {
 #ifndef RTCOMPAT
-   	{ "crypto",	luaopen_crypto },
-  	{ "net",	luaopen_net },
+   	{ "compression",	luaopen_compression },
+   	{ "crypto",			luaopen_crypto },
+  	{ "net",			luaopen_net },
 #endif
 #ifdef RTWIN
-    { "ui",		luaopen_ui },
+    { "ui",				luaopen_ui },
 #endif
   { NULL,		NULL }
 };

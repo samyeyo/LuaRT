@@ -11,7 +11,7 @@
 
 
 local ui = require "ui"
-local zip = require "zip"
+local compression = require "compression"
 
 local File = embed == nil and sys.File  or embed.File
 
@@ -52,7 +52,7 @@ function button:onClick()
     if dir ~= nil then
         local label = ui.Label(win, "", 80, 160)
         label.y = 160        
-        local archive = zip.Zip(File("luaRT.zip"))
+        local archive = compression.Zip(File("luaRT.zip"))
         local size = 0
         self:hide()
         for entry in each(archive) do

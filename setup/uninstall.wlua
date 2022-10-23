@@ -10,7 +10,6 @@
 
 
 local ui = require "ui"
-local zip = require "zip"
 
 local File = embed.File
 
