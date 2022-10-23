@@ -402,7 +402,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
         hInstance = GetModuleHandle(NULL);
     if (wp->wtype == UIGroup)
         id = ++wp->status;
-    h = CreateWindowExW(exstyle, classname, text, WS_VISIBLE | WS_CHILD | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type]), (int)luaL_optinteger(L, idx+3, height[type]), hParent, id, hInstance, NULL);
+    h = CreateWindowExW(exstyle, classname, text, WS_VISIBLE | WS_CHILD | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type-UIWindow]), (int)luaL_optinteger(L, idx+3, height[type-UIWindow]), hParent, id, hInstance, NULL);
     free(text);
     w = calloc(1, sizeof(Widget));
     w->handle = h;
