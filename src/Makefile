@@ -18,7 +18,7 @@
 #---- x86 for 32bits lua54.dll, liblua54.a and executables
 #---- x64 for 64bits lua54.dll, liblua54.a and executables
 
-PLATFORM = x86
+PLATFORM = x64
 
 #---- LuaRT version
 LUART_MAJOR= 1
@@ -48,8 +48,8 @@ DEFINES_RES= --target=$(TARGET) -D LUART_MINOR=$(LUART_MINOR) -D LUART_MAJOR=$(L
 BUILD := release
 
 DEST= ..\bin
-cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -std=c99 -Os -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I".\include" -Wall -Wextra -I"." -I".\\lua\\" -flto=auto -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
-ldflags.release= -s -static-libgcc -lm -Wl,--no-insert-timestamp -Wl,--no-seh -lgdi32 -flto=auto  -L"." 
+cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -std=c99 -Os -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I".\include" -Wall -Wextra -I"." -I".\\lua\\"  -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
+ldflags.release= -s -static-libgcc -lm -Wl,--no-insert-timestamp -Wl,--no-seh -lgdi32   -L"." 
 cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -std=c99 -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I".\include" -I"." -I".\\lua\\"
 ldflags.debug= -g -static-libgcc -lm -lgdi32 -L"."
 
@@ -145,13 +145,13 @@ $(LUA_A): $(BASE_O)
 $(LUART_T): $(LUA_A) $(LUART_LIB_O) $(LUART_OBJ_O) luart.c
 	@windres $(DEFINES_RES)  -I"./lua/" resources\resource.rc -o resource.o
 	$(info Linking luart.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) -flto=auto
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) 
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 $(LUAWRT_T): $(LUA_A) $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) luart.c ui\ui.o
 	@windres $(DEFINES_RES)  -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	$(info Linking wluart.exe...)
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 -flto=auto
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 quickrt: rtc compat
@@ -162,13 +162,16 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\tools\rtc\src >nul
+	ifeq (,$(wildcard ../tools/rtc/src/rtc.lua))
+    	$(error rtc sources not found. Go to https://github.com/samyeyo/rtc or clone rtc repository in the tools\rtc\ folder)
+	endif
 	@echo Compiling rtc.exe...
 	@windres $(DEFINES_RES)  -I"./lua/" resources\resource.rc -o resource.o
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) -flto=auto
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) 
 	@luart.exe ..\tools\rtc\src\rtc.lua -o rtc.exe ..\tools\rtc\src >nul
 	@echo Compiling wrtc.exe...
 	@windres $(DEFINES_RES)  -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
-	@$(CC) -mwindows $(CFLAGS) -DRTC -DRTWIN $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe luart.c -llua54 $(LUART_LIBS) -lgdi32 -flto=auto
+	@$(CC) -mwindows $(CFLAGS) -DRTC -DRTWIN $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe luart.c -llua54 $(LUART_LIBS) -lgdi32 
 	@luart.exe ..\tools\rtc\src\rtc.lua -o wrtc.exe -w -i ..\tools\rtc\src\img\rtc.ico ..\tools\rtc\src\rtc.lua ..\tools\rtc\src >nul
 	@-copy /Y rtc.exe "$(DEST)\rtc.exe" >nul	
 	@-copy /Y wrtc.exe "$(DEST)\wrtc.exe" >nul	
@@ -214,7 +217,7 @@ ALL= all
 .PHONY: all clean
 
 lvm.o: 
-	$(CC) $(CFLAGS) -c -O2 lvm.c -o $@ -flto=auto
+	$(CC) $(CFLAGS) -c -O2 lvm.c -o $@ 
 
 lua\lapi.o: lua\lapi.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lapi.h lua\llimits.h lua\lstate.h \
  lua\lobject.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldebug.h lua\ldo.h lua\lfunc.h lua\lgc.h lua\lstring.h \
