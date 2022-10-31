@@ -46,10 +46,6 @@ static const int align_values[] = {SS_LEFT, SS_RIGHT, SS_CENTER};
 
 LUA_API void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
 	lua_registerobject(L, type, typename, constructor, methods, mt);
-	// lua_pushstring(L, typename);
-	// lua_pushvalue(L, -2);
-	// lua_rawset(L, -4);
-	// lua_setfield(L, LUA_REGISTRYINDEX, typename);
 }
 
 LUA_API void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip) {
@@ -78,10 +74,6 @@ LUA_API void widget_type_new(lua_State *L, int *type, const char *typename, lua_
 	if (has_tooltip)
 		luaL_setrawfuncs(L, WidgetTooltip_methods);
 	lua_pop(L, 1);
-	// lua_pushstring(L, typename);
-	// lua_pushvalue(L, -2);
-	// lua_rawset(L, -4);
-	// lua_setfield(L, LUA_REGISTRYINDEX, typename);
 }
 
 static void page_resize(Widget *w, BOOL isfocused) {
