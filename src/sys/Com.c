@@ -22,12 +22,12 @@
 
 luart_type TCOM;
 
-//-------------------------------------[ COM COM Constructor ]
+//-------------------------------------[ COM Constructor ]
 LUA_CONSTRUCTOR(COM) {
 	COM *obj = (COM *)calloc(1, sizeof(COM));
 	UINT count;
 	CLSID clsid;
-  
+
 	if (lua_islightuserdata(L, 2))
 		obj->this = lua_touserdata(L, 2);
 	else {
@@ -35,7 +35,7 @@ LUA_CONSTRUCTOR(COM) {
 		if ( FAILED(CLSIDFromProgID(name, &clsid)) && FAILED(CLSIDFromString(name, &clsid)) ) {
 			lua_pushfstring(L, "COM object '%s' not registered", lua_tostring(L, 2));
 			goto error;
-		} else if ( FAILED(CoCreateInstance(&clsid, 0, CLSCTX_INPROC_SERVER, &IID_IDispatch, (LPVOID*)&obj->this)) ) {
+		} else if ( FAILED(CoCreateInstance(&clsid, 0, CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER, &IID_IDispatch, (LPVOID*)&obj->this))) {
 			lua_pushfstring(L, "IDispatch interface not implemented by COM object '%s'", lua_tostring(L, 2));		
 error:		free(name);
 			lua_error(L);
@@ -210,7 +210,7 @@ LUA_METHOD(COM, __index) {
 				luaL_where(L, 2);
 				luaL_error(L, "%s: COM error : field '%s' not found", lua_tostring(L, -1), lua_tostring(L, 2));
 			} else {
-				lua_pushvalue(L, 2);
+method:			lua_pushvalue(L, 2);
 				lua_pushinteger(L, DISPATCH_METHOD);
 				lua_pushcclosure(L, COM_method_call, 2);				
 			}
@@ -219,7 +219,9 @@ LUA_METHOD(COM, __index) {
 			lua_pushinteger(L, DISPATCH_PROPERTYGET | DISPATCH_METHOD);
 			lua_pushvalue(L, 1);
 			lua_pushcclosure(L, COM_method_call, 3);
-		} else {
+		} else if ((value == DISP_E_EXCEPTION))
+			goto method; 
+		else {
 			lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_PROPERTYGET);
 			lua_pushvalue(L, 1);
