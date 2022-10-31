@@ -240,15 +240,16 @@ static const luaL_Reg def_libs[] = {
   {LUA_STRLIBNAME, 	luaopen_string},
   {LUA_MATHLIBNAME, luaopen_math},
   {LUA_DBLIBNAME, 	luaopen_debug},
-#ifdef RTCOMPAT
   {"io",	luaopen_io },
   {"os",	luaopen_os },
+  {"utf8",	luaopen_utf8 },
+  {"sys",		luaopen_sys},
+#ifdef RTCOMPAT
   {"ui",		luaopen_ui },
   {"crypto",	luaopen_crypto },
   {"net",		luaopen_net },
   {"compression",	luaopen_compression },
-#endif
-  {"sys",		luaopen_sys},
+#endif  
   {NULL, NULL}
 };
 

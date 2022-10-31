@@ -28,8 +28,8 @@ LUAMOD_API int luaopen_ui(lua_State *L);
 LUAMOD_API int luaopen_console(lua_State *L);
 LUAMOD_API int luaopen_embed(lua_State *L);
 LUAMOD_API int luaopen_io(lua_State *L);
-//--- Lua standard modules included in LuaRT compatiblity version
 LUAMOD_API int luaopen_os(lua_State *L);
+LUAMOD_API int luaopen_utf8(lua_State *L);
 LUAMOD_API int luaopen_com(lua_State *L);
 
 //--- Pushes Windows system error string on stack
