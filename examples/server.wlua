@@ -43,18 +43,18 @@ while win.visible do
 				if server.canread then
 					-- check for new connection
 					local newclient = server:accept()
-          edit.selection.color = 0x007000
+			        edit.selection.color = 0x007000
 					edit:append(newclient.ip.." has connected\n")
-          edit.selection.color = 0xA0A0A0
+					edit.selection.color = 0xA0A0A0
 					sockets[#sockets+1] = newclient
 				end
 			else
 				local data = client:recv()
 				if data == false then
-          edit.selection.color = 0xD00000
-					edit:append(client.ip.." has disconnected\n")
-          edit.selection.color = 0xA0A0A0
-					client.disconnected = true
+          		edit.selection.color = 0xD00000
+				edit:append(client.ip.." has disconnected\n")
+          		edit.selection.color = 0xA0A0A0
+				client.disconnected = true
         else
           edit:append(client.ip..": "..tostring(data).."\n")
 				end
@@ -65,9 +65,9 @@ while win.visible do
 			if client == server then
 				error("fatal network error with server")
 			else
-        edit.selection.color = 0xD00000
+       			edit.selection.color = 0xD00000
 				edit:append(client.ip.." has encountered a fatal network error")
-        edit.selection.color = 0xA0A0A0
+        		edit.selection.color = 0xA0A0A0
 				client.disconnected = true
 			end
 		end
