@@ -641,6 +641,20 @@ LUA_PROPERTY_GET(Socket, blocking) {
 	return 1;
 }
 
+LUA_PROPERTY_GET(Socket, nodelay) {
+	BOOL flag = 0;
+	int size = sizeof(BOOL);
+	getsockopt(lua_self(L, 1, Socket)->sock, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, &size);
+	lua_pushboolean(L, (int)flag);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Socket, nodelay) {
+	BOOL flag = lua_toboolean(L, 2);
+	setsockopt(lua_self(L, 1, Socket)->sock, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(BOOL));
+	return 0;
+}
+
 LUA_PROPERTY_GET(Socket, port) {
 	Socket *s = lua_self(L, 1, Socket);
 	lua_pushinteger(L, ntohs(s->addr.sin_family == AF_INET ? s->addr.sin_port : s->addr6.sin6_port));
@@ -706,6 +720,8 @@ const luaL_Reg Socket_methods[] = {
 	{"starttls",		Socket_start_tls},
 	{"get_blocking",	Socket_getblocking},
 	{"set_blocking",	Socket_setblocking},
+	{"get_nodelay",		Socket_getnodelay},
+	{"set_nodelay",		Socket_setnodelay},
 	{"get_port",		Socket_getport},
 	{"get_ip",			Socket_getip},
 	{"get_family",		Socket_getfamily},
