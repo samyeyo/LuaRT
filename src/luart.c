@@ -23,6 +23,7 @@ void __wgetmainargs(int*,wchar_t***,wchar_t***,int,int*);
 
 extern struct zip_t *fs;
 extern BYTE *datafs;
+static lua_State *L;
 
 #ifdef RTC
 
@@ -132,7 +133,6 @@ static int update_exe_icon(lua_State *L) {
 }
 #endif
 
-wchar_t temp[MAX_PATH] = {0};
 static luaL_Reg luaRT_libs[] = {
    	{ "compression",	luaopen_compression },
    	{ "crypto",			luaopen_crypto },
@@ -143,6 +143,18 @@ static luaL_Reg luaRT_libs[] = {
   { NULL,		NULL }
 };
 
+void lua_stop() {
+	if (L) {
+		if (lua_getfield(L, LUA_REGISTRYINDEX, "atexit") == LUA_TFUNCTION) {
+			if (lua_pcall(L, 0, 0, 0))
+				puts(lua_tostring(L, -1));
+		}
+		lua_close(L);
+		CoUninitialize();
+		L = NULL;
+	}
+}
+
 #ifdef RTWIN
 __attribute__((used)) int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
 #else
@@ -151,20 +163,19 @@ __attribute__((used)) int main() {
 	INITCOMMONCONTROLSEX icex;
 	int i, result = EXIT_SUCCESS;
 	WCHAR exename[MAX_PATH];
-	lua_State *L = luaL_newstate();
 	BOOL is_embeded = FALSE;
 	const luaL_Reg *lib;
 	wchar_t **enpv, **wargv;
-
 	int argc, si = 0;
+
 	__wgetmainargs(&argc, &wargv, &enpv, _CRT_glob, &si);
-	
 	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
 	icex.dwICC = ICC_USEREX_CLASSES;
 	InitCommonControlsEx(&icex);
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	L = luaL_newstate();
 	luaL_openlibs(L);
-
+	SetConsoleCtrlHandler(NULL, TRUE);
 	for (lib = luaRT_libs; lib->func; lib++) {
 		luaL_requiref(L, lib->name, lib->func, 0);
 		lua_pop(L, 1);
@@ -174,6 +185,7 @@ __attribute__((used)) int main() {
 		luaL_requiref(L, "embed", luaopen_embed, 1);
 		lua_pop(L, 1);
 	}
+	atexit(lua_stop);
 #ifdef RTC
 	lua_pushcfunction(L, update_exe_icon);
 	lua_setglobal(L, "seticon");
@@ -225,7 +237,5 @@ error:
 			}
 		}
 	}
-	lua_close(L);
-	CoUninitialize();
-   	return result;
+	return result;
 }

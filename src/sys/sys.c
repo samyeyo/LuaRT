@@ -47,8 +47,6 @@ LUA_METHOD(sys, clock) {
 //-------------------------------------[ sys.exit() ]
 LUA_METHOD(sys, exit) {
 	int ret = (int)luaL_optinteger(L, 1, EXIT_SUCCESS);
-	lua_close(L);
-	CoUninitialize();
 	exit(ret);
 	return 0;
 }
@@ -167,6 +165,18 @@ int lasterror(lua_State *L, DWORD err) {
 
 LUA_PROPERTY_GET(sys, lasterror) {
 	return lasterror(L, GetLastError());
+}
+
+LUA_PROPERTY_GET(sys, atexit) {
+	lua_getfield(L, LUA_REGISTRYINDEX, "atexit");
+	return 1;
+}
+
+LUA_PROPERTY_SET(sys, atexit) {
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	lua_pushvalue(L, 1);
+	lua_setfield(L, LUA_REGISTRYINDEX, "atexit");
+	return 0;
 }
 
 LUA_PROPERTY_GET(sys, clipboard) {
@@ -419,6 +429,8 @@ static const luaL_Reg sys_properties[] = {
 	{"set_currentdir",	sys_setcurrentdir},
 	{"get_clipboard",	sys_getclipboard},
 	{"set_clipboard",	sys_setclipboard},
+	{"get_atexit",		sys_getatexit},
+	{"set_atexit",		sys_setatexit},
 	{NULL, NULL}
 };
 
