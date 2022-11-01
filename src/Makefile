@@ -1,19 +1,24 @@
 # | LuaRT - A Windows programming framework for Lua
 # | Luart.org, Copyright (c) Tine Samir 2022.
 # | See Copyright Notice in LICENSE.TXT
-# |---------------------------------------------------------
-# | Makefile | LuaRT Makefile
-# |---------------------------------------------------------
-# | You can prefix all the following commands with PLATFORM=x64|x86  
+# |--------------------------------------------------------------
+# | LuaRT Makefile
+# | You can prefix all the following tasks with PLATFORM=x64|x86  
+# |--------------------------------------------------------------
 # | Usage (default release build)			 : make
 # | Usage (debug build) 		  			 : make debug
 # | Usage (release build with QuickRT) 		 : make all
 # | Usage (build QuickRT only)		 		 : make quickrt
-
 # | Usage (build setup executable)	  		 : make setup
 # | Usage (build only rtc) 				 	 : make rtc
 # | Usage (clean all)	 				 	 : make clean
-# |---------------------------------------------------------
+# |-------------------------------------------------------------
+# | Or you can use default release build for any platform 
+# | Usage (default x64 release build)		 : make x64
+# | Usage (default x86 release build)		 : make x86
+# |-------------------------------------------------------------
+# |	LuaRT-Studio uses a specific Lua54.dll 
+# | Usage 				 				 	 : make luart_studio
 
 #---- Platform selection
 #---- x86 for 32bits lua54.dll, liblua54.a and executables
@@ -28,7 +33,7 @@ LUART_RELEASE= 2
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 
 ifeq ($(PLATFORM), x86)
- $(info --------------------------------- Building for Windows x86 Platform)
+$(info --------------------------------- Building for Windows x86 Platform)
  ARCH = -m32 -march=pentium4 -msse -msse2 -mmmx -fno-unwind-tables -fno-asynchronous-unwind-tables 
  _ARCH = x86
  TARGET = pe-i386
@@ -37,7 +42,9 @@ ifeq ($(PLATFORM), x86)
  endif
 endif
 ifeq ($(PLATFORM), x64)
- $(info --------------------------------- Building for Windows x64 Platform)
+ifneq ($(MAKECMDGOALS),x86)
+$(info --------------------------------- Building for Windows x64 Platform)
+endif
  ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion
  _ARCH = x64
  TARGET = pe-x86-64
@@ -81,7 +88,7 @@ ALL_T= $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe rtc
 endif
 ALL_A= $(LUA_A)
 
-default: clean $(ALL_T)
+default: $(ALL_T)
 
 all: clean $(ALL_T) quickrt
 	@echo --------------------------------- LuaRT has been successfully compiled
@@ -101,6 +108,12 @@ libsensapi.a:
 
 debug:
 	$(MAKE) "BUILD=debug"
+
+x64: clean
+	@$(MAKE) "PLATFORM=x64"
+
+x86: clean
+	@$(MAKE) "PLATFORM=x86"
 
 setup: $(ALL_T) quickrt
 	@windres $(DEFINES_RES) -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
@@ -160,7 +173,7 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe
 	@$(RM) wluart.exe >nul 2>&1
 	@$(RM) ..\tools\rtc\src\*.exe >nul 2>&1
 
-luart_studio: rtc
+luart_studio: clean rtc
 	@$(RM) lrtapi.o
 	@$(CC) $(CFLAGS) -DRTCOMPAT -c lrtapi.c -o lrtapi.o
 	$(info lrtapi.c)
