@@ -175,7 +175,6 @@ __attribute__((used)) int main() {
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	L = luaL_newstate();
 	luaL_openlibs(L);
-	SetConsoleCtrlHandler(NULL, TRUE);
 	for (lib = luaRT_libs; lib->func; lib++) {
 		luaL_requiref(L, lib->name, lib->func, 0);
 		lua_pop(L, 1);
