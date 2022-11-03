@@ -4,6 +4,8 @@
 # |--------------------------------------------------------------
 # | LuaRT Makefile
 # | You can prefix all the following tasks with PLATFORM=x64|x86  
+# | Don't forget to get all submodules :
+# | git clone --recurse-submodules git://github.com/samyeyo/LuaRT.git
 # |--------------------------------------------------------------
 # | Usage (default release build)			 : make
 # | Usage (debug build) 		  			 : make debug
@@ -155,13 +157,10 @@ quickrt: rtc
 	@rtc -w -i ..\tools\QuickRT\contrib\quickrt.ico ..\tools\QuickRT\src\quickrt.lua -o ..\tools\QuickRT\QuickRT.exe ..\tools\QuickRT\src
 	@-copy /Y ..\bin\lua54.dll ..\tools\QuickRT\lua54.dll >nul
 
-rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe
+rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\tools\rtc\src\rtc.lua
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\tools\rtc\src >nul
-	ifeq (,$(wildcard ../tools/rtc/src/rtc.lua))
-    	$(error rtc sources not found. Go to https://github.com/samyeyo/rtc or clone rtc repository in the tools\rtc\ folder)
-	endif
 	@echo Compiling rtc.exe...
 	@windres $(DEFINES_RES)  -I"./lua/" resources\resource.rc -o resource.o
 	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) 
