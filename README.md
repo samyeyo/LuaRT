@@ -23,11 +23,11 @@ Lua multipurpose programming framework to develop Windows applications
 ## :small_blue_diamond:Features
 
 #### Lua for Windows, with batteries included
-- Multipurpose programming framework with optimized Lua runtime library for Windows.
+- Multipurpose programming framework with optimized Lua runtime library for x86 and x64 Windows.
 - Build Windows desktop or console applications with Lua.
 - Lightweight with no other dependencies
 - Develop in Lua, C programming knowledge is not needed
-- Batteries included : UTF8 strings, sockets, GUI, files, ZIP compression...
+- Batteries included : UTF8 strings, sockets, GUI, files, ZIP, compression...
 
 #### Complete development environment 
 - rtc: a Lua script to executable compiler
@@ -47,8 +47,12 @@ It's the easiest and fastest way to start developing with LuaRT.
 All you need to build LuaRT from sources is a valid installation of the Mingw-w64 GCC compiler, feedback is welcome for other C compilers.
 LuaRT should run on Windows Vista, Windows 7, Windows 8, Windows 10 and Windows 11.
 
-First clone or download latest LuaRT GitHub repository to the directory of your choice.
-Go to the ```\src``` directory and type ```make```:
+First clone the LuaRT repository (or manualy download the repository but don't forget submodules in tools folder) :
+```
+git clone --recurse-submodules https://github.com/samyeyo/LuaRT.git
+```
+
+Then go to the ```\src``` directory and type ```make```:
 
 ```
 cd LuaRT\src
