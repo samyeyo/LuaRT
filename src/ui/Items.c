@@ -160,14 +160,17 @@ void *__push_item(lua_State *L, Widget *w, int idx, HTREEITEM hti) {
 	static const char *itemtypes[] = { "ListItem", "ComboItem", "TreeItem", "TabItem", "TreeItem"};
 	void *item = __get_item(w, idx, hti);
 	int narg = 3;
-	lua_pushlightuserdata(L, item);
-	lua_pushinteger(L, w->wtype == UIItem ? UITree : w->wtype);
-	if ((w->wtype != UIItem) && !hti)
-		lua_pushinteger(L, idx);
-	else narg = 2;
-	lua_pushnewinstance(L, itemtypes[w->wtype-UIList], narg);	
-	lua_insert(L, -narg-1);
-	lua_pop(L, narg);
+	if (item) {
+		lua_pushlightuserdata(L, item);
+		lua_pushinteger(L, w->wtype == UIItem ? UITree : w->wtype);
+		if ((w->wtype != UIItem) && !hti)
+			lua_pushinteger(L, idx);
+		else narg = 2;
+		lua_pushnewinstance(L, itemtypes[w->wtype == UIItem ? w->item.itemtype-UIList : w->wtype-UIList], narg);	
+		lua_insert(L, -narg-1);
+		lua_pop(L, narg);
+	}
+	else lua_pushnil(L);
 	return item;
 }
 
@@ -368,6 +371,7 @@ static int find_item_bytext(lua_State *L, Widget *w, int idx, HTREEITEM *hti) {
 	HTREEITEM result = NULL;
 	DWORD start = TVGN_ROOT;
 	wchar_t *text = lua_towstring(L, idx);
+	
 	idx = -1;
 	if (w->wtype == UIItem) {
 		result = w->item.treeitem->hItem;
@@ -389,7 +393,7 @@ start:
 			} else break;
 		}
 	}
-	else if (w->wtype == UIItem) {
+	else if (w->wtype == UITab) {
 		int i = get_count(w);
 		while (--i > -1) {
 			TCITEMW *item = get_item(w, i);
@@ -448,17 +452,21 @@ LUA_METHOD(Items, __index) {
     lua_Integer idx = -1;
     int isnum = 0;
     HTREEITEM hti = NULL;
+	lua_Integer d = lua_tointegerx(L, 2, &isnum);
+
     luaL_getmetafield(L, 1, "__widget");
     w = lua_self(L, -1, Widget);
-    if (w->wtype == UITree)
+
+	if (isnum)
+        idx = d-1;
+	else if (lua_type(L, 2) == LUA_TSTRING)
         idx = find_item_bytext(L, w, 2, &hti);
-    else
-        idx = (idx = lua_tointegerx(L, 2, &isnum)) || isnum ? idx-1 : find_item_bytext(L, w, 2, &hti);      
-    if ((idx >= 0) && ((w->wtype == UIItem) || (hti) || (idx < (int)get_count(w))))
+	else luaL_error(L, "bad index while indexing items property (string or integer expected, found %s)", luaL_typename(L, 2));
+	if ((idx >= 0) && ((w->wtype == UIItem) || (hti) || (idx < (int)get_count(w))))
         __push_item(L, w, idx, hti);
     else lua_pushnil(L);
     return 1; 
-}
+} 
 
 
 LUA_METHOD(Items, __newindex) {
@@ -570,19 +578,19 @@ LUA_METHOD(Listbox, remove) {
 	int idx = 0;
 	HTREEITEM hti = NULL;
 	
-	if (lua_isinteger(L, 2))
-		idx = lua_tointeger(L, 2);
-	else {
-		if ((w->wtype == UITree || w->item.itemtype == UITree) && lua_isstring(L, 2)) 
-			find_item_bytext(L, w, 0, &hti);
-		else {
-			Widget *item = check_widget(L, 2, UIItem);
-			if (w->wtype != item->item.itemtype)
-				luaL_typeerror(L, 2, types[w->wtype-UIList]);
-			if (item->item.itemtype == UITree)
-				hti = item->item.treeitem->hItem;
-			else idx = item->index;
-		}
+	switch (lua_type(L, 2)) {
+		case LUA_TNUMBER:	idx = lua_tointeger(L, 2);
+							break;
+		case LUA_TSTRING:	idx = find_item_bytext(L, w, 0, &hti);
+							break;
+		case LUA_TTABLE:	{
+								Widget *item = check_widget(L, 2, UIItem);
+								if (w->wtype != item->item.itemtype)
+									luaL_typeerror(L, 2, types[w->wtype-UIList]);
+								if (item->item.itemtype == UITree)
+									hti = item->item.treeitem->hItem;
+								else idx = item->index;
+							} break;
 	}
 	__free_item(w, idx, hti);
 	return 0;
@@ -726,7 +734,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		}
 	}
 	else 
-		luaL_error(L, "cannot select an item that don't belong to this %s object", luart_wtypes[w->wtype-UIWindow]);
+		luaL_error(L, "cannot select an item that don't belong to this %s object", luaL_typename(L, 1));
 	if (w->wtype == UITab) {
 		NMHDR lparam = {0};
 		lparam.code = TCN_SELCHANGE;
