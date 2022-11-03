@@ -136,7 +136,29 @@ HBITMAP LoadImg(wchar_t *filename) {
 	return result;
 }
 
-#ifdef RTWIN
+static BOOL CALLBACK MyEnumThreadWndProc(HWND hwnd, LPARAM param) {
+	Widget *w = (Widget*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+	if (w && (w->wtype == UIWindow)) {
+		*(HWND*)(param) = hwnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+ 
+HWND GetMainWindow() 
+{ 
+	HWND oWind = NULL;
+	EnumThreadWindows(GetCurrentThreadId(), &MyEnumThreadWndProc, (LPARAM)&oWind);
+	return oWind;
+}
+
+typedef struct {
+	wchar_t *msg;
+	wchar_t *title;
+	UINT 	options;
+	int		result;
+} MsgParam;
+
 static HHOOK hMsgBoxHook = NULL;
 static HICON hMsgIcon;
 
@@ -148,30 +170,27 @@ LRESULT CALLBACK CBTProc(int nCode, WPARAM wParam, LPARAM lParam)
 	}
 	return CallNextHookEx(hMsgBoxHook, nCode, wParam, lParam);
 }
-#endif
 
-static int MsgBox(lua_State *L, UINT options, const wchar_t *def) {
+DWORD WINAPI CreateMessageBox(LPVOID lpParam) {
+	MsgParam *mp = ((MsgParam*)lpParam);
+	hMsgBoxHook = SetWindowsHookEx(WH_CBT, CBTProc, NULL, GetCurrentThreadId());		
+    mp->result = MessageBoxW(NULL, mp->msg, mp->title, mp->options);
+	UnhookWindowsHookEx(hMsgBoxHook);
+}
+
+static int MsgBox(lua_State *L, UINT options, wchar_t *def) {
 	static const char *values[] = {NULL, "ok", "cancel", NULL, NULL, NULL, "yes", "no"};
-	int result;
-	HWND h = GetFocus();
-	wchar_t *msg = lua_towstring(L, 1);
-	wchar_t *title = lua_gettop(L) > 1 ? lua_towstring(L, 2) : NULL;
-#ifdef RTWIN
-	Widget *w = (Widget*)GetWindowLongPtr(GetForegroundWindow(), GWLP_USERDATA);
-	if (w) {
-		hMsgBoxHook = SetWindowsHookEx(WH_CBT, CBTProc, NULL, GetCurrentThreadId());
-		hMsgIcon = w->icon;
-	}
-#endif
-	result = MessageBoxW(NULL, msg, title ? title : def, options | MB_SYSTEMMODAL);
-#ifdef RTWIN
-	if (w)
-		UnhookWindowsHookEx(hMsgBoxHook);
-#endif
-	free(title);
-	free(msg);
-	lua_pushstring(L, values[result]);
-	SetFocus(h);
+	MsgParam mp;
+	hMsgIcon =  (HICON)SendMessage(GetMainWindow(), WM_GETICON, 0, 0);
+	hMsgIcon = hMsgIcon ?: LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(101));
+	mp.title = lua_gettop(L) > 1 ? lua_towstring(L, 2) : def;
+	mp.msg = lua_towstring(L, 1);
+	mp.options = options | MB_SYSTEMMODAL;
+	WaitForSingleObject(CreateThread(NULL, 0, &CreateMessageBox, &mp, 0, NULL), INFINITE);
+	if (mp.title != def)
+		free(mp.title);
+	free(mp.msg);
+	lua_pushstring(L, values[mp.result]);
 	return 1;
 }
 
@@ -369,16 +388,16 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 												break;
 						}
 					} else lua_pop(L, 1);					
-				} else if (msg.message == WM_LUAMENU) {
-					lua_rawgeti(L, LUA_REGISTRYINDEX, msg.wParam);
-					if (lua_type(L, -1) == LUA_TTABLE && lua_getfield(L, -1, "onClick")) {
+				} else if (msg.message == WM_LUAMENU) {			
+					int type = 	lua_rawgeti(L, LUA_REGISTRYINDEX, msg.wParam);
+					if (type == LUA_TTABLE && lua_getfield(L, -1, "onClick")) {
 						lua_insert(L, -2);
 						if (msg.lParam > -1) {
 							lua_pushinteger(L, msg.lParam);
 							lua_pushinstance(L, MenuItem, 2);
 							lua_remove(L, -2);
 						}
-					} else lua_pop(L, 1);	
+					} //else lua_pop(L, 1);	
 				} else goto do_msg;
 				if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
 					if (lua_pcall(L, nargs, LUA_MULTRET, 0))
@@ -671,6 +690,9 @@ LUAMOD_API int luaopen_ui(lua_State *L)
 	UIMenuItem = lua_registerobject(L,  NULL, "MenuItem", MenuItem_constructor, MenuItem_methods, MenuItem_metafields);
 	lua_setfield(L, LUA_REGISTRYINDEX, "MenuItem");
 	if (FAILED(CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (LPVOID*)&ui_factory)))
-        luaL_error(L, "Failed to open 'ui' module : WIC Imaging Factory could not be created");
+        luaL_error(L, "Failed to open 'ui' module : WIC Imaging Factory could not be created");	
+	lua_widgetfinalize = Widget_finalize;
+	lua_widgetinitialize = Widget_init;
+	WIDGET_METHODS = Widget_methods;
 	return 1;
 }
