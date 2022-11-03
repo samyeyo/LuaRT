@@ -186,6 +186,13 @@ static const luaL_Reg usertype_mt[] = {
 	{NULL, NULL}
 };
 
+LUA_API void *lua_pushnewinstancebyname(lua_State *L, luart_type type, int narg) {
+	luaL_getsubtable(L, LUA_REGISTRYINDEX, LUART_OBJECTS);
+	if (lua_rawgeti(L, -1, type) != LUA_TSTRING)
+		luaL_error(L, "unknown object");
+	return lua_pushnewinstance(L, lua_tostring(L, -1), narg);
+}
+
 LUA_API void *lua_pushnewinstance(lua_State *L, const char *typename, int narg) {
 	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 	for (int i = 0; i < narg; i++) 
@@ -353,7 +360,7 @@ int lua_registerobject(lua_State *L, int *type, const char *typename, lua_CFunct
 	 	lua_pushvalue(L, 1);
 	 	lua_setfield(L, -2, "__type");
 	}
-	if (!methods && (count > 1) ) {				//----  fill the mixins table for Lua objects
+	if (!methods && !type && (count > 1) ) {				//----  fill the mixins table for Lua objects
 		int i;
 		lua_createtable(L, 0, count-1);	//---- table for mixins
 		for (i = 2; i <= count; i++) {
@@ -428,6 +435,15 @@ void lua_createcinstance(lua_State *L, void *t, luart_type type) {
 	lua_pushvalue(L, 1);
 }
 
+void *lua_checkcinstancebyname(lua_State *L, int idx, const char *name) {
+	void *instance;
+	lua_checkinstance(L, idx, name);
+	luaL_getmetafield(L, idx, "__userdata");
+	instance = lua_touserdata(L, -1);
+	lua_pop(L, 2);
+	return lua_tocinstance(L, idx, instance);
+}
+
 void *lua_checkcinstance(lua_State *L, int idx, luart_type t) {
 	void *p;
 	if ( (p = lua_iscinstance(L, idx, t)) )
@@ -466,3 +482,43 @@ void *lua_iscinstance(lua_State *L, int idx, luart_type t) {
 	return obj;
 }
 
+static void property(lua_State *L, const char *prop) {
+	char buffer[255];
+	const char *formats[] = { "get_%s", "set_%s" };
+
+	for (int i = 0; i < 2; i++) {
+		snprintf(buffer, 255, formats[i], prop);
+		lua_pushstring(L, buffer);
+		lua_pushvalue(L, -1);
+		lua_rawget(L, -3);
+		lua_rawset(L, -4);	
+	}
+}
+
+void lua_registerwidget(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip) {
+	lua_registerobject(L, type, typename, constructor, methods, mt);
+	if (!lua_getfield(L, LUA_REGISTRYINDEX, "Radiobutton"))
+		luaL_error(L, "ui module not found");
+	if (has_text)
+		property(L, "text");	
+	if (has_cursor)
+		property(L, "cursor");	
+	if (has_font) {
+		property(L, "font");
+		property(L, "fontsize");
+		property(L, "fontstyle");
+	}
+	if (has_icon)
+		property(L, "loadicon");
+	if (has_tooltip)
+		property(L, "tooltip");
+	lua_pop(L, 1);
+	lua_getfield(L, LUA_REGISTRYINDEX, typename);
+}
+
+#include <luart_ui.h>
+
+WIDGET_INIT 	lua_widgetinitialize = NULL;
+WIDGET_FINALIZE	lua_widgetfinalize = NULL;
+luaL_Reg 		*WIDGET_METHODS = NULL;
+luart_type		TWidget = -1;

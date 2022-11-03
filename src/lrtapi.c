@@ -70,6 +70,15 @@ LUALIB_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l) {
   }
 }
 
+//-------------------------------------------------[LuaL_require alternative with luaL_requiref]
+static int module_error(lua_State *L) {
+	return luaL_error(L, "required module '%s' not found", lua_tostring(L, 1));
+}
+
+LUALIB_API void luaL_require(lua_State *L, const char *modname) {
+	luaL_requiref(L, modname, module_error, 0);
+}
+
 //-------------------------------------------------[LuaRT Extended base library]
 
 //-------------------------------------------------[is() function]
