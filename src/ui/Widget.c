@@ -101,7 +101,7 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 	Widget *w = (Widget*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	LPNMHDR lpNmHdr;
 
-	if (w && w->wtype) {
+	if (w && (w->wtype)) {
 		switch(uMsg) {
 			case WM_COMMAND: {
 				WPARAM cmd = HIWORD(wParam);
@@ -126,8 +126,9 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 							wchar_t *text = calloc(SendMessageW(w->status, CB_GETLBTEXTLEN, idx, 0)+1, sizeof(wchar_t));
 							SendMessageW((HWND)w->status, CB_GETLBTEXT, idx, (LPARAM)text);
 							SendMessageW((HWND)w->handle, WM_SETTEXT, 0, (LPARAM)text);
-							SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
 							InvalidateRect(w->handle, NULL, TRUE);
+							SetFocus(GetParent(w->handle));
+							SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
 							free(text);
 							lua_indexevent(w, onSelect, idx);
 							return FALSE;
@@ -337,7 +338,7 @@ static void WidgetAutosize(Widget *w) {
 
 Widget *check_widget(lua_State *L, int idx, WidgetType t) {
 	Widget *w = lua_self(L, idx, Widget);
-	if (w->wtype != t)
+	if (w->wtype != t) 
 		luaL_typeerror(L, idx, luart_wtypes[t]);
 	return w;	
 }
@@ -369,6 +370,32 @@ static void init_items(lua_State *L, Widget *w, int idx) {
 	ImageList_SetImageCount(w->imglist, count);
 }
 
+void *Widget_init(lua_State *L, Widget **wp) {
+	if (lua_isuserdata(L, 2)) {
+        lua_pushnewinstancebyname(L, ((Widget*)lua_touserdata(L, 2))->wtype, 1);
+        return lua_self(L, -1, Widget);
+    }
+    *wp = luaL_checkcinstance(L, 2, Widget);
+    if (((*wp)->wtype != UIWindow) && ((*wp)->wtype != UIGroup) && (((*wp)->wtype != UIItem) || ((*wp)->item.itemtype != UITab)))
+        luaL_typeerror(L, 2, "Groupbox, TabItem or Window");
+    return (void*)((*wp)->wtype == UIItem ? (HWND)(*wp)->item.tabitem->lParam : (*wp)->handle);
+}
+
+Widget *Widget_finalize(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc) {
+	Widget *w = calloc(1, sizeof(Widget));
+    w->handle = h;
+    SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
+    SetFontFromWidget(w, wp);
+	w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
+    w->wtype = type;
+    lua_newinstance(L, w, Widget);
+    lua_pushvalue(L, 1);
+    w->ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    SetWindowSubclass(h, proc ?: WidgetProc, 0, 0);
+    lua_callevent(w, onCreate);
+    return w;
+}
+
 Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_t *classname, DWORD style, int caption, int autosize)
 {
     Widget *wp;
@@ -380,15 +407,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     wchar_t *text;
     HMENU id = 0;
             
-    if (lua_isuserdata(L, 2)) {
-        w = lua_touserdata(L, 2);
-        lua_pushnewinstance(L, luart_wtypes[w->wtype-UIWindow], 1);
-        return lua_self(L, -1, Widget);
-    }
-    wp = luaL_checkcinstance(L, 2, Widget);
-    if ((wp->wtype != UIWindow) && (wp->wtype != UIGroup) && ((wp->wtype != UIItem) || (wp->item.itemtype != UITab)))
-        luaL_typeerror(L, 2, "Groupbox, TabItem or Window");
-    hParent =  wp->wtype == UIItem ? (HWND)wp->item.tabitem->lParam : wp->handle;
+    hParent = Widget_init(L, &wp);
     text = caption && ((type < UIList) || (type > UITab)) ? lua_towstring(L, idx-1) : NULL;
     if (!hInstance)
         hInstance = GetModuleHandle(NULL);
@@ -903,6 +922,7 @@ LUA_PROPERTY_GET(Widget, parent) {
 		HTREEITEM hti = TreeView_GetParent(w->handle, w->item.treeitem->hItem);
 		if (hti) 
 			__push_item(L, w, 0, hti);
+		else lua_rawgeti(L, LUA_REGISTRYINDEX, ((Widget*)GetWindowLongPtr(w->handle, GWLP_USERDATA))->ref);
 	} else if (parent) {
 		lua_rawgeti(L, LUA_REGISTRYINDEX, ((Widget*)GetWindowLongPtr(w->wtype != UIItem ? parent : w->handle, GWLP_USERDATA))->ref);
 		wp = lua_self(L, -1, Widget);
