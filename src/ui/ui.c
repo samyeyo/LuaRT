@@ -7,7 +7,7 @@
 */
 
 #include <luart.h>
-#include <Widget.h>
+#include "Widget.h"
 #include <Window.h>
 #include <File.h>
 #include <Directory.h>
@@ -176,6 +176,7 @@ DWORD WINAPI CreateMessageBox(LPVOID lpParam) {
 	hMsgBoxHook = SetWindowsHookEx(WH_CBT, CBTProc, NULL, GetCurrentThreadId());		
     mp->result = MessageBoxW(NULL, mp->msg, mp->title, mp->options);
 	UnhookWindowsHookEx(hMsgBoxHook);
+	return 0;
 }
 
 static int MsgBox(lua_State *L, UINT options, wchar_t *def) {

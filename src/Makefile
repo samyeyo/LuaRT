@@ -177,7 +177,7 @@ luart_studio: clean rtc
 	@$(RM) lrtapi.o
 	@$(CC) $(CFLAGS) -DRTCOMPAT -c lrtapi.c -o lrtapi.o
 	$(info lrtapi.c)
-	$(info Linking lua54.dll...)
+	$(info Linking lua54.dll for LuaRT-Studio...)
 	@$(CC) $(CFLAGS) -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LDFLAGS) $(LUART_LIBS)
 	@$(RM) lrtapi.o
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
@@ -292,5 +292,5 @@ sys\sys.o: sys\sys.c include\Date.h include\File.h include\Buffer.h include\luar
 console\console.o: console\console.c include\Date.h include\File.h include\Buffer.h include\luart.h lrtapi.h
 compression\zip.o: compression\zip.c include\File.h compression\lib\zip.h compression\lib\miniz.h \
  include\File.h include\Buffer.h include\luart.h lrtapi.h
-ui\Widget.o: ui\Widget.c include\Widget.h include\luart.h lrtapi.h
-ui\ui.o: ui\ui.c include\Widget.h include\luart.h lrtapi.h
+ui\Widget.o: ui\Widget.c ui\Widget.h include\luart.h lrtapi.h
+ui\ui.o: ui\ui.c ui\Widget.h include\luart.h lrtapi.h

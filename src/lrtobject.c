@@ -516,8 +516,6 @@ void lua_registerwidget(lua_State *L, int *type, char *typename, lua_CFunction c
 	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 }
 
-#include <luart_ui.h>
-
 WIDGET_INIT 	lua_widgetinitialize = NULL;
 WIDGET_FINALIZE	lua_widgetfinalize = NULL;
 luaL_Reg 		*WIDGET_METHODS = NULL;
