@@ -28,8 +28,8 @@ PLATFORM ?= x64
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 0
-LUART_RELEASE= 2
+LUART_MINOR= 1
+LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 
 ifeq ($(PLATFORM), x86)
@@ -173,14 +173,19 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe
 	@$(RM) wluart.exe >nul 2>&1
 	@$(RM) ..\tools\rtc\src\*.exe >nul 2>&1
 
-luart_studio: clean rtc
+#---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
+luart_studio: rtc
 	@$(RM) lrtapi.o
 	@$(CC) $(CFLAGS) -DRTCOMPAT -c lrtapi.c -o lrtapi.o
 	$(info lrtapi.c)
 	$(info Linking lua54.dll for LuaRT-Studio...)
 	@$(CC) $(CFLAGS) -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LDFLAGS) $(LUART_LIBS)
+	@-copy /Y ..\bin\wluart.exe "..\tools\LuaRT-Studio\bin\luart.exe" >nul	
+	@-copy /Y ..\bin\wrtc.exe "..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
+	@-copy /Y lua54.dll "..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
 	@$(RM) lrtapi.o
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
+	$(info done)
 	
 clean:
 	@$(RM) $(ALL_T) >nul 2>&1
