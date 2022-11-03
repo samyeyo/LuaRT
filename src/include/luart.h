@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
+#include "..\lua\lua.h"
+#include "..\lua\lauxlib.h"
+#include "..\lua\lualib.h"
 #include <windows.h>
 
 //--------------------------------------------------| LuaRT _VERSION
@@ -97,6 +97,7 @@ void *lua_checkcinstance(lua_State *L, int idx, luart_type t);
 #define lua_self(L, idx, type) ((type*)lua_toself(L, idx, T##type))
 
 //--- Pushes a new instance from object name with the lasts narg arguments on stack as constructor arguments
+LUA_API void *lua_pushnewinstancebyname(lua_State *L, luart_type type, int narg);
 LUA_API void *lua_pushnewinstance(lua_State *L, const char *typename, int narg);
 #define lua_pushinstance(L, type, narg) lua_pushnewinstance(L, #type, narg)
 
@@ -144,3 +145,6 @@ LUALIB_API int luaL_embedclose(lua_State *L);
 
 //--- luaL_setfuncs() alternative with lua_rawset() and without upvalues
 LUALIB_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l);
+
+//--- luaL_require() alternative with luaL_requiref()
+LUALIB_API void luaL_require(lua_State *L, const char *modname);
