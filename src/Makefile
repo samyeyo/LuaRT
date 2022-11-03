@@ -142,13 +142,13 @@ $(LUA_A): $(BASE_O)
 $(LUART_T): $(LUA_A) $(LUART_LIB_O) $(LUART_OBJ_O) luart.c
 	@windres $(DEFINES_RES)  -I"./lua/" resources\resource.rc -o resource.o
 	$(info Linking luart.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) -flto=auto
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) 
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 $(LUAWRT_T): $(LUA_A) $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) luart.c ui\ui.o
 	@windres $(DEFINES_RES)  -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	$(info Linking wluart.exe...)
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 -flto=auto
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_LIB_O) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 quickrt: rtc
@@ -159,9 +159,12 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\tools\rtc\src >nul
+	ifeq (,$(wildcard ../tools/rtc/src/rtc.lua))
+    	$(error rtc sources not found. Go to https://github.com/samyeyo/rtc or clone rtc repository in the tools\rtc\ folder)
+	endif
 	@echo Compiling rtc.exe...
 	@windres $(DEFINES_RES)  -I"./lua/" resources\resource.rc -o resource.o
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) -flto=auto
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_LIB_O) $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) 
 	@luart.exe ..\tools\rtc\src\rtc.lua -o rtc.exe ..\tools\rtc\src >nul
 	@echo Compiling wrtc.exe...
 	@windres $(DEFINES_RES)  -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
