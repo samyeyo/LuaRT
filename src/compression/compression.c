@@ -91,9 +91,9 @@ ioerror: 	inflateEnd(&stream);
         do {
             stream.avail_out = CHUNK;
             stream.next_out = out;
-            ret = inflate(&stream, Z_NO_FLUSH);
+            ret = mz_inflate(&stream, MZ_NO_FLUSH);
 			if (ret < MZ_OK || ret > MZ_STREAM_END)
-				luaL_error(L, "Memory error during decompression");
+				luaL_error(L, "Error during decompression");
             have = CHUNK - stream.avail_out;
             if (fwrite(out, 1, have, fileto) != have || ferror(fileto)) 
 				goto ioerror;
