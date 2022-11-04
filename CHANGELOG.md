@@ -78,7 +78,6 @@
 
 #### ui module
 - Fixed strange characters with IME input when using Entry and Combobox widgets
-## LuaRT v1.0 (Sept 25 2022)
  
 ## LuaRT v1.0.0 (Sept 25 2022)
 
