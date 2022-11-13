@@ -542,7 +542,7 @@ void *lua_getevent(lua_State *L, lua_Integer eventid, int *type) {
 	return methodname;
 }
 
-lua_Integer			WM_LUAMAX = WM_LUAMIN-1;
+lua_Integer			WM_LUAMAX = WM_USER+1;
 WIDGET_INIT 		lua_widgetinitialize = NULL;
 WIDGET_CONSTRUCTOR	lua_widgetconstructor = NULL;
 WIDGET_DESTRUCTOR	lua_widgetdestructor = NULL;
