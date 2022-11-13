@@ -172,3 +172,53 @@ LUA_CONSTRUCTOR(Item);
 LUA_CONSTRUCTOR(Menu);
 LUA_CONSTRUCTOR(MenuItem); 
 LUA_METHOD(Widget, __gc);
+
+//--------------------------------------------------| GUI Events
+
+#define	WM_LUAMIN			(WM_USER+2)
+#define WM_LUAHIDE 			(WM_LUAMIN)
+#define WM_LUASHOW 			(WM_LUAMIN + 1)
+#define WM_LUAMOVE 			(WM_LUAMIN + 2)
+#define WM_LUARESIZE 		(WM_LUAMIN + 3)
+#define WM_LUAHOVER 		(WM_LUAMIN + 4)
+#define WM_LUALEAVE 		(WM_LUAMIN + 5)
+#define WM_LUACLOSE 		(WM_LUAMIN + 6)
+#define WM_LUACLICK 		(WM_LUAMIN + 7)
+#define WM_LUADBLCLICK		(WM_LUAMIN + 8)
+#define WM_LUACONTEXT 		(WM_LUAMIN + 9)
+#define WM_LUACREATE	 	(WM_LUAMIN + 10)
+#define WM_LUACARET 		(WM_LUAMIN + 12)
+#define WM_LUACHANGE 		(WM_LUAMIN + 12)
+#define WM_LUASELECT 		(WM_LUAMIN + 13)
+#define WM_LUATRAYCLICK 	(WM_LUAMIN + 14)
+#define WM_LUATRAYDBLCLICK	(WM_LUAMIN + 15)
+#define WM_LUATRAYCONTEXT 	(WM_LUAMIN + 16)
+#define WM_LUATRAYHOVER 	(WM_LUAMIN + 17)
+#define WM_LUAMENU 			(WM_LUAMIN + 18)
+
+typedef enum {
+	onHide			= WM_LUAHIDE,
+    onShow 			= WM_LUASHOW, 
+    onMove 			= WM_LUAMOVE, 
+    onResize		= WM_LUARESIZE,
+    onHover 		= WM_LUAHOVER,
+    onLeave			= WM_LUALEAVE,
+    onClose 		= WM_LUACLOSE,
+    onClick 		= WM_LUACLICK,
+    onDoubleClick 	= WM_LUADBLCLICK,
+    onContext 		= WM_LUACONTEXT,
+    onCreate		= WM_LUACREATE,
+    onCaret 		= WM_LUACARET,
+    onChange 		= WM_LUACHANGE,
+    onSelect 		= WM_LUASELECT,
+    onTrayClick		= WM_LUATRAYCLICK,
+    onTrayDoubleClick=WM_LUATRAYDBLCLICK,
+    onTrayContext 	= WM_LUATRAYCONTEXT,
+    onTrayHover 	= WM_LUATRAYHOVER,
+	onMenu			= WM_LUAMENU
+} WidgetEvent;
+
+//---- call close event a associated with window w
+#define lua_closeevent(w, e) PostMessage(w->handle, WM_LUACLOSE, 0, 0)
+//--- call menu event references in LUA_REGISTRYINDEX with i 
+#define lua_menuevent(i, idx) PostMessage(NULL, WM_LUAMENU, (WPARAM)i, (LPARAM)idx) 
