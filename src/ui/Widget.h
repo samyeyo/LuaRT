@@ -36,7 +36,8 @@ extern int UIItem;
 void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
 void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip);
 void *Widget_init(lua_State *L, Widget **wp);
-Widget *Widget_finalize(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc);
+Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc);
+Widget *Widget_destructor(lua_State *L);
 
 #define lua_newtype_widget(L, typename) widget_type_new(L, #typename, typename##_constructor, Widget_methods, Widget_metafields, NULL)
 #define lua_newtype_extwidget(L, typename) widget_type_new(L, #typename, typename##_constructor, Widget_methods, Widget_metafields, typename##_methods)
@@ -73,6 +74,7 @@ int fontsize_fromheight(int height);
 LOGFONTW *Font(Widget *w);
 void UpdateFont(Widget *w, LOGFONTW *l);
 void SetFontFromWidget(Widget *w, Widget *wp);
+int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uIdSubclass);
 
 LUA_METHOD(Widget, __metanewindex); //----- for event registration
 LUA_METHOD(Widget, show);

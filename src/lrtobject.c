@@ -450,7 +450,7 @@ void *lua_checkcinstance(lua_State *L, int idx, luart_type t) {
 	if ( (p = lua_iscinstance(L, idx, t)) )
 		return p;
 	else
-		luaL_typeerror(L, idx, luaL_typename(L, idx));
+		luaL_typeerror(L, idx, "object instance");
 	return NULL;
 }
 
@@ -496,6 +496,7 @@ static void property(lua_State *L, const char *prop) {
 
 void lua_registerwidget(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip) {
 	lua_registerobject(L, type, typename, constructor, methods, mt);
+	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 	if (!lua_getfield(L, LUA_REGISTRYINDEX, "Radiobutton"))
 		luaL_error(L, "ui module not found");
 	if (has_text)
@@ -512,10 +513,39 @@ void lua_registerwidget(lua_State *L, int *type, char *typename, lua_CFunction c
 	if (has_tooltip)
 		property(L, "tooltip");
 	lua_pop(L, 1);
-	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 }
 
-WIDGET_INIT 	lua_widgetinitialize = NULL;
-WIDGET_FINALIZE	lua_widgetfinalize = NULL;
-luaL_Reg 		*WIDGET_METHODS = NULL;
-luart_type		TWidget = -1;
+lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction func) {
+	luaL_getsubtable(L, LUA_REGISTRYINDEX, "LuaRT Events");
+	WM_LUAMAX += luaL_len(L, -1)+1;
+	if (methodname)
+		lua_pushstring(L, methodname);
+	else lua_pushcfunction(L, func);
+	lua_rawseti(L, -2, WM_LUAMAX);
+	lua_pop(L, 1);
+	return WM_LUAMAX;
+}
+
+void *lua_getevent(lua_State *L, lua_Integer eventid, int *type) {
+	char *methodname = NULL;
+	if (eventid <= WM_LUAMAX) {
+		luaL_getsubtable(L, LUA_REGISTRYINDEX, "LuaRT Events");
+		if ( (*type = lua_rawgeti(L, -1, eventid)) == LUA_TSTRING ) {		
+			methodname = (char *)lua_tostring(L, -1);
+			lua_pop(L, 2);
+		}
+		else { 
+			lua_insert(L, -2);
+			lua_pop(L, 1);	
+		}
+	}
+	return methodname;
+}
+
+lua_Integer			WM_LUAMAX = WM_LUAMIN-1;
+WIDGET_INIT 		lua_widgetinitialize = NULL;
+WIDGET_CONSTRUCTOR	lua_widgetconstructor = NULL;
+WIDGET_DESTRUCTOR	lua_widgetdestructor = NULL;
+WIDGET_PROC			lua_widgetproc = NULL;
+luaL_Reg 			*WIDGET_METHODS = NULL;
+luart_type			TWidget = 0;
