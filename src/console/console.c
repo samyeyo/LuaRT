@@ -550,6 +550,7 @@ LUAMOD_API int luaopen_console(lua_State *L) {
 	DWORD mode = 0;
 
 	if (AllocConsole()) {
+		DeleteMenu(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_BYCOMMAND);
 		freopen("CON", "r", stdin);
 		freopen("CON", "w", stdout);
 		freopen("CON", "w", stderr);

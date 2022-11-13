@@ -19,7 +19,6 @@
 #include <shlwapi.h>
 #include <windowsx.h>
 
-//luart_type TWidget;
 
 const char *luart_wtypes[] = {
 	"Window", "Button", "Label", "Entry", "Edit", "Status", "Checkbox", "Radiobutton", "Groupbox", "Calendar", "List", "Combobox", "Tree", "Tab", "Item", "Menu", "MenuItem", "Picture"
@@ -227,7 +226,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			break; 
 		case WM_MOUSEMOVE:		
 			CallWindowProc(WindowProc, w->handle, uMsg, wParam, lParam);
-			return TRUE;
+			break;
 		case WM_SETCURSOR:	
 			if (w->wtype != UIEdit || ((w->wtype == UIEdit) && ((BOOL)w->cursor == TRUE))) {
 				SetCursor(w->hcursor);

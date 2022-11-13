@@ -78,6 +78,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 					hwndPrevious = hWnd;
 				}
 				lua_paramevent(w, onHover, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				if (w->status)
+					BringWindowToTop(w->status);
 				return 0;
 			case WM_NOTIFY:
 				if (w->status != ((LPNMHDR)lParam)->hwndFrom)
@@ -102,7 +104,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				if (w->status) {
 					GetWindowRect(w->status, &sbRect);
 					sbheight = sbRect.bottom - sbRect.top;
-					MoveWindow(w->status, 0, HIWORD(lParam)-sbheight, LOWORD(lParam), sbheight, TRUE);
+					SetWindowPos(w->status, HWND_TOP, 0, HIWORD(lParam)-sbheight, LOWORD(lParam), sbheight, SWP_SHOWWINDOW);
 				}
 				lua_callevent(w, onResize);
 				return 0;
@@ -252,7 +254,8 @@ LUA_METHOD(Window, status) {
 		wchar_t **str = calloc(n,sizeof(wchar_t*));
 		LONG size = 0;
 		for(i = 0; i < n; i++) {
-			str[i] = lua_tolwstring(L, i+2, &len);
+			luaL_tolstring(L, i+2, NULL);
+			str[i] = lua_tolwstring(L, -1, &len);
 			if (i+1 == n)
 				parts[i] = -1;
 			else {
@@ -270,6 +273,7 @@ LUA_METHOD(Window, status) {
 		free(str);
 		free(parts);
 	}
+	BringWindowToTop(handle);
 	return 0;
 }
 
