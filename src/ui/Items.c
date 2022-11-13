@@ -226,7 +226,7 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 		item = calloc(1, sizeof(TCITEMW));
 		RECT r; 
 		GetClientRect(w->handle, &r);
-		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 22, r.right-r.left-4, r.bottom-r.top-24, h, NULL, GetModuleHandle(NULL), NULL);
+		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 26, r.right-r.left-4, r.bottom-r.top-30, h, NULL, GetModuleHandle(NULL), NULL);
 		SetWindowLongPtr(hh, GWLP_WNDPROC, (ULONG_PTR)PageProc);
 		SetWindowLongPtr(hh, GWLP_USERDATA, (ULONG_PTR)w);
 		BringWindowToTop(hh);
