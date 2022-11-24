@@ -104,14 +104,8 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			WPARAM cmd = HIWORD(wParam);
 			if (w->wtype == UIGroup)
 				w = (Widget*)GetWindowLongPtr(GetDlgItem(w->handle, LOWORD(wParam)), GWLP_USERDATA);
-			if ((w->wtype == UIButton) || (w->wtype == UILabel) || (w->wtype >= UICheck && w->wtype <= UIGroup) || (w->wtype == UIPicture)) {
-				switch (cmd) {
-					case BN_CLICKED: 	lua_callevent(w, onClick); break;										
-					case BN_DOUBLECLICKED: 
-					case STN_DBLCLK:	lua_callevent(w, onDoubleClick);
-				}
-				return 0;
-			} 
+			if (!w)
+				break;
 			else if (((w->wtype == UIEntry) || (w->wtype == UIEdit)) && (cmd == EN_CHANGE || (w->wtype == UIEntry && cmd == EN_SELCHANGE))) {
 				lua_callevent(w, onChange);
 				return 0;
@@ -134,6 +128,12 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				return TRUE;	
 			}						
 		} break;
+
+		case WM_LBUTTONDOWN:
+			lua_callevent(w, onClick);				
+			if ((w->wtype == UIButton) || (w->wtype == UILabel) || (w->wtype >= UICheck && w->wtype <= UIGroup) || (w->wtype == UIPicture))
+				break;
+			return FALSE;
 		case WM_LBUTTONDBLCLK:
 			if (w->wtype == UIList) {
 				int index;
@@ -228,7 +228,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			CallWindowProc(WindowProc, w->handle, uMsg, wParam, lParam);
 			break;
 		case WM_SETCURSOR:	
-			if (w->wtype != UIEdit || ((w->wtype == UIEdit) && ((BOOL)w->cursor == TRUE))) {
+			if (w->wtype != UIEdit || ((BOOL)w->cursor == TRUE)) {
 				SetCursor(w->hcursor);
 				return TRUE;
 			} break;
@@ -239,11 +239,8 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				lua_callevent(w, onShow);
 			break;
 		case WM_NCHITTEST:
-			if (w->wtype == UIEdit) {
-				if (w->cursor)
-					return HTBORDER;
-				return DefWindowProc(w->handle, uMsg, wParam, lParam);
-			};
+			if (w->wtype == UIGroup) 
+				return HTCLIENT;
 			break;
 		case WM_MOUSELEAVE:
 			lua_callevent(w, onLeave);
@@ -428,7 +425,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     HMENU id = 0;
             
     hParent = Widget_init(L, &wp);
-    text = caption && ((type < UIList) || (type > UITab)) ? lua_towstring(L, idx-1) : NULL;
+    text = caption && (((type < UIList) || (type > UITab)) && (type != UIPicture)) ? lua_towstring(L, idx-1) : NULL;
     if (!hInstance)
         hInstance = GetModuleHandle(NULL);
     if (wp->wtype == UIGroup)
