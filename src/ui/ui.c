@@ -587,6 +587,7 @@ LUA_CONSTRUCTOR(Calendar) {
 LUA_CONSTRUCTOR(Tab) {
 	HTHEME t;
 	COLORREF color;
+	luaL_checktype(L, 3, LUA_TTABLE);
 	Widget *w = Widget_create(L, UITab, 0, WC_TABCONTROLW, WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, TRUE, TRUE);
 	LONG style = GetWindowLongPtr(w->handle, GWL_STYLE ) & ~WS_BORDER;
 	SetWindowLongPtr(w->handle, GWL_STYLE, style);
@@ -599,6 +600,7 @@ LUA_CONSTRUCTOR(Tab) {
 }
 
 LUA_CONSTRUCTOR(Listbox) {
+	luaL_checktype(L, 3, LUA_TTABLE);
 	Widget *w = Widget_create(L, UIList, WS_EX_CLIENTEDGE, WC_LISTVIEWW, WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | LVS_NOCOLUMNHEADER | LVS_REPORT | LVS_SHOWSELALWAYS | WS_TABSTOP | LVS_SINGLESEL, TRUE, FALSE);
 	HIMAGELIST imglist = ImageList_Create(1, 1, ILC_COLOR32|ILC_MASK, ImageList_GetImageCount(w->imglist), 1);
 	ListView_SetImageList(w->handle, imglist, LVSIL_SMALL);
@@ -608,6 +610,7 @@ LUA_CONSTRUCTOR(Listbox) {
 }
 
 LUA_CONSTRUCTOR(Tree) {
+	luaL_checktype(L, 3, LUA_TTABLE);
 	Widget_create(L, UITree, WS_EX_CLIENTEDGE, WC_TREEVIEWW, WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_TABSTOP | TVS_SHOWSELALWAYS | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_EDITLABELS, TRUE, FALSE);
 	lua_pushcfunction(L, Item_sort);
 	lua_setfield(L, 1, "sort");
@@ -620,7 +623,10 @@ LUA_CONSTRUCTOR(Combobox) {
 	if (lua_istable(L, 3)) {
 		caption = 1;
 		style = CBS_DROPDOWN;
-	} else style = lua_toboolean(L, 3) ? CBS_DROPDOWN : CBS_DROPDOWNLIST;
+	} else {
+		style = lua_toboolean(L, 3) ? CBS_DROPDOWN : CBS_DROPDOWNLIST;
+		luaL_checktype(L, 4, LUA_TTABLE);
+	}
 	Widget *w = Widget_create(L, UICombo, 0, WC_COMBOBOXEXW, WS_TABSTOP | style | WS_CHILD | WS_VISIBLE, caption, FALSE);
 	SendMessage(w->handle, CBEM_SETIMAGELIST, 0, (LPARAM)w->imglist);
 	SendMessage(w->handle, CBEM_SETEXTENDEDSTYLE, CBES_EX_NOEDITIMAGEINDENT, CBES_EX_NOEDITIMAGEINDENT);
