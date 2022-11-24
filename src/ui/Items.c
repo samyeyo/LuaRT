@@ -76,8 +76,14 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			return WidgetProc(hWnd, Msg, 0, lParam, 0, 0);
 		case WM_CTLCOLORBTN:
 		case WM_CTLCOLORSTATIC: 
-			SetBkMode((HDC)wParam, TRANSPARENT);	
-			return (LRESULT)w->brush;
+			if (IsWindowEnabled((HWND)lParam)) {
+				Widget *c = (Widget*)GetWindowLongPtr((HWND)lParam, GWLP_USERDATA);	
+				if (c) {			
+					SetBkMode((HDC)wParam, TRANSPARENT);	
+					SetTextColor((HDC)wParam, c->color);
+					return (LRESULT)(c->brush ?: w->brush);
+				}
+			}
 		default: break;
 	}
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
