@@ -486,7 +486,7 @@ static int arith_unm (lua_State *L) {
 }
 
 static int str_iter(lua_State *L) {
-	int len;
+	int len, result = 0;
 	const wchar_t *str = lua_tolwstring(L, lua_upvalueindex(1), &len);
 	lua_Integer pos = lua_tointeger(L, lua_upvalueindex(2));
 	
@@ -494,9 +494,10 @@ static int str_iter(lua_State *L) {
 		lua_pushinteger(L, pos+1);
 		lua_replace(L, lua_upvalueindex(2));
 		lua_pushlwstring(L, str+pos, 1);
-		return 1;
+		result = 1;
 	}
-	return 0;	
+  free(str);
+	return result;	
 }
 
 static int str_iterate(lua_State *L) {
