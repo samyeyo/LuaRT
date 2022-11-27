@@ -66,6 +66,7 @@ static int luart_fsloader(lua_State *L) {
 //-------------------------------------------------[luaL_embedclose() luaRT C API]
 LUALIB_API int luaL_embedclose(lua_State *L) {
 	free(datafs);
+  free(fs);
 	return 0;
 }
 
@@ -117,12 +118,13 @@ LUALIB_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
 	  CloseHandle(hFile);
 	  if ((fs = open_fs(datafs, fssize))) {
 	  	lua_getglobal(L, "package");
-		lua_getfield(L, -1, "searchers");
-		lua_pushcfunction(L, luart_fsloader);
-		lua_rawseti(L, -2, luaL_len(L, -2)+1);
-		lua_pop(L, 2);
-		return TRUE;
+      lua_getfield(L, -1, "searchers");
+      lua_pushcfunction(L, luart_fsloader);
+      lua_rawseti(L, -2, luaL_len(L, -2)+1);
+      lua_pop(L, 2);
+      return TRUE;
 	  }
+    free(datafs);
   }
   return FALSE;
 }
@@ -152,14 +154,14 @@ static const luaL_Reg embed_properties[] = {
 //-------------------------------------------------[luaopen_embed() "embed" module]
 int luaopen_embed(lua_State *L) {
 	lua_registermodule(L, "embed", embedlib, embed_properties, luaL_embedclose);
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "loaded");
-    lua_getfield(L, -1, "compression");
-    lua_pushstring(L, "zip");
-    lua_getfield(L, -2, "Zip");
-    lua_pushlightuserdata(L, fs);
-    lua_pcall(L, 1, 1, 0);
-    lua_rawset(L, -6);
-    lua_pop(L, 3);
+  lua_getglobal(L, "package");
+  lua_getfield(L, -1, "loaded");
+  lua_getfield(L, -1, "compression");
+  lua_pushstring(L, "zip");
+  lua_getfield(L, -2, "Zip");
+  lua_pushlightuserdata(L, fs);
+  lua_pcall(L, 1, 1, 0);
+  lua_rawset(L, -6);
+  lua_pop(L, 3);
 	return 1;
 }
