@@ -38,6 +38,7 @@ LUA_CONSTRUCTOR(COM) {
 		} else if ( FAILED(CoCreateInstance(&clsid, 0, CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER, &IID_IDispatch, (LPVOID*)&obj->this))) {
 			lua_pushfstring(L, "IDispatch interface not implemented by COM object '%s'", lua_tostring(L, 2));		
 error:		free(name);
+			free(obj);
 			lua_error(L);
 		}					
 		free(name);
@@ -145,8 +146,7 @@ static int COM_method_call(lua_State *L) {
 		} else switch(result.vt) {
 			case VT_EMPTY:
 done:		case VT_NULL:		lua_pushnil(L); break;
-			case VT_BSTR:		lua_pushwstring(L, (LPCWSTR)V_BSTR(&result));	
-								SysFreeString(V_BSTR(&result)); break;						
+			case VT_BSTR:		lua_pushwstring(L, (LPCWSTR)V_BSTR(&result)); break;						
 			case VT_BOOL:  		lua_pushboolean(L, result.boolVal); break;
 			case VT_I1:
 			case VT_I2:
@@ -170,10 +170,11 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 									lua_pushinstance(L, Datetime, 1);
 									break;
 								}
-			default: 	luaL_error(L, "COM error : unsupported result type"); 
+			default: 			luaL_error(L, "COM error : unsupported result type"); 
 		}
 	} else
 		lua_pushfstring(L, "COM error : no member '%s' found", lua_tostring(L, lua_upvalueindex(1)));
+	VariantClear(&result);
 	free(field);
 	while (n--)
 		VariantClear(&params.rgvarg[n]);
