@@ -9,8 +9,8 @@
 #include <luart.h>
 #include "Widget.h"
 #include <Window.h>
-
 #include <windowsx.h>
+#include <dwmapi.h>
 
 luart_type TWindow;
 
@@ -180,9 +180,13 @@ LUA_CONSTRUCTOR(Window) {
 	w->handle = CreateWindowExW(0, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, HWND_DESKTOP, NULL, hInstance, NULL);
 	if (style == 1)
 		SetWindowLong(w->handle, GWL_STYLE, GetWindowLongPtr(w->handle, GWL_STYLE) & ~WS_MAXIMIZEBOX);
+	else if (style == 3) {
+		DWM_WINDOW_CORNER_PREFERENCE d = DWMWCP_ROUND;
+		DwmSetWindowAttribute(w->handle, DWMWA_WINDOW_CORNER_PREFERENCE, &d, sizeof(DWM_WINDOW_CORNER_PREFERENCE));
+	}
   	AdjustWindowRectEx(&r, GetWindowLongPtr(w->handle, GWL_STYLE), FALSE, GetWindowLongPtr(w->handle, GWL_EXSTYLE));
 	SetWindowPos(w->handle, 0, 0, 0, r.right-r.left, r.bottom-r.top, SWP_HIDEWINDOW | SWP_NOMOVE);
-	free(title);
+	free(title); 
 	SetWindowLongPtr(w->handle, GWLP_USERDATA, (ULONG_PTR)w);
 	w->brush = GetSysColorBrush(COLOR_BTNFACE);
 	w->wtype = UIWindow;
@@ -234,7 +238,6 @@ LUA_METHOD(Window, loadtrayicon) {
 	}
 	Shell_NotifyIconW(action, nid);
 	return 0;
-
 }
 
 LUA_METHOD(Window, status) {
