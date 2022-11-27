@@ -236,5 +236,6 @@ error:
 			}
 		}
 	}
+	lua_stop();
 	return result;
 }
