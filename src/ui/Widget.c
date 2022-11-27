@@ -106,6 +106,13 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				w = (Widget*)GetWindowLongPtr(GetDlgItem(w->handle, LOWORD(wParam)), GWLP_USERDATA);
 			if (!w)
 				break;
+			if ((w->wtype == UIButton) || (w->wtype == UILabel) || (w->wtype >= UICheck && w->wtype <= UIGroup) || (w->wtype == UIPicture)) {
+				switch (cmd) {
+					case BN_DOUBLECLICKED: 
+					case STN_DBLCLK:	lua_callevent(w, onDoubleClick);
+				}
+				return 0;
+			} 				
 			else if (((w->wtype == UIEntry) || (w->wtype == UIEdit)) && (cmd == EN_CHANGE || (w->wtype == UIEntry && cmd == EN_SELCHANGE))) {
 				lua_callevent(w, onChange);
 				return 0;
@@ -131,9 +138,8 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 
 		case WM_LBUTTONDOWN:
 			lua_callevent(w, onClick);				
-			if ((w->wtype == UIButton) || (w->wtype == UILabel) || (w->wtype >= UICheck && w->wtype <= UIGroup) || (w->wtype == UIPicture))
-				break;
-			return FALSE;
+			break;
+			
 		case WM_LBUTTONDBLCLK:
 			if (w->wtype == UIList) {
 				int index;
@@ -204,9 +210,10 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 					case TVN_ENDLABELEDITW:	lua_paramevent(w, onChange, 0, (LPARAM)((LPNMTVDISPINFOW)lParam)->item.hItem); return TRUE;
 					case TVN_DELETEITEMW:	{
 												TVITEMW *item = __get_item(w, 0, ((LPNMTREEVIEW)lParam)->itemOld.hItem);
-												lua_paramevent(w, onChange, 1, (LPARAM)(item->pszText)); break;
+												lua_paramevent(w, onChange, 1, (LPARAM)(item->pszText));
+												free(item->pszText);
 												free(item);
-											}	
+											} break;
 				}
 			}
 			return 0;
@@ -839,6 +846,7 @@ LUA_PROPERTY_SET(Widget, font) {
 		UpdateFont(w, l);
 	}
 	free(l);
+	free(str);
 	if (!result)
 		luaL_error(L, "failed to load font");
 	return 0;
