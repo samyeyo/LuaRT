@@ -279,7 +279,7 @@ static int dialog(lua_State *L, BOOL save, DWORD flags) {
 			lua_pushinstance(L, File, 1);
 		}
 	} else lua_pushnil(L);
-	free(ofn.lpstrFileTitle);
+	free((void*)ofn.lpstrTitle);
 	free(filter);
 	SetForegroundWindow(ofn.hwndOwner);
 	SetActiveWindow(ofn.hwndOwner);
@@ -314,6 +314,7 @@ LUA_METHOD(ui, dirdialog) {
 	    lua_pushwstring(L, path);
 	    lua_pushinstance(L, Directory, 1);
 	} else luaL_pushfail(L);
+	free((void*)bi.lpszTitle);
 	free((void*)bi.lParam);
 	SetFocus(bi.hwndOwner);
 	return 1;
@@ -374,7 +375,7 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 								lua_insert(L, -count);
 							} 
 						} else if (lua_getfield(L, -1, methodname)) {
-							lua_insert(L, -2);
+							lua_insert(L, -2);							
 							switch (msg.message) {
 								case WM_LUADBLCLICK:
 								case WM_LUACONTEXT:	if (((w->wtype >= UIList) && (w->wtype <= UITab)) && (msg.wParam > 0))
@@ -439,6 +440,7 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 						lua_pop(L, result);
 				 	} 
 				}
+				lua_pop(L, lua_gettop(L));
 				goto peek;
 			} else {				 
 				Widget *wp = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
@@ -603,6 +605,7 @@ LUA_CONSTRUCTOR(Listbox) {
 	luaL_checktype(L, 3, LUA_TTABLE);
 	Widget *w = Widget_create(L, UIList, WS_EX_CLIENTEDGE, WC_LISTVIEWW, WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | LVS_NOCOLUMNHEADER | LVS_REPORT | LVS_SHOWSELALWAYS | WS_TABSTOP | LVS_SINGLESEL, TRUE, FALSE);
 	HIMAGELIST imglist = ImageList_Create(1, 1, ILC_COLOR32|ILC_MASK, ImageList_GetImageCount(w->imglist), 1);
+	ListView_SetExtendedListViewStyleEx(w->handle, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
 	ListView_SetImageList(w->handle, imglist, LVSIL_SMALL);
 	lua_pushcfunction(L, Listbox_sort);
 	lua_setfield(L, 1, "sort");
@@ -693,7 +696,7 @@ LUAMOD_API int luaopen_ui(lua_State *L)
 	while (events[++i])
 		lua_registerevent(L, events[i], NULL);
 	lua_regmodulefinalize(L, ui); 
-	widget_type_new(L, &UIWindow, "Window", Window_constructor, Window_methods, NULL, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE);
+	widget_type_new(L, &UIWindow, "Window", Window_constructor, Window_methods, Window_metafields, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE);
 	widget_type_new(L, &UIButton, "Button", Button_constructor, NULL, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE);
 	widget_type_new(L, &UILabel, "Label", Label_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	widget_type_new(L, &UIEntry, "Entry", Entry_constructor, Entry_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
