@@ -9,7 +9,6 @@
 #pragma once
 
 #define FDSET_SIZE 1024
-#include <lua.h>
 #include <luart.h>
 
 //--- Utility macro to calculate UTF8 char size in bytes

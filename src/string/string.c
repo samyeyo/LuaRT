@@ -9,7 +9,7 @@
 #define lstrlib_c
 #define LUA_LIB
 
-#include <lprefix.h>
+#include <lua\lprefix.h>
 
 #include <ctype.h>
 #include <float.h>

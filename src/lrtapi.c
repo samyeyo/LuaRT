@@ -6,8 +6,7 @@
  | lrtapi.c | LuaRT API implementation
 */
 
-#include "lua.h"
-#include "luart.h"
+#include <luart.h>
 #include "lrtapi.h"
 #include <windows.h>
 

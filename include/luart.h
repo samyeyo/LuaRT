@@ -12,9 +12,9 @@
 extern "C" {
 #endif
 
-#include "..\src\lua\lua.h"
-#include "..\src\lua\lauxlib.h"
-#include "..\src\lua\lualib.h"
+#include "lua\lua.h"
+#include "lua\lauxlib.h"
+#include "lua\lualib.h"
 #include <windows.h>
 
 //--------------------------------------------------| LuaRT _VERSION

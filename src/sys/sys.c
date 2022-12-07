@@ -6,8 +6,7 @@
  | sys.c | LuaRT sys module
 */
 
-#include <lua.h>
-#include <lauxlib.h>
+#include <luart.h>
 #include <locale.h>
 
 #include <Buffer.h>
@@ -16,7 +15,6 @@
 #include <Pipe.h>
 #include <Date.h>
 #include <Com.h>
-#include <luart.h>
 #include <wininet.h>
 #include <winreg.h>
 
