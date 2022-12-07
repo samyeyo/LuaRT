@@ -161,20 +161,21 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 			case VT_DISPATCH:	{
 									lua_pushlightuserdata(L, result.pdispVal);
 									lua_pushinstance(L, COM, 1);
-									break;
+									goto cleanup;
 								}
 			case VT_DATE:		{
 									SYSTEMTIME st;
 									VariantTimeToSystemTime(V_DATE(&result), &st);
 									lua_pushlightuserdata(L, &st);
 									lua_pushinstance(L, Datetime, 1);
-									break;
+									goto cleanup;
 								}
 			default: 			luaL_error(L, "COM error : unsupported result type"); 
 		}
 	} else
 		lua_pushfstring(L, "COM error : no member '%s' found", lua_tostring(L, lua_upvalueindex(1)));
 	VariantClear(&result);
+cleanup:
 	free(field);
 	while (n--)
 		VariantClear(&params.rgvarg[n]);
