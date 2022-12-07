@@ -421,7 +421,7 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 							lua_pushinstance(L, MenuItem, 2);
 							lua_remove(L, -2);
 						}
-					} //else lua_pop(L, 1);	
+					} 
 				} else goto do_msg;
 				if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
 					if (lua_pcall(L, nargs, LUA_MULTRET, 0))
@@ -440,9 +440,8 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 						}
 						lua_pop(L, result);
 				 	}
-				}
-				lua_pop(L, lua_gettop(L));
-				goto peek;
+				} else if (w->wtype > UIMenuItem)
+					goto do_msg;
 			} else {				 
 				Widget *wp = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
 				while(wp && (wp->wtype != UIWindow))
@@ -462,6 +461,7 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 do_msg:			TranslateMessage(&msg);
 dispatch:		DispatchMessage(&msg);
 			}
+			lua_pop(L, lua_gettop(L));
 		}	
 	}
 	Sleep(1);
