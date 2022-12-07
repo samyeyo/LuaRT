@@ -65,8 +65,7 @@ static int luart_fsloader(lua_State *L) {
 
 //-------------------------------------------------[luaL_embedclose() luaRT C API]
 LUALIB_API int luaL_embedclose(lua_State *L) {
-	free(datafs);
-  free(fs);
+  free(datafs);
 	return 0;
 }
 
