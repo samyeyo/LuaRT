@@ -80,10 +80,10 @@ LUA_METHOD(net, reverse) {
 	char *ip = (char*)luaL_checkstring(L, 1);
 	char final_ip[100];
 	char *type = NULL;
+	char ip2[29];
     
 	if ( inet_pton(AF_INET, ip, &(sa.sin_addr)) != 0 ) {
 		int a,b,c,d, result;
-		char ip2[29];
 		result = sscanf(ip,"%d.%d.%d.%d",&a,&b,&c,&d);
 		if (result == EOF || result != 4)
 			luaL_error(L, "malformed IPv4 address");
