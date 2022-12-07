@@ -8,7 +8,7 @@ local ui = require "ui"
 
 local win = ui.Window("Server running on 127.0.0.1:5000", "fixed", 320, 200)
 local edit = ui.Edit(win, "")
-edit:align("all")
+edit.align = "all"
 edit.readonly = true
 edit.font = "Consolas"
 edit.fonsize = 8

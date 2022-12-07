@@ -68,7 +68,6 @@ function FileOpen:onClick()
 			Edit:load(file, isRTF)
 			title = file.name
 			Edit.modified = false
-			Edit:align("all")
 			update_status()
 		end
 	end
@@ -150,9 +149,7 @@ function SettingsMenu:onClick(idx)
 end
 
 -- Realign Edit size when the Window is resized
-function win:onResize() 
-	Edit:align("all")
-end
+Edit.align = "all"
 
 -- Main Window onClose Event => call MenuItem FileExit onClick() method
 function win:onClose()
@@ -192,7 +189,6 @@ win:shortcut("n", FileNew.onClick, true)
 
 -- update status bar and Edit menuitems
 Edit:onChange()
-win:onResize()
 
 -- shows the main Window and set focus to the Edit object
 win:show()

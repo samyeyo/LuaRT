@@ -9,7 +9,8 @@ local ui = require "ui"
 -- create a simple window 
 local win = ui.Window("Binary file viewer sample", "fixed", 560, 460)
 local edit = ui.Edit(win, "")
-edit:align("all")
+edit.align = "all"
+edit.cursor = "arrow"
 
 -- set edit widget properties
 edit.font = "Lucida Console"
