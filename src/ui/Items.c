@@ -7,7 +7,8 @@
 */
 
 #include <luart.h>
-#include "Widget.h"
+#include <Widget.h>
+#include "ui.h"
 #include <Window.h>
 #include <windowsx.h>
 #include <uxtheme.h>
@@ -71,7 +72,7 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			return SendMessage((HWND)lParam, Msg, wParam, lParam);
 		case WM_CONTEXTMENU: 
 		case WM_MOUSEMOVE:
-			lParam = MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam));
+			lParam = MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam));		
 		case WM_MOUSELEAVE:
 			return WidgetProc(hWnd, Msg, 0, lParam, 0, 0);
 		case WM_CTLCOLORBTN:

@@ -7,7 +7,8 @@
 */
 
 #include <luart.h>
-#include "Widget.h"
+#include <Widget.h>
+#include "ui.h"
 #include <Window.h>
 #include <windowsx.h>
 #include <dwmapi.h>
@@ -15,6 +16,17 @@
 luart_type TWindow;
 
 static HANDLE hwndPrevious;
+
+BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam)
+{
+	if (GetParent(h) == (HWND)lParam) {	
+		Widget *w = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA);
+		if (w) {
+			do_align(w);
+		}
+	}
+	return TRUE;
+}
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {	
 	Widget *w = (Widget*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
@@ -43,9 +55,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 										lua_menuevent(((Widget*)mi.dwItemData)->ref, wParam);
 	    							return 0;
 								 }
-								 
 			case WM_WINDOWPOSCHANGING:
 				if (!(((WINDOWPOS*)lParam)->flags & SWP_NOSIZE)) {
+					
 					lua_callevent(w, onResize);
 					return 0;
 				}
@@ -53,14 +65,12 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			case WM_WINDOWPOSCHANGED:	
 				if (w->status) {
 					RECT r;
-					GetClientRect(w->handle, &r);
+					GetClientRect(hWnd, &r);
 					SendMessage(w->status, WM_SIZE, 0, MAKELPARAM(r.right, r.bottom));
 				}
 				flags = ((WINDOWPOS*)lParam)->flags;
-				if (!(flags & SWP_NOMOVE)) {
+				if (!(flags & SWP_NOMOVE))
 					lua_callevent(w, onMove);
-					return 0;
-				}
 				if (flags & SWP_HIDEWINDOW)
 					lua_callevent(w, onHide);
 				else if (flags & SWP_SHOWWINDOW)
@@ -68,6 +78,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				if (!(flags & SWP_NOSIZE)) {
 					if (w->status)
 						SendMessage(w->status, WM_SIZE, 0, 0);
+					EnumChildWindows(hWnd, ResizeChilds, (LPARAM)hWnd);
 					lua_callevent(w, onResize);
 				}
 				return 0;
@@ -100,7 +111,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				return 0;
 			case WM_SIZE: {
 				RECT sbRect;
-				UINT sbheight;
+				UINT sbheight;				
 				if (w->status) {
 					GetWindowRect(w->status, &sbRect);
 					sbheight = sbRect.bottom - sbRect.top;
@@ -109,6 +120,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				lua_callevent(w, onResize);
 				return 0;
              }
+			case WM_SIZING:
+			    EnumChildWindows(hWnd, ResizeChilds, (LPARAM)hWnd);
+				break;
             case WM_SETCURSOR:
 				if (LOWORD(lParam) == HTCLIENT) {
 					POINT p;

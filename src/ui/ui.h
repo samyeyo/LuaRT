@@ -9,29 +9,12 @@
 #pragma once
 
 #include <luart.h>
+#include <Widget.h>
 #include <window.h>
 #include <windows.h>
 #include <commctrl.h>
 #include <richedit.h>
 #include <wincodec.h>
-
-extern int UIWindow;
-extern int UIButton;
-extern int UIGroup;
-extern int UICheck;
-extern int UIRadio;
-extern int UILabel;
-extern int UIEntry;
-extern int UIPicture;
-extern int UIDate;
-extern int UIMenu;
-extern int UIMenuItem;
-extern int UITab;
-extern int UIList;
-extern int UICombo;
-extern int UITree;
-extern int UIEdit;
-extern int UIItem;
 
 void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
 void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip);
@@ -67,6 +50,7 @@ void add_column(Widget *w);
 int getStyle(Widget *w, const int *values, const char *names[]);
 void copy_menuitems(lua_State *L, HMENU from, HMENU to);
 
+void do_align(Widget *w);
 HBITMAP LoadImg(wchar_t *filename);
 BOOL SaveImg(wchar_t *fname, HBITMAP hBitmap);
 BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf);

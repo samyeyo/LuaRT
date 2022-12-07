@@ -18,4 +18,3 @@ extern luart_type TWindow;
 
 extern luaL_Reg Window_methods[];
 extern luaL_Reg Window_metafields[];
-

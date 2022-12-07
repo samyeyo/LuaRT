@@ -7,7 +7,8 @@
 */
 
 #include <luart.h>
-#include "Widget.h"
+#include <Widget.h>
+#include "ui.h"
 #include <Window.h>
 #include <File.h>
 #include <Directory.h>
@@ -438,7 +439,7 @@ peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 							}
 						}
 						lua_pop(L, result);
-				 	} 
+				 	}
 				}
 				lua_pop(L, lua_gettop(L));
 				goto peek;

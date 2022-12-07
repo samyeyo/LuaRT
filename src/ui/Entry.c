@@ -7,7 +7,8 @@
 */
 
 #include <luart.h>
-#include "Widget.h"
+#include <Widget.h>
+#include "ui.h"
 #include <File.h>
 #include <Window.h>
 
@@ -23,6 +24,7 @@ LUA_METHOD(Edit, append) {
  	SendMessageW(w->handle,(UINT) EM_REPLACESEL,(WPARAM) FALSE,(LPARAM) chars);	
  	if (!w->cursor)
 		SetFocus(w->handle);
+	SendMessage(w->handle, WM_VSCROLL, SB_BOTTOM, 0);
 	free(chars);
  	return 0;
 }

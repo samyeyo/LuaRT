@@ -6,7 +6,8 @@
  | lrtobject.c | LuaRT C API object implementation
 */
 
-#include "luart.h"
+#include <luart.h>
+#include <Widget.h>
 #include "lrtapi.h"
 #include <stdlib.h>
 #include <windows.h>
@@ -515,12 +516,12 @@ void lua_registerwidget(lua_State *L, int *type, char *typename, lua_CFunction c
 	lua_pop(L, 1);
 }
 
-lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction func) {
+lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction event) {
 	luaL_getsubtable(L, LUA_REGISTRYINDEX, "LuaRT Events");
 	WM_LUAMAX += luaL_len(L, -1)+1;
 	if (methodname)
 		lua_pushstring(L, methodname);
-	else lua_pushcfunction(L, func);
+	else lua_pushcfunction(L, event);
 	lua_rawseti(L, -2, WM_LUAMAX);
 	lua_pop(L, 1);
 	return WM_LUAMAX;

@@ -8,7 +8,8 @@
 
 #include "lrtapi.h"
 #include <luart.h>
-#include "Widget.h"
+#include <Widget.h>
+#include "ui.h"
 #include <Window.h>
 
 #include <windowsx.h>

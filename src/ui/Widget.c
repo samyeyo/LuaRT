@@ -7,7 +7,8 @@
 */
 
 #include <luart.h>
-#include "Widget.h"
+#include <Widget.h>
+#include "ui.h"
 #include <Window.h>
 #include <File.h>
 #include <Buffer.h>
@@ -95,6 +96,7 @@ static HANDLE HitTest(TCHITTESTINFO *hti, HWND h, DWORD msg, UINT flags, LPARAM 
 	return (HANDLE)SendMessage(h, msg, 0, (LPARAM)hti);
 }
 
+extern BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam);
 
 int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uIdSubclass) {
 	LPNMHDR lpNmHdr;
@@ -137,7 +139,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 		} break;
 
 		case WM_LBUTTONDOWN:
-			lua_callevent(w, onClick);				
+			lua_callevent(w, onClick);			
 			break;
 			
 		case WM_LBUTTONDBLCLK:
@@ -235,7 +237,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			CallWindowProc(WindowProc, w->handle, uMsg, wParam, lParam);
 			break;
 		case WM_SETCURSOR:	
-			if (w->wtype != UIEdit || ((BOOL)w->cursor == TRUE)) {
+			if ((w->wtype != UIEdit) || ((BOOL)w->cursor == TRUE)) {
 				SetCursor(w->hcursor);
 				return TRUE;
 			} break;
@@ -265,14 +267,17 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			RemoveWindowSubclass(w->handle, WidgetProc, uIdSubclass);
 			break;
 		case WM_SIZE:
-			if (w->wtype == UITab) 
-				page_resize(w, FALSE);
+			if (w->wtype == UIGroup || w->wtype == UITab) {
+				if (w->wtype == UITab) 
+					page_resize(w, FALSE);
+				EnumChildWindows(w->handle, ResizeChilds, (LPARAM)w->handle);
+			}
 			break;
 		case WM_PAINT:
 			if (w->wtype == UITab) { //----- Tab control transparency hack
 				RECT r, rr;
-				size_t count = TabCtrl_GetItemCount(w->handle);
-				HBRUSH brush, pbrush = ((Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA))->brush ?: w->brush;
+				int count = TabCtrl_GetItemCount(w->handle);
+				HBRUSH pbrush = ((Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA))->brush ?: w->brush;
 				HDC hdc = GetDC(w->handle);
 				DefSubclassProc(w->handle, uMsg, wParam, lParam);
 				GetClientRect(w->handle, &r);
@@ -281,7 +286,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				GetObject(pbrush, sizeof(lbr), &lbr);
 				SelectObject(hdc, CreateSolidBrush(lbr.lbColor));
 				int sel = TabCtrl_GetCurSel(w->handle);
-				for (size_t i = 0; i < count; i++) { 
+				for (int i = 0; i < count; i++) { 
 					if (i != sel) {
 						TabCtrl_GetItemRect(w->handle, i, &rr);	
 						cr = GetPixel(hdc, rr.left+r.left+2, rr.top+r.top-2);				
@@ -407,6 +412,7 @@ Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, S
 	Widget *w = calloc(1, sizeof(Widget));
 	w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
     w->wtype = type;
+	w->align = -1;
     lua_newinstance(L, w, Widget);
     lua_pushvalue(L, 1);
     w->ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -446,6 +452,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     if (type != UIEdit)
         w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
     w->wtype = type;
+	w->align = -1;	
     if ((w->autosize = autosize) && (lua_gettop(L) < 6))
         WidgetAutosize(w);
     lua_newinstance(L, w, Widget);
@@ -492,42 +499,53 @@ LUA_METHOD(Widget, hide) {
 	return 0;
 }
 
-static void do_align(HWND h, int type, RECT r, RECT rect) {
-	switch (type) {
-		case 0:	SetWindowPos(h, NULL, r.left, r.top, r.right-r.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
-		case 1:	SetWindowPos(h, NULL, r.left, r.top, rect.right-rect.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
-		case 2:	SetWindowPos(h, NULL, r.right-(rect.right-rect.left), r.top, rect.right-rect.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
-		case 3:	SetWindowPos(h, NULL, r.left, r.bottom-(rect.bottom-rect.top), r.right-r.left, rect.bottom-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
-		case 4:	SetWindowPos(h, NULL, r.left, r.top, r.right-r.left, rect.bottom-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER);
-	}	
+void do_align(Widget *w) {
+	if (w->align >= 0) {
+		RECT r, rect;
+		GetClientRect(w->handle, &rect);
+		if (w->wtype != UIWindow) {
+			Widget *win = (Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA);
+			if (win) {
+				GetClientRect(win->handle, &r);
+				if (win->status) {	
+					RECT sr;
+					GetWindowRect(win->status, &sr);
+					r.bottom -= sr.bottom-sr.top;
+				}
+				if (win->wtype == UITab) {
+					r.bottom -= AdjustTab_height(win->handle);
+				} else if (win->wtype == UIGroup)
+					r.top += 22;
+			} else GetClientRect(GetParent(w->handle), &r);
+		} else
+			GetClientRect(GetDesktopWindow(), &r);
+		switch (w->align) {
+			case 0:	SetWindowPos(w->handle, NULL, r.left, r.top, r.right-r.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
+			case 1:	SetWindowPos(w->handle, NULL, r.left, r.top, rect.right-rect.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
+			case 2:	SetWindowPos(w->handle, NULL, r.right-(rect.right-rect.left), r.top, rect.right-rect.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
+			case 3:	SetWindowPos(w->handle, NULL, r.left, r.bottom-(rect.bottom-rect.top), r.right-r.left, rect.bottom-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
+			case 4:	SetWindowPos(w->handle, NULL, r.left, r.top, r.right-r.left, rect.bottom-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
+		}	
+		if (w->wtype == UIPicture)
+			InvalidateRect(GetParent(w->handle), NULL, TRUE);
+	}
 }
 
-LUA_METHOD(Widget, align) {
-	Widget *w = lua_self(L, 1, Widget);
-	static const char *options[] = { "all", "left", "right", "bottom", "top", NULL };
-	RECT r, rect;
-	int type = luaL_checkoption(L, 2, NULL, options);
+static const char *align_options[] = { "all", "left", "right", "bottom", "top", NULL };
 
-	GetClientRect(w->handle, &rect);
-	if (w->wtype != UIWindow) {
-		Widget *win = (Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA);
-		GetClientRect(win->handle, &r);
-		if (win->status) {	
-			RECT sr;
-			GetWindowRect(win->status, &sr);
-			r.bottom -= sr.bottom-sr.top;
-		}
-		if (win->wtype == UITab) {
-			r.bottom -= AdjustTab_height(win->handle);
-		} else if (win->wtype == UIGroup)
-			r.top += 22;
-
-	} else
-		GetClientRect(GetDesktopWindow(), &r);
-	do_align(w->handle, type, r, rect);
-	if (w->wtype == UIPicture)
-		InvalidateRect(GetParent(w->handle), NULL, TRUE);
+LUA_PROPERTY_SET(Widget, align) {
+	Widget *w = lua_self(L, 1, Widget);	
+	w->align = lua_isnil(L, 2) ? -1 : luaL_checkoption(L, 2, NULL, align_options);
+	do_align(w);
 	return 0;
+}
+
+LUA_PROPERTY_GET(Widget, align) {
+	Widget *w = lua_self(L, 1, Widget);
+	if (w->align == -1)
+		lua_pushnil(L);
+	else lua_pushstring(L, align_options[w->align]);
+	return 1;
 }
 
 LUA_PROPERTY_SET(Widget, enabled) {
@@ -821,7 +839,6 @@ void UpdateFont(Widget *w, LOGFONTW *l) {
         }
     }
     else if (w->wtype == UIGroup || (w->wtype == UIItem && w->item.itemtype == UITab) || (w->wtype == UIWindow))
-
 		EnumChildWindows(w->handle, SetChildFont, (LPARAM)l); 
 	RedrawWindow(w->handle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
@@ -1205,7 +1222,8 @@ luaL_Reg Widget_methods[] = {
 	{"set_visible",		Widget_setvisible},
 	{"show",			Widget_show},
 	{"hide",			Widget_hide},
-	{"align",			Widget_align},
+	{"get_align",		Widget_getalign},
+	{"set_align",		Widget_setalign},
 	{"get_parent",		Widget_getparent},
 	{"center",			Widget_center},
 	{NULL, NULL}

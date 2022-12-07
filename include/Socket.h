@@ -47,7 +47,6 @@ typedef struct {
 	BOOL		error;
 	int			protocol;
 } Socket;
-
 extern luart_type TSocket;
 
 //---------------------------------------- Socket type
