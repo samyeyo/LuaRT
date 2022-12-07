@@ -15,7 +15,7 @@
 #define MINIZ_HEADER_FILE_ONLY
 #include <compression\lib\miniz.h>
 
-luart_type TCipher;
+// __declspec(dllexport) luart_type TCipher;
 
 typedef struct {
     BLOBHEADER hdr;

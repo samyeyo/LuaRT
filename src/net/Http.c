@@ -16,7 +16,7 @@
 #include <windns.h>
 #include <stdio.h>
 
-luart_type THttp;
+// __declspec(dllexport) luart_type THttp;
 
 static wchar_t *wcsndup(wchar_t* src, size_t len) {
 	wchar_t *result = calloc(1, len*2+1);

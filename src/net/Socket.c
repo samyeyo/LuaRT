@@ -14,7 +14,7 @@
 #include <io.h>
 #include <windns.h>
 
-luart_type TSocket;
+// __declspec(dllexport) luart_type TSocket;
 static const char *socket_mode [] = {"ipv4", "ipv6"};
 
 extern int dns(lua_State *L, const char *str, WORD type);

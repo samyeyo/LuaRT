@@ -15,7 +15,7 @@
 #include <windns.h>
 #include <stdio.h>
 
-luart_type TFtp;
+// __declspec(dllexport) luart_type TFtp;
 
 //--------------------------------- [ Ftp:constructor }
 LUA_CONSTRUCTOR(Ftp) {

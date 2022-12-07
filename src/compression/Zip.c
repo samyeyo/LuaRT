@@ -18,8 +18,9 @@
 #include <shlwapi.h>
 
 #include "lib\zip.h"
+#include <compression\lib\zip.h>
 
-luart_type TZip;
+
 const char *zip_modes[] = { "read", "append", "write", NULL };
 extern struct zip_t *fs;
 

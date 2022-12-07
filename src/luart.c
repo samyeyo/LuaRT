@@ -133,6 +133,7 @@ static int update_exe_icon(lua_State *L) {
 }
 #endif
 
+//------- LuaRT modules included in luart.exe/wluart.exe
 static luaL_Reg luaRT_libs[] = {
    	{ "compression",	luaopen_compression },
    	{ "crypto",			luaopen_crypto },

@@ -543,6 +543,14 @@ void *lua_getevent(lua_State *L, lua_Integer eventid, int *type) {
 	return methodname;
 }
 
+//------- LuaRT Objects implemented in luart.exe/wluart.exe
+luart_type TZip;
+luart_type TFtp;
+luart_type THttp;
+luart_type TSocket;
+luart_type TCipher;
+
+ //------ Helpers for Widgets in LuaRT binary modules
 lua_Integer			WM_LUAMAX = WM_USER+1;
 WIDGET_INIT 		lua_widgetinitialize = NULL;
 WIDGET_CONSTRUCTOR	lua_widgetconstructor = NULL;
