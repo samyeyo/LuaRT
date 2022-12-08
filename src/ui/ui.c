@@ -348,7 +348,7 @@ LUA_METHOD(ui, update) {
 	ULONGLONG start = GetTickCount64();
 
 	while (GetTickCount64()-start < delay) {
-peek:	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {	
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {	
 	    	if ((msg.message >= WM_LUAMIN) && (msg.message <= WM_LUAMAX)) {
 				Widget *w = NULL;
 				int n = lua_gettop(L), nargs;
