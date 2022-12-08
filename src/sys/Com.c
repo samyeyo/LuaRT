@@ -203,32 +203,44 @@ LUA_METHOD(COM, __index) {
 	EXCEPINFO	execpInfo = {0};
 	UINT		puArgErr = 0;
 	VARIANT		result = {0};
+	TYPEATTR	*attr;
+	FUNCDESC	*funcdesc = NULL;
+	BSTR name;
 
 	if (SUCCEEDED(IDispatch_GetIDsOfNames(obj->this, &IID_NULL, &field, 1, 0, &id))) {
-		VariantInit(&result);	
-		LONG value = IDispatch_Invoke(obj->this, id, &IID_NULL, 0, DISPATCH_PROPERTYGET, &params, &result, &execpInfo, &puArgErr);
-		if ( (value == DISP_E_MEMBERNOTFOUND) ) {
-			if ( IDispatch_Invoke(obj->this, id, &IID_NULL, 0, DISPATCH_METHOD, &params, &result, &execpInfo, &puArgErr) == DISP_E_MEMBERNOTFOUND ) {
-				luaL_where(L, 2);
-				luaL_error(L, "%s: COM error : field '%s' not found", lua_tostring(L, -1), lua_tostring(L, 2));
-			} else {
-method:			lua_pushvalue(L, 2);
-				lua_pushinteger(L, DISPATCH_METHOD);
-				lua_pushcclosure(L, COM_method_call, 2);				
+		BOOL found = FALSE;
+		if ( obj->typeinfo && SUCCEEDED(ITypeInfo_GetTypeAttr(obj->typeinfo, &attr))) {
+		UINT count;
+		for (WORD i = 0; i < attr->cFuncs; i++)
+			if ( SUCCEEDED(ITypeInfo_GetFuncDesc(obj->typeinfo, i, &funcdesc)) && SUCCEEDED(ITypeInfo_GetNames(obj->typeinfo, funcdesc->memid, &name, 1, &count)) ) {
+				if ((funcdesc->invkind == INVOKE_FUNC) && (lstrcmpiW(name, field) == 0)) {
+					ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
+					found = TRUE;
+					break;
+				}
+				ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
 			}
-		} else if ((value == DISP_E_BADPARAMCOUNT)) {
+		}
+		ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);			
+		if (found)
+			goto method;			
+		LONG value = IDispatch_Invoke(obj->this, id, &IID_NULL, 0, DISPATCH_PROPERTYGET, &params, &result, &execpInfo, &puArgErr);
+		if (value == DISP_E_BADPARAMCOUNT) {
 			lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_PROPERTYGET | DISPATCH_METHOD);
 			lua_pushvalue(L, 1);
 			lua_pushcclosure(L, COM_method_call, 3);
-		} else if ((value == DISP_E_EXCEPTION))
-			goto method; 
-		else {
+		} else if (value == 0) {		
+			VariantInit(&result);	
 			lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_PROPERTYGET);
 			lua_pushvalue(L, 1);
 			lua_pushcclosure(L, COM_method_call, 3);
 			lua_call(L, 0, 1);
+		} else {
+method:		lua_pushvalue(L, 2);
+			lua_pushinteger(L, DISPATCH_METHOD);
+			lua_pushcclosure(L, COM_method_call, 2);
 		}
 	} else lua_pushnil(L);
 	free(field);
@@ -281,7 +293,7 @@ LUA_METHOD(COM, __tostring) {
 	lua_pushwstring(L, lua_self(L, 1, COM)->name);
 	lua_pushstring(L, ">");
 	lua_concat(L, 3);
-	return 1;
+	return 1; 
 }
 
 LUA_METHOD(COM, __gc) {
