@@ -78,6 +78,7 @@ static wchar_t *append_path(wchar_t *str, wchar_t* path) {
 	return result;
 }
 
+//-------------------------------------[ Directory.make ]
 LUA_METHOD(Directory, make) {
 	Directory *dir = lua_self(L, 1, Directory);
 	wchar_t *trailing = append_path(dir->fullpath, L"");;
@@ -154,6 +155,11 @@ static int dir_create_iterator(lua_State *L, wchar_t *filter, size_t len) {
 	return 1;
 }
 
+LUA_PROPERTY_GET(Directory, isempty) {
+	lua_pushboolean(L, PathIsDirectoryEmptyW(lua_self(L, 1, Directory)->fullpath));
+	return 1;
+}
+
 LUA_METHOD(Directory, list) {
 	int len;
 	wchar_t *filter = lua_tolwstring(L, 2, &len);
@@ -213,6 +219,7 @@ const luaL_Reg Directory_methods[] = {
 	{"make",			Directory_make},
 	{"remove",			File_remove},
 	{"removeall",		Directory_removeall},
+	{"get_isempty",		Directory_getisempty},
 	{"move",			File_move},
 	{"list",			Directory_list},
 	{"get_name",		File_getfilename},
