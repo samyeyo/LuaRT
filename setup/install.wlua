@@ -1,4 +1,4 @@
-﻿local VERSION = '1.0.0'
+﻿local VERSION = '1.1.0'
 
 --[[
  | LuaRT - A Windows programming framework for Lua
@@ -15,11 +15,30 @@ local compression = require "compression"
 
 local File = embed == nil and sys.File  or embed.File
 
-local win = ui.Window("", "fixed", 320, 200)
+local win = ui.Window("", "raw", 320, 240)
 win.font = "Segoe UI"
+win.installation = false
 
-local img = ui.Picture(win, File("img/luaRT.png").fullpath, 0, 0)
-win:loadicon(File("img/setup.ico"))
+local x = ui.Label(win, "\xc3\x97", 378, -4)
+x.fontsize = 16
+x.fgcolor = 0x808080
+x.cursor = "hand"
+
+function x:onHover()
+    x.fgcolor = 0x202020
+end
+
+function x:onLeave()
+    x.fgcolor = 0x808080
+end
+
+function x:onClick()
+    if not (win.installation and ui.confirm("Installation is in progress. Are you really want to quit ?", "LuaRT installation") ~= "yes" or false) then
+        win.visible = false
+    end
+end
+
+local img = ui.Picture(win, File("img/luaRT.png").fullpath, 0, 20)
 win.width = img.width
 win.bgcolor = 0xFFFFFF
 win:center()
@@ -50,17 +69,28 @@ end
 function button:onClick()
     local dir = ui.dirdialog("Select a directory to install LuaRT")
     if dir ~= nil then
-        local label = ui.Label(win, "", 80, 160)
-        label.y = 160        
+        win.installation = true
+        local label = ui.Label(win, "", 40, 188)
+        label.autosize = false        
+        label.fontsize = 8
+        label.width = 312
+        label.textalign = "left"
+        label.fgcolor = 0x002A5A
+        local bar = ui.Progressbar(win, true, 40, 170, 312)
+        bar.fgcolor = 0xEFB42C
+        bar.bgcolor = 0xFFFFFF
         local archive = compression.Zip(File("luaRT.zip"))
+        bar.range = {0, archive.count}
         local size = 0
         self:hide()
         for entry in each(archive) do
-            label.text = "Extracting "..entry:sub(1, 32).."..."
+            local fname = entry:gsub('/', '\\')
+            label.text = "Extracting "..fname:sub(1, 40).."..."
             local result = archive:extract(entry, dir)
             if not result then
-                error("Error extracting "..entry.."\n"..(sys.error or ""))
+                error("Error extracting "..fname.."\n"..(sys.error or ""))
             end
+            bar:advance(1)
             ui.update()
         end
         archive:close()
@@ -70,7 +100,6 @@ function button:onClick()
         reg.InstallLocation = dir.fullpath;
         reg.DisplayIcon = dir.fullpath.."\\LuaRT-remove.exe,-103"
         reg.UninstallString = dir.fullpath.."\\LuaRT-remove.exe"
-        -- reg.EstimatedSize = math.floor(size/100)
         for key, value in pairs(reg) do
             sys.registry.write("HKEY_CURRENT_USER", "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LuaRT", key, value);
         end
@@ -88,12 +117,15 @@ function button:onClick()
 
         -- Create shortcuts
         startmenu_dir = sys.Directory(sys.env.USERPROFILE.."\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\LuaRT")
-        startmenu_dir:make()
+        if not startmenu_dir.exists then
+            startmenu_dir:make()
+        end
         shortcut("QuickRT", dir.fullpath.."\\QuickRT\\QuickRT.exe")
         shortcut("LuaRT Studio", dir.fullpath.."\\LuaRT-Studio\\LuaRT Studio.exe")
         shortcut("LuaRT Documentation", "https://luart.org/doc/index.html", sys.env.windir.."\\system32\\shell32.dll, 13")
-        ui.info("LuaRT "..VERSION.." has been successfully installed", "")
-        win:hide()
+        win.installation = false
+        label.textalign = "center"
+        label.text = "LuaRT "..VERSION.." has been successfully installed"
     end
 end
 
