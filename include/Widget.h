@@ -25,6 +25,7 @@ extern int UICombo;
 extern int UITree;
 extern int UIEdit;
 extern int UIItem;
+extern int UIProgressbar;
 
 //--------------------------------------------------| Widget object definition
 

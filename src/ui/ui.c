@@ -46,6 +46,7 @@ int UICombo;
 int UITree;
 int UIEdit;
 int UIItem;
+int UIProgressbar;
 
 BOOL SaveImg(wchar_t *fname, HBITMAP hBitmap) {
 	BITMAP Bitmap;
@@ -539,13 +540,13 @@ LUA_CONSTRUCTOR(Button) {
 		{"set_hastext", Widget_sethastext},
 		{NULL, NULL}
 	};
-	Widget_create(L, UIButton, 0, WC_BUTTONW, WS_TABSTOP | BS_PUSHBUTTON, TRUE, TRUE);
+	Widget_create(L, UIButton, 0, WC_BUTTONW, WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, TRUE, TRUE);
 	luaL_setrawfuncs(L, funcs);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Label) {
-	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, SS_NOTIFY | SS_LEFT, TRUE, TRUE);
+	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, WS_VISIBLE | SS_NOTIFY | SS_LEFT, TRUE, TRUE);
 	SetWindowTheme(w->handle, L"", L"");
 	luaL_setrawfuncs(L, color_methods);
 	return 1;
@@ -560,25 +561,36 @@ LUA_CONSTRUCTOR(Picture) {
     SendMessage(w->handle, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
 	return 1;
 }
+
+LUA_CONSTRUCTOR(Progressbar)
+{   
+	luaL_checktype(L, 3, LUA_TBOOLEAN);
+    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, 1, TRUE);
+	if (lua_toboolean(L, 3))
+		SetWindowTheme(w->handle, L"", L"");
+	ShowWindow(w->handle, SW_SHOWNORMAL);
+    return 1;
+}
+
 LUA_CONSTRUCTOR(Entry) {
-	Widget *w = Widget_create(L, UIEntry, WS_EX_CLIENTEDGE, WC_EDITW, WS_TABSTOP | ES_LEFT | ES_AUTOHSCROLL, TRUE, TRUE);
+	Widget *w = Widget_create(L, UIEntry, WS_EX_CLIENTEDGE, WC_EDITW, WS_VISIBLE | WS_TABSTOP | ES_LEFT | ES_AUTOHSCROLL, TRUE, TRUE);
 	w->cursor = 5;
 	w->hcursor = LoadCursor(NULL, IDC_IBEAM);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Checkbox) {
-	Widget_create(L, UICheck, 0, WC_BUTTONW, WS_TABSTOP | ES_LEFT | BS_AUTOCHECKBOX | BS_FLAT, TRUE, TRUE);
+	Widget_create(L, UICheck, 0, WC_BUTTONW, WS_VISIBLE | WS_TABSTOP | ES_LEFT | BS_AUTOCHECKBOX | BS_FLAT, TRUE, TRUE);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Radiobutton) {
-	Widget_create(L, UIRadio, 0, WC_BUTTONW, WS_TABSTOP | ES_LEFT | BS_AUTORADIOBUTTON | BS_FLAT, TRUE, TRUE);
+	Widget_create(L, UIRadio, 0, WC_BUTTONW, WS_VISIBLE | WS_TABSTOP | ES_LEFT | BS_AUTORADIOBUTTON | BS_FLAT, TRUE, TRUE);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Groupbox) {
-	Widget_create(L, UIGroup, 0, WC_BUTTONW, ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE)->brush = GetSysColorBrush(COLOR_BTNFACE);
+	Widget_create(L, UIGroup, 0, WC_BUTTONW, WS_VISIBLE | ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE)->brush = GetSysColorBrush(COLOR_BTNFACE);
 	return 1;
 }
 
@@ -641,7 +653,7 @@ LUA_CONSTRUCTOR(Combobox) {
 }
 
 LUA_CONSTRUCTOR(Edit) {
-	Widget *w = Widget_create(L, UIEdit, WS_EX_STATICEDGE, RICHEDIT_CLASSW, WS_VSCROLL | WS_HSCROLL | ES_LEFT | ES_AUTOHSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, TRUE, FALSE);
+	Widget *w = Widget_create(L, UIEdit, WS_EX_STATICEDGE, RICHEDIT_CLASSW, WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_LEFT | ES_AUTOHSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, TRUE, FALSE);
 	SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
 	SendMessage(w->handle, EM_EXLIMITTEXT, 0, 0x7FFFFFF0);
 	return 1;
@@ -713,6 +725,7 @@ LUAMOD_API int luaopen_ui(lua_State *L)
 	widget_type_new(L, &UITree, "Tree",Tree_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UITab, "Tab", Tab_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UIPicture, "Picture", Picture_constructor, Picture_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
+	widget_type_new(L, &UIProgressbar, "Progressbar", Progressbar_constructor, Progressbar_methods, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE);
 	lua_registerobject(L, NULL, "ListItem", Item_constructor, Item_methods, Item_metafields);
 	lua_setfield(L, LUA_REGISTRYINDEX, "ListItem");
 	lua_registerobject(L, NULL, "ComboItem", Item_constructor, Item_methods, Item_metafields);

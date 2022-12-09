@@ -131,6 +131,7 @@ extern luaL_Reg MenuItem_methods[];
 extern luaL_Reg MenuItem_metafields[];
 extern luaL_Reg Picture_methods[];
 extern luaL_Reg color_methods[];
+extern luaL_Reg Progressbar_methods[];
 LUA_METHOD(Listbox, sort);
 LUA_METHOD(Item, sort);
 

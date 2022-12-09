@@ -22,7 +22,7 @@
 
 
 const char *luart_wtypes[] = {
-	"Window", "Button", "Label", "Entry", "Edit", "Status", "Checkbox", "Radiobutton", "Groupbox", "Calendar", "List", "Combobox", "Tree", "Tab", "Item", "Menu", "MenuItem", "Picture"
+	"Window", "Button", "Label", "Entry", "Edit", "Status", "Checkbox", "Radiobutton", "Groupbox", "Calendar", "List", "Combobox", "Tree", "Tab", "Item", "Menu", "MenuItem", "Picture", "Progressbar"
 };
 
 const char *events[] = {
@@ -332,9 +332,9 @@ int GetText(lua_State *L, HANDLE h) {
 	return len;
 }
 
-static int width[] = {0, 20, 0, 60, 250, 16, 24, 24, 180, 226, 80, 100, 120, 300};
-static int height[] = {0, 24, 0, 20, 200, 9, 9, 9, 200, 160, 100, 150, 160, 200};
-static int margins[] = {0, 0, 2, 7, 100, 9, 9, 9, 10, 0, 150, 20, 100, 0, 160};
+static int width[] = {0, 20, 0, 60, 250, 16, 24, 24, 180, 226, 80, 100, 120, 300, 300, 150};
+static int height[] = {0, 24, 0, 20, 200, 9, 9, 9, 200, 160, 100, 150, 160, 200, 200, 16};
+static int margins[] = {0, 0, 2, 7, 100, 9, 9, 9, 10, 0, 150, 20, 100, 0, 0, 0, 0};
 
 static void WidgetAutosize(Widget *w) {	
     HDC dc = GetWindowDC(w->handle);
@@ -368,6 +368,11 @@ Widget *check_widget(lua_State *L, int idx, WidgetType t) {
 	if (w->wtype != t) 
 		luaL_typeerror(L, idx, luart_wtypes[t]);
 	return w;	
+	// if (w->wtype != t) {
+	// 	luaL_getmetafield(L, idx, "__type");
+	// 	lua_getfield(L, -1, "__name");
+	// 	luaL_typeerror(L, idx, lua_tostring(L, -1));
+	// }
 }
 
 LUA_METHOD(Widget, autosize) {
@@ -438,12 +443,12 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     HMENU id = 0;
             
     hParent = Widget_init(L, &wp);
-    text = caption && (((type < UIList) || (type > UITab)) && (type != UIPicture)) ? lua_towstring(L, idx-1) : NULL;
+    text = caption && (((type < UIList) || (type > UITab)) && (type < UIPicture)) ? lua_towstring(L, idx-1) : NULL;
     if (!hInstance)
         hInstance = GetModuleHandle(NULL);
     if (wp->wtype == UIGroup)
         id = ++wp->status;
-    h = CreateWindowExW(exstyle, classname, text, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type-UIWindow]), (int)luaL_optinteger(L, idx+3, height[type-UIWindow]), hParent, id, hInstance, NULL);
+    h = CreateWindowExW(exstyle, classname, text, WS_CHILD | WS_CLIPSIBLINGS | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type-UIWindow]), (int)luaL_optinteger(L, idx+3, height[type-UIWindow]), hParent, id, hInstance, NULL);
     free(text);
     w = calloc(1, sizeof(Widget));
     w->handle = h;
@@ -1100,6 +1105,92 @@ luaL_Reg Picture_methods[] = {
 	{"load",	Picture_load},
 	{"save",	Picture_save},
 	{"resize",	Picture_resize},
+	{NULL, NULL}
+};
+
+//------------------------------------ Progressbar methods/properties
+LUA_METHOD(Progressbar, advance) {
+    SendMessage(lua_self(L, 1, Widget)->handle, PBM_DELTAPOS, luaL_checkinteger(L, 2), 0);
+    return 0;
+}
+
+LUA_PROPERTY_GET(Progressbar, fgcolor) {
+	Widget *w = lua_self(L, 1, Widget);
+	lua_pushinteger(L, GetRValue(w->color) << 16 | GetGValue(w->color) << 8 | GetBValue(w->color));
+	return 1;
+}
+
+LUA_PROPERTY_SET(Progressbar, fgcolor) {
+	Widget *w = lua_self(L, 1, Widget);
+	lua_Integer color = luaL_checkinteger(L, 2);
+	w->color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+	SendMessage(w->handle,(WPARAM) PBM_SETBARCOLOR,0,(LPARAM)w->color);
+	InvalidateRect(w->handle, NULL, TRUE);
+	return 0;
+}
+
+LUA_PROPERTY_GET(Progressbar, bgcolor) {
+	Widget *w = lua_self(L, 1, Widget);
+	lua_Integer color = SendMessage(w->handle, PBM_GETBKCOLOR, 0, RGB(255,255,255));	
+	lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
+	return 1;
+}
+
+LUA_PROPERTY_SET(Progressbar, bgcolor) {
+	Widget *w = lua_self(L, 1, Widget);
+	lua_Integer color = luaL_checkinteger(L, 2);
+	color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+	SendMessage(w->handle, PBM_SETBKCOLOR,0,(LPARAM)color);
+	InvalidateRect(w->handle, NULL, TRUE);
+	return 0;
+}
+
+LUA_PROPERTY_GET(Progressbar, position) {
+    lua_pushinteger(L, SendMessage(lua_self(L, 1, Widget)->handle, PBM_GETPOS, 0, 0));
+    return 1;
+}
+
+LUA_PROPERTY_SET(Progressbar, position) {
+    PBRANGE range;
+    SendMessage(lua_self(L, 1, Widget)->handle, PBM_SETPOS, luaL_checkinteger(L, 2), (LPARAM)&range);
+    return 0;
+}
+
+LUA_PROPERTY_GET(Progressbar, range) {
+    PBRANGE range;
+    SendMessage(lua_self(L, 1, Widget)->handle, PBM_GETRANGE, 0, (LPARAM)&range);
+    lua_createtable(L, 2, 0);
+    lua_pushinteger(L, range.iLow);
+    lua_setfield(L, -2, "low");
+    lua_pushinteger(L, range.iHigh);
+    lua_setfield(L, -2, "high");
+    return 1;
+}
+
+LUA_PROPERTY_SET(Progressbar, range) {
+    lua_Integer low, high;
+    luaL_checktype(L, 2, LUA_TTABLE);
+    if (lua_rawgeti(L, 2, 1) == LUA_TNUMBER)
+        low = lua_tointeger(L, -1);
+    else
+error:  luaL_error(L, "bad value in range table (integer expected, found %s", luaL_typename(L, -1));
+    if (lua_rawgeti(L, 2, 2) == LUA_TNUMBER)
+        high = lua_tointeger(L, -1);
+    else goto error;
+    SendMessage(lua_self(L, 1, Widget)->handle, PBM_SETRANGE32, low, high);
+    return 0;
+}
+
+luaL_Reg Progressbar_methods[] = {
+	{"get_position",	Progressbar_getposition},
+	{"set_position",	Progressbar_setposition},
+	{"get_bgcolor",		Progressbar_getbgcolor},
+	{"set_bgcolor",		Progressbar_setbgcolor},
+	{"get_fgcolor",		Progressbar_getfgcolor},
+	{"set_fgcolor",		Progressbar_setfgcolor},
+	{"advance",	    	Progressbar_advance},
+	{"set_range",		Progressbar_setrange},
+	{"get_range",		Progressbar_getrange},
 	{NULL, NULL}
 };
 
