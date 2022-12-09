@@ -116,7 +116,7 @@ x64: clean
 x86: clean
 	@$(MAKE) "PLATFORM=x86"
 
-setup: $(ALL_T) quickrt
+setup: $(ALL_T) quickrt luart_studio
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
 	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
 	@..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
