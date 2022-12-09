@@ -145,7 +145,6 @@ void zip_close(struct zip_t *zip) {
     // Always finalize, even if adding failed for some reason, so we have a
     // valid central directory.
     mz_zip_writer_finalize_archive(&(zip->archive));
-
     mz_zip_writer_end(&(zip->archive));
     mz_zip_reader_end(&(zip->archive));
     free(zip);
@@ -168,14 +167,18 @@ int zip_is64(struct zip_t *zip) {
 
 static void normalize(struct zip_t *zip, const char *entryname, mz_uint16 len) {
   char *p = strdup(entryname);
-  char c;
+  int index = 0;
 
 	zip->entry.name = p;
 	zip->entry.namelen = len;
 
-	while ((c = *entryname++))
-		if (c == '\\')
-			*p++ = '/';
+  while(p[index])
+  {     
+      if(p[index] == '\\')
+          p[index] = '/';
+      else
+          index++;
+  }
 }
 
 int zip_entry_open(struct zip_t *zip, const char *entryname) {
