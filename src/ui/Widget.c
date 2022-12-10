@@ -1056,11 +1056,20 @@ LUA_METHOD(Widget, center) {
     GetWindowRect(w->handle, &rw);
 	
 	if (w->wtype != UIWindow) {
+		Widget *win = (Widget*)GetWindowLongPtr(hParent, GWLP_USERDATA);
 		rw.bottom -= rw.top;
 		rw.right -= rw.left;
 		rw.left = rw.top = 0;
 		rw.left = (rp.right - rw.right)/2;
 		rw.top = (rp.bottom - rw.bottom)/2;
+		if (win) {
+			if (win->status) {	
+				RECT sr;
+				GetWindowRect(win->status, &sr);
+				rw.top -= sr.bottom-sr.top;
+			} else if (win->wtype == UIGroup)
+				rw.top += 22;
+		}
 		SetWindowPos(w->handle, NULL, rw.left, rw.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 	} else SetWindowPos(w->handle, 0, GetSystemMetrics(SM_CXSCREEN)/2 - (rw.right-rw.left)/2, GetSystemMetrics(SM_CYSCREEN)/2 - (rw.bottom-rw.top)/2, rw.right, rw.bottom, SWP_NOZORDER | SWP_NOSIZE);
 	return 0;	
@@ -1115,32 +1124,45 @@ LUA_METHOD(Progressbar, advance) {
 }
 
 LUA_PROPERTY_GET(Progressbar, fgcolor) {
-	Widget *w = lua_self(L, 1, Widget);
-	lua_pushinteger(L, GetRValue(w->color) << 16 | GetGValue(w->color) << 8 | GetBValue(w->color));
+	lua_Integer color = SendMessage(lua_self(L, 1, Widget)->handle, PBM_GETBARCOLOR, 0, 0);	
+	if (color == CLR_DEFAULT)
+		lua_pushnil(L);
+	else lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
 	return 1;
 }
 
 LUA_PROPERTY_SET(Progressbar, fgcolor) {
 	Widget *w = lua_self(L, 1, Widget);
-	lua_Integer color = luaL_checkinteger(L, 2);
-	w->color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
-	SendMessage(w->handle,(WPARAM) PBM_SETBARCOLOR,0,(LPARAM)w->color);
+	lua_Integer color;
+	if (lua_isnil(L, 2)) 
+		color = CLR_DEFAULT;
+	else {
+		color = luaL_checkinteger(L, 2);
+		color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+	}
+	SendMessage(w->handle,(WPARAM) PBM_SETBARCOLOR,0,(LPARAM)RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF));
 	InvalidateRect(w->handle, NULL, TRUE);
 	return 0;
 }
 
 LUA_PROPERTY_GET(Progressbar, bgcolor) {
-	Widget *w = lua_self(L, 1, Widget);
-	lua_Integer color = SendMessage(w->handle, PBM_GETBKCOLOR, 0, RGB(255,255,255));	
-	lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
+	lua_Integer color = SendMessage(lua_self(L, 1, Widget)->handle, PBM_GETBKCOLOR, 0, 0);	
+	if (color == CLR_DEFAULT)
+		lua_pushnil(L);
+	else lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
 	return 1;
 }
 
 LUA_PROPERTY_SET(Progressbar, bgcolor) {
 	Widget *w = lua_self(L, 1, Widget);
-	lua_Integer color = luaL_checkinteger(L, 2);
-	color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
-	SendMessage(w->handle, PBM_SETBKCOLOR,0,(LPARAM)color);
+	lua_Integer color;
+	if (lua_isnil(L, 2)) 
+		color = CLR_DEFAULT;
+	else {
+		color = luaL_checkinteger(L, 2);
+		color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+	}
+	SendMessage(w->handle,(WPARAM) PBM_SETBKCOLOR,0, (LPARAM)color);
 	InvalidateRect(w->handle, NULL, TRUE);
 	return 0;
 }
@@ -1161,9 +1183,9 @@ LUA_PROPERTY_GET(Progressbar, range) {
     SendMessage(lua_self(L, 1, Widget)->handle, PBM_GETRANGE, 0, (LPARAM)&range);
     lua_createtable(L, 2, 0);
     lua_pushinteger(L, range.iLow);
-    lua_setfield(L, -2, "low");
+    lua_setfield(L, -2, "min");
     lua_pushinteger(L, range.iHigh);
-    lua_setfield(L, -2, "high");
+    lua_setfield(L, -2, "max");
     return 1;
 }
 
