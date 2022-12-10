@@ -564,9 +564,9 @@ LUA_CONSTRUCTOR(Picture) {
 
 LUA_CONSTRUCTOR(Progressbar)
 {   
-	luaL_checktype(L, 3, LUA_TBOOLEAN);
-    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, 1, TRUE);
-	if (lua_toboolean(L, 3))
+	int isbool = lua_isboolean(L, 3);
+    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, isbool, TRUE);
+	if (isbool && lua_toboolean(L, 3))
 		SetWindowTheme(w->handle, L"", L"");
 	ShowWindow(w->handle, SW_SHOWNORMAL);
     return 1;
