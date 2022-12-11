@@ -205,8 +205,10 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			}
 			else if (w->wtype == UITree) {
 				TVHITTESTINFO hti;
-				switch(lpNmHdr->code) { 
-					case TVN_SELCHANGEDW:	lua_paramevent(w, onSelect, 0, ((LPNMTREEVIEW)lParam)->itemNew.hItem); return TRUE;
+				switch(lpNmHdr->code) {		
+					case TVN_SELCHANGEDW:	lua_paramevent(w, onSelect, 0, ((LPNMTREEVIEW)lParam)->itemNew.hItem);
+											SendMessage(w->handle, WM_UPDATEUISTATE, (WPARAM) MAKELONG(UIS_SET, UISF_HIDEFOCUS), 0);
+											return TRUE;
 					case NM_RCLICK:			lua_indexevent(w, onContext, HitTest((TCHITTESTINFO *)&hti, w->handle, TVM_HITTEST, TVHT_ONITEM, GetMessagePos())); return TRUE;
 					case NM_DBLCLK:			lua_indexevent(w, onDoubleClick, HitTest((TCHITTESTINFO *)&hti, w->handle, TVM_HITTEST, TVHT_ONITEM, GetMessagePos())); return TRUE;
 					case TVN_ENDLABELEDITW:	lua_paramevent(w, onChange, 0, (LPARAM)((LPNMTVDISPINFOW)lParam)->item.hItem); return TRUE;
@@ -259,7 +261,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				HideCaret(w->handle);
 				return TRUE;
 			}
-			if (!(w->wtype == UIList || w->wtype == UIEntry || w->wtype == UIEdit))
+			if (!(w->wtype == UIList || w->wtype == UIEntry || w->wtype == UIEdit || w->wtype == UITree))
 				return 0;
 			break;
 		case WM_NCDESTROY:
