@@ -45,6 +45,7 @@ It's the easiest and fastest way to start developing with LuaRT.
 #### Method 2 : Building from sources :gear:
 
 All you need to build LuaRT from sources is a valid installation of the Mingw-w64 GCC compiler, feedback is welcome for other C compilers.
+The Mingw-w64 GCC 8.1.0 is used to produce the LuaRT release. Compilation have been successfully reported for Mingw-w64 GCC 11.2.0 and Mingw-w64 GCC 12.2.0 (ie the latest Mingw-w64 10.0.0 runtime).
 LuaRT should run on Windows Vista, Windows 7, Windows 8, Windows 10 and Windows 11.
 
 First clone the LuaRT repository (or manualy download the repository but don't forget submodules in tools folder) :
@@ -52,12 +53,15 @@ First clone the LuaRT repository (or manualy download the repository but don't f
 git clone --recurse-submodules https://github.com/samyeyo/LuaRT.git
 ```
 
-Then go to the ```\src``` directory and type ```make```:
+Then go to the ```\src``` directory and type one of the following commands : ```make```, or ``make -j4`` to speed up the compilation on multicore CPU:
 
-```
-cd LuaRT\src
-make
-```
+- `make` : Build LuaRT library and executable using the default x64 platform
+- `make -j4` : Speed up building with multithreaded compilation
+- `make PLATFORM=x86`: Build LuaRT library and executable using the x86 platform
+- `make debug`: Build debug versions of LuaRT library and executable using the default x64 platform
+- `make PLATFORM=x86 debug`: Build debug versions of LuaRT library and executable using the default x86 platform
+- `make clean` : Clean all the generated binaries
+
 If everything went right, it will produce in the ```\bin``` directory:
 - ```lua54.dll``` : the LuaRT shared library, ABI compatible with the standard lua54.dll
 - ```luart.exe``` : the LuaRT console interpreter
@@ -75,7 +79,7 @@ SET PATH=%PATH%;"C:\LuaRT\bin"
 
 > **Note**
 
-> By default, LuaRT is configured to build LuaRT for x86 (32 bits). To switch to 64 bits, set the PLATFORM value to x64 in the Makefile
+> By default, LuaRT is configured to build LuaRT for x64 (64 bits). To switch to 32 bits, set the PLATFORM value to x86 in the Makefile
 
 ## :small_blue_diamond:Usage
 

@@ -1,91 +1,187 @@
------------------------- LuaRT CHANGELOG -------------------------
+## LuaRT v1.2.0 (Dec 11 2022)
+ 
+#### General
+- New ``modules\`` folder in the root directory to put your binary/Lua modules
+- Fixed *lots of* modules memory leaks (string iterator, ``embed`` module, ``COM`` module, ``ui`` module, ``Zip`` object)
 
-16/10/2022 -------- LuaRT 1.0.2 (bugfix)
+#### LuaRT installer
+- Updated installer with the new Progressbar widget and other cosmetics changes
+- Fixed uninstaller from deleting installation folder even if it's not empty anymore (Implements #36)
 
------------ General
-[ NEW ]			New examples img_viewer.wlua and binary.wlua
+#### LuaRT Studio
+- Updated LuaRT Studio with LuaRT 1.2.0 runtime
+- Fixed LuaRT-Studio x64 program crash when starting a new debug session
 
------------ QuickRT
-[ BUG ]			Fixed nil variable names with underscore character "_" outputs no result 
+#### LuaRT C API
+- Include files are now in the ``include\`` folder in the root directory
+- Library files are now in the ``lib\``
+- New `lua_registerevent()` and `lua_getevent()` for custom widgets events
+- New `lua_widgetdestructor()` to be called during custom Widget destruction
+- New `lua_widgetproc()` to register a custom Widget messages procedure
+- ``luart.h`` can now be included in C++ files easily
+- New header ``Widget.h`` for builtin and custom Widgets
+- Fixed compilation warnings when using GCC 12+
 
------------ LuaRT Studio
-[ BUG ]			Fixed runtime error when compiling to executable without a project set 
+- `lua_widgetfinalize()` renamed to `lua_widgetconstructor()`
 
----------- net module
-[ BUG ] 		Http:get() method might return wrong results
+- Fixed `lua_checkcinstance()` error when using a non instance value
+- Fixed `lua_registerwidget()` not setting Widget properties properly
 
------------ ui module
-[ UPDATE ]		Segoe UI font is now used by default, as recommended since Windows Vista
-[ BUG ]			Fixed Runtime error when compiling to executable without a project set 
-[ BUG ]			Fixed Groupbox painted with white background color when redrawn
+#### `sys` module
+- New ``Directory.isempty`` property to check if a directory is empty
 
-08/10/2022 -------- LuaRT 1.0.1 (bugfix)
+- Fixed crash when getting a ``COM`` object
+- Fixed ``COM`` methods that might being called twice
 
------------ General
-[ BUG ]			Fixed GCC 10+ warnings during compilation
-[ BUG ]			Fixed build error because of "bin\" and "bin\std" folders missing
+#### `console` module
+- Fixed console to be not closeable anymore when using desktop applications (Fixes #32)
 
----------- rtc
-[ BUG ] 		Lua compiled scripts silently crash after execution
+#### `ui` module
+- New ``Progressbar`` widget
+- New `onClick()` event for all Widgets
+- New rounded corners for ``"raw"`` windows on Windows 11
+- New ``Widget.align`` property (alignment now persists even if the size of the parent Widget changes)
 
------------ ui module
-[ BUG ]			Fixed strange characters with IME input when using Entry and Combobox widgets
+- Removed ``Widget:align()`` method (replaced by the new ``align`` property)
+- Updated ` Window:status()` to convert each argument to string
+- Updated ``ui.info()``, ``ui.error()``, ``ui.confirm()`` and ``ui.warn()`` to convert first argument to string
+- Updated ``ui.update()`` to use registered events for custom Widgets
+- Updated ``ui.List`` selection now spans to the entire row
+- Updated ``Edit:append()`` to scroll down automatically
 
-25/09/2022 -------- LuaRT 1.0.0
+- Fixed changing a widget font attribute alter other widget fonts (Fixes #18)
+- Fixed ``Widget:center()`` not taking in count the presence of a Window statusbar
+- Fixed ``ui.Tab`` not drawn properly and background color when parent window background color changes
+- Fixed ``Label.fgcolor`` and ``Label.bgcolor`` properties ineffective when parent is a ``TabItem`` (Fixes #35)
+- Fixed Window statusbar not always showing on top of other widgets (Fixes #31)
+- Fixed ``Tree``, ``List``, ``Combobox`` and ``Tab`` that didn't check for a ``table`` argument in constructor
+- Fixed readonly ``Edit`` scrollbars that coouldn't be used
+- Fixed ``Picture`` constructor not accepting ``string`` or a ``File`` instance (Fixes #30)
+- Fixed ``Window`` finalizer not being called
+- Fixed taskbar showing ugly-resized Window icon when application is compiled with rtc -i option (Fixes #34)
+- Fixed ``Widget:center()`` not taking in count the presence of the window statusbar
+- Fixed selected ``TreeItem`` not staying higlighted
 
------------ General
-[ NEW ]			LuaRT is now open sourced, under the MIT License
-[ NEW ]			LuaRT binary distribution now includes LuaRT Studio and QuickRT
-[ NEW ]			New examples : syntax.wlua, iconbutton.wlua, balls.wlua, dir.lua
+## LuaRT v1.1.0 (Nov 3 2022)
+ 
+#### General
+- LuaRT now contains all PUC Lua modules, including `os`, `io` and `utf8`, providing better compatiblity with PUC Lua
+- `bin\std\lua54.dll` is no more needed, and have been removed
+- New example `server.wlua`
+- New example `calc.c` and `usecalc.lua`, a binary module using LuaRT extensions to the Lua C API
+- Fixed flto error while building LuaRT with GCC 
+- Fixed rtc error during build
 
------------ rtc
-[ NEW ]			New rtc -i option to change executable icon 
-[ NEW ]			New wrtc.exe GUI frontend for rtc
+#### LuaRT Studio
+- New LuaRT-Studio x64 to develop and debug 64 bits Lua applications (available in LuaRT x64 distribution)
 
------------ OOP
-[ NEW ]			New mixins implementation for Object() declarations
-[ NEW ]			New super() global function to get inherited object
-[ NEW ]			New Object.iterator() to iterate over an object instance
-[ UPDATED ]		rawset() and rawget() global functions cannot operate on objects/instances anymore
+#### Objects
+- Fixed calling a C instance method without self causes crash instead of error
+- LuaRT C API updated to build binary modules that uses GUI Widgets
 
------------ zip module
-[ UPDATED ]		Zip object iteration now returns only the entry name
-[ BUG ]			Fixed Zip:write() archive corruption when writing directories
+#### LuaRT C API
+- New `luaL_require()`
+- New `lua_checkinstancebyname()` and `lua_pushnewinstancebyname()`
+- New `lua_registerwidget()` and `lua_regwidget()` C API
 
------------ ui module
-[ NEW ]			New Edit.selection.visible property to disable scrolling/visibility when manipulating the selection
-[ NEW ]			New Button.hastext property 
-[ NEW ]			New readonly option in Combobox constructor 
-[ NEW ]			New Window.bgcolor, Label.bgcolor, Label.fgcolor properties
-[ NEW ]			New Window:loadtrayicon() method, Window.traytooltip property and tray icon events
-[ UPDATED ]		Tree:add(), Treeitem:add(), List:add(), Tab:add() and Combobox:add() now accepts more than one string
-[ UPDATED ]		Menu:add() now has an optional parameter for a submenu, as Menu:insert()
-[ UPDATED ]		Window:loadicon(), MenuItem:loadicon() and button:loadicon() called without argument removes the icon
-[ BUG ]			Fixed edit.color and edit.bgcolor property (using RGB value and not BGR value)
-[ BUG ]			Fixed application crash on status bar mouse click
-[ BUG ]			Fixed runtime error once a MenuItem, without onClick event set, is clicked
-[ BUG ]			Fixed widgets not redrawing once their position has changed
-[ BUG ]			Fixed Groupbox childs widget not receiving events notification
-[ BUG ]			Fixed TAB and ARROWS keys widget navigation on a Window
-[ BUG ]			Fixed crash with Window.parent property 
+#### New `compression` module
+- Replace the previous `zip` module
+- Include new functions `compression.gzip()`, `compression.gunzip()` 
+- New functions `compression.deflate()`, `compression.inflate` that replace `Buffer.compress()` and `Buffer.decompress()` methods
+- Old function `zip.isvalid()` replaced by `compression.isZip()`
+- `Zip` object available in `compression.Zip`
 
-12/06/2022 -------- LuaRT 0.9.9
-[ NEW ]			LuaRT is now available for x64 and x86 Windows systems
-[ NEW ]			New global _ARCH variable that holds LuaRT interpreter architecture ("x64" or "x86")
-[ NEW ]			New sys.COM object added to interact with Microsoft Component Object Model
-[ NEW ]			New examples illustrating the new sys.COM object : json.lua, speech.lua, shortcut.lua
-[ NEW ]			New LuaRT interpreter option "-e" to execute a Lua statement from the command line
+#### `sys` module
+- `Buffer.compress()` and  `Buffer.decompress()` methods have been removed (see above)
+- New `sys.atexit` module property to call a Lua function when program exits
+- Fixed Com object construction when COM needs locale machine execution
 
-[ UPDATED ]		LuaRT interpreter now accepts UTF8/UNICODE characters as arguments
-[ UPDATED ]		Global _VERSION variable now holds full LuaRT version string
-[ UPDATED ]		Now qrcode.wlua example can now save the generated QRCODE 
+#### `console` module
+- Console window when using wluart.exe can now be closed
 
-[ BUG ]			ComboItem:remove(), ListItem:remove(), TabItem:remove() are now working as expected
-[ BUG ]			Window shortcuts are now calling the binded function correctly
-[ BUG ]			TabItem:remove() now gives focus to the next remaining TabItem
-[ BUG ]			Path registry key is no more corrupted during LuaRT installation
-[ BUG ]			ComboItem, TabItem, TreeItem, ListItem and MenuItem objects are no more available from ui module
+#### `ui` module
+- Fixed changing a widget font attribute alter other widget fonts
+- Fixed changing a `Tab` font does not change its childs widgets
+- Fixed `Treeview` widget empties when setting the `Treeview.items` property
+- Fixed shortcuts don't fire when combobox has focus
+- Fixed random crash when using ui.msg(), ui.info(), ui.confirm()...
+- Fixed message boxes not showing the current window icon
+- Fixed `Tab.items` that couldn't be indexed by string
+- Fixed `Tab.items`, `List.items`, `Combobox.items` to be accessed by string or by integer index
+- Fixed `remove()` method of items ans `List`, `Tree`, `Combobox`, `Tab`
+- Fixed __push_item() don't push NULL items anymore
 
+## LuaRT v1.0.2 (Oct 16 2022) bugfix
+
+#### General
+- New examples `img_viewer.wlua` and `binary.wlua`
+
+#### QuickRT
+- Fixed nil variable names with underscore character "_" outputs no result 
+
+#### LuaRT Studio
+- Fixed runtime error when compiling to executable without a project set 
+
+#### `net` module
+- Fixed `Http:get()` method might return wrong results
+
+#### `ui` module
+- Segoe UI font is now used by default, as recommended since Windows Vista
+- Fixed Groupbox painted with white background color when redrawn
+
+## LuaRT v1.0.1 (Oct 08 2022) bugfix
+ 
+### Changelog
+
+#### General
+- Fixed GCC 10+ warnings during compilation
+- Fixed build error because of "bin\" and "bin\std" folders missing
+
+#### rtc compiler
+- Fixed compiled scripts silently crashing after execution
+
+#### ui module
+- Fixed strange characters with IME input when using Entry and Combobox widgets
+ 
+## LuaRT v1.0.0 (Sept 25 2022)
+
+#### General
+- LuaRT is now open sourced, under the MIT License
+- LuaRT binary distribution now includes LuaRT Studio and QuickRT
+- New examples : syntax.wlua, iconbutton.wlua, balls.wlua, dir.lua
+
+#### rtc compiler
+- New rtc -i option to change executable icon 
+- New wrtc.exe GUI frontend for rtc
+
+#### Objects implementation
+- New mixins implementation for Object() declarations
+- New super() global function to get inherited object
+- New Object.iterator() to iterate over an object instance
+- rawset() and rawget() global functions cannot operate on objects/instances anymore
+
+####  zip module
+- Zip object iteration now returns only the entry name
+- Fixed Zip:write() archive corruption when writing directories
+
+#### ui module
+- New Edit.selection.visible property to disable scrolling/visibility when manipulating the selection
+- New Button.hastext property 
+- New readonly option in Combobox constructor 
+- New Window.bgcolor, Label.bgcolor, Label.fgcolor properties
+- New Window:loadtrayicon() method, Window.traytooltip property and tray icon events
+- Tree:add(), Treeitem:add(), List:add(), Tab:add() and Combobox:add() now accepts more than one string
+- Menu:add() now has an optional parameter for a submenu, as Menu:insert()
+- Window:loadicon(), MenuItem:loadicon() and button:loadicon() called without argument removes the icon
+- Fixed edit.color and edit.bgcolor property (using RGB value and not BGR value)
+- Fixed application crash on status bar mouse click
+- Fixed runtime error once a MenuItem, without onClick event set, is clicked
+- Fixed widgets not redrawing once their position has changed
+- Fixed Groupbox childs widget not receiving events notification
+- Fixed TAB and ARROWS keys widget navigation on a Window
+- Fixed crash with Window.parent property 
+
+```LuaRT beta releases
 26/05/2022 -------- LuaRT 0.9.8
 [ NEW ]			New 'compatibility' LUA54.DLL runtime in bin\std, with better Lua 5.4 standard library compatibility (including io and os modules)
 				This runtime library provides better compatibility with Lua ecosystem (mobdebug, LuaSocket,...)				
@@ -376,4 +472,4 @@
 [ BUG ]		Fixed modeless ui.opendialog, ui.savedialog
 [ BUG ]		Fixed modeless ui.msg, ui.warn, ui.info, ui.confirm
 
-17/01/2021 -------- LuaRT 0.9 beta1
+17/01/2021 -------- LuaRT 0.9 beta1 ```
