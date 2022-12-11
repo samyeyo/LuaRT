@@ -1142,7 +1142,7 @@ LUA_PROPERTY_SET(Progressbar, fgcolor) {
 		color = luaL_checkinteger(L, 2);
 		color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
 	}
-	SendMessage(w->handle,(WPARAM) PBM_SETBARCOLOR,0,(LPARAM)RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF));
+	SendMessage(w->handle,(WPARAM) PBM_SETBARCOLOR,0,(LPARAM)color);
 	InvalidateRect(w->handle, NULL, TRUE);
 	return 0;
 }
