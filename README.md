@@ -78,7 +78,6 @@ SET PATH=%PATH%;"C:\LuaRT\bin"
 ```
 
 > **Note**
-
 > By default, LuaRT is configured to build LuaRT for x64 (64 bits). To switch to 32 bits, set the PLATFORM value to x86 in the Makefile
 
 ## :small_blue_diamond:Usage
