@@ -33,7 +33,9 @@ LUART_MAJOR= 1
 LUART_MINOR= 2
 LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
+CLEAN=clean
 
+ifeq ($(filter $(CLEAN),$(MAKECMDGOALS)),)
 ifeq ($(PLATFORM), x86)
 $(info --------------------------------- Building for Windows x86 Platform)
  ARCH = -m32 -march=pentium4 -msse -msse2 -mmmx -fno-unwind-tables -fno-asynchronous-unwind-tables 
@@ -50,6 +52,7 @@ endif
  ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion
  _ARCH = x64
  TARGET = pe-x86-64
+endif
 endif
 
 DEFINES= -DLUART_MINOR=$(LUART_MINOR) -DLUART_MAJOR=$(LUART_MAJOR) -DLUART_RELEASE=$(LUART_RELEASE)
@@ -116,20 +119,20 @@ x64: clean
 x86: clean
 	@$(MAKE) "PLATFORM=x86"
 
-setup: $(ALL_T) quickrt luart_studio
+setup: $(ALL_T) quickrt
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
 	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
 	@..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@-copy /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
 	@echo --------------------------------- LuaRT setup has been successfully compiled
 
-wluart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) luart.c
+wluart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	$(info Linking wluart-static.exe...)
 	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O)  $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
 	@-copy /Y wluart-static.exe $(DEST)\wluart-static.exe >nul
 
-luart-static.exe: $(BASE_O) $(LUART_OBJ_O) luart.c
+luart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
 	$(info Linking luart-static.exe...)
 	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart-static.exe $(LUART_OBJ_O) $(BASE_O) -mconsole luart.c $(LDFLAGS) $(LUART_LIBS) 
@@ -221,7 +224,6 @@ clean:
 	@$(RM) LuaRT-$(VERSION)-x86.exe >nul 2>&1
 	@$(RM) ..\LuaRT-$(VERSION)-x64.exe >nul 2>&1
 	@$(RM) ..\LuaRT-$(VERSION)-x86.exe >nul 2>&1
-	@echo LuaRT cleaning done
 
 ALL= all
 
