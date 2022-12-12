@@ -176,6 +176,20 @@ static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_
 
 extern int size(Widget *w, lua_State *L, int offset_from, int offset_to, BOOL set, LONG value, BOOL iswidth);
 
+//---------- dwmapi.h from Mingw-w64 compiler are not uptodate
+
+#define DWMWA_WINDOW_CORNER_PREFERENCE  33
+
+typedef enum {
+    DWMWCP_DEFAULT                                 = 0,
+    DWMWCP_DONOTROUND                              = 1,
+    DWMWCP_ROUND                                   = 2,
+    DWMWCP_ROUNDSMALL                              = 3
+
+} DWM_WINDOW_CORNER_PREFERENCE;
+
+//-----------
+
 LUA_CONSTRUCTOR(Window) {
 	Widget *w = (Widget*)calloc(1, sizeof(Widget));
 	wchar_t *title;
