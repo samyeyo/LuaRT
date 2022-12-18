@@ -167,7 +167,7 @@ __attribute__((used)) int main() {
 	BOOL is_embeded = FALSE;
 	const luaL_Reg *lib;
 	wchar_t **enpv, **wargv;
-	int argc, si = 0;
+	int argc, si = 0, argfile = 1;
 
 	__wgetmainargs(&argc, &wargv, &enpv, _CRT_glob, &si);
 	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
@@ -191,7 +191,7 @@ __attribute__((used)) int main() {
 	lua_setglobal(L, "seticon");
 #endif
 	if (argc == 1 && !is_embeded)
-		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2022, Samir Tine.\nusage:\tluart.exe [-e statement | script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
+		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2022, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
 	else {
 		lua_createtable(L, argc, 0);	
 		lua_pushwstring(L, exename);
@@ -209,9 +209,13 @@ __attribute__((used)) int main() {
 		else {
 			if (*wargv[1] == L'-') {
 				if ((wargv[1][1] == L'e')) {
-					if (__argc > 2) {
+					if (argc > 2) {
 						if (luaL_dostring(L, __argv[2]))
 							goto error;
+						else if (__argc > 3) {
+							argfile = 3;
+							goto execscript;
+						}
 					} else
 						fputs("error: -e option expects a statement argument\n", stderr);					
 				} else {
@@ -220,8 +224,8 @@ __attribute__((used)) int main() {
 					lua_concat(L, 2);
 					goto error;
 				}
-			}
-			else if (luaL_loadfile(L, __argv[1]) || lua_pcall(L, 0, LUA_MULTRET, 0)) {
+			} else 
+execscript:	if (luaL_loadfile(L, __argv[argfile]) || lua_pcall(L, 0, LUA_MULTRET, 0)) {
 error:			
 				{
 					const char *err = lua_tostring(L, -1);
