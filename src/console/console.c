@@ -330,7 +330,11 @@ LUA_METHOD(console, readchar) {
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
 	BOOL isspecial = FALSE;
  
-	while (TRUE) {
+	if (GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &cc) == FALSE) {
+		wchar_t ch;
+		ReadFile(h, &ch, 2, &cc, NULL);
+		lua_pushlwstring(L, &ch, 1);
+	} else while (TRUE) {
 		ReadConsoleInputW( h, &irec, 1, &cc );
 		if ((irec.EventType == KEY_EVENT) &&  irec.Event.KeyEvent.bKeyDown) {
 			if (irec.Event.KeyEvent.dwControlKeyState & ENHANCED_KEY) {
@@ -548,8 +552,7 @@ LUALIB_API int console_finalize(lua_State *L) {
 LUAMOD_API int luaopen_console(lua_State *L) {
 	CONSOLE_SCREEN_BUFFER_INFO info = {0};
 	DWORD mode = 0;
-
-	if (AllocConsole()) {
+	if ((GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode) == FALSE) && AllocConsole()) {
 		DeleteMenu(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_BYCOMMAND);
 		freopen("CON", "r", stdin);
 		freopen("CON", "w", stdout);

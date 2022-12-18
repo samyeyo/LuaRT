@@ -183,7 +183,7 @@ static int FileRead(lua_State *L, File *f, size_t size, BOOL line) {
 	int nbytes = f->std ? 2 : encoding_size[f->encoding];
 	size_t todo = size;
 	size_t utf8size;
-	size_t i, last = 0;
+	DWORD i = 0, last = 0;
 	extern wchar_t echochar;
 
 	if (f->mode > 0 && f->mode < 3)
@@ -199,31 +199,42 @@ static int FileRead(lua_State *L, File *f, size_t size, BOOL line) {
 		lua_pop(L, 1);
 		if (echochar) {
 			DWORD mode;
-			GetConsoleMode(std, &mode);
-			SetConsoleMode(std, mode & ~ENABLE_ECHO_INPUT & ~ENABLE_LINE_INPUT & ~ENABLE_PROCESSED_INPUT);
-readstd:	while (ReadConsoleW(f->h, &ch, 1, (LPDWORD)&i, NULL)) {	
+			BOOL redirected;
+			int save;
+			
+readstd:	save = _setmode(_fileno(fout), _O_U16TEXT);
+			redirected = GetConsoleMode(f->h, &mode) == FALSE;
+			SetConsoleMode(f->h, mode & ~ENABLE_LINE_INPUT & ~ENABLE_PROCESSED_INPUT & ~ENABLE_ECHO_INPUT );
+			
+			while (TRUE) { 
+				if (!redirected)
+					ReadConsoleW(f->h, &ch, 1, (LPDWORD)&i, NULL);
+				else
+					ReadFile(f->h, &ch, 2, &i, NULL);
 				if (line && ch == 13)
 					break;
-				else if (ch == 3) {
+				else if (ch == 3) { 
 					lua_pushstring(L, "^C");
 					lua_error(L);				
 				}
-				else if ((ch == 8) && (b.n > 0)) {
-					todo++;
-					luaL_buffsub(&b, 2);
-					if (echochar != 1)
-						fputws(L"\b \b", fout);
-					continue;
+				if (!redirected) {
+					if ((ch == 8) && (b.n > 0)) {
+						todo++;
+						luaL_buffsub(&b, 2);
+						if (echochar)
+							fputws(L"\b \b", fout);
+						continue;
+					} else if (echochar)
+						fputwc(echochar, fout);
+					else if (ch > 31)
+						fputwc(ch, fout);					
 				}
-				else if (echochar != 1)
-					fputwc(echochar, fout);
-				else if (ch > 31)
-					fputwc(ch, fout);
 				luaL_addlstring(&b, (char*)&ch, sizeof(wchar_t));
 				if (!line && (--todo == 0))
 					break;
 			}
 			SetConsoleMode(std, mode);
+			_setmode(_fileno(fout), save);
 		} else if (line) {
 			wchar_t buffer[4096];
 			int save = _setmode(_fileno(f->stream), _O_U16TEXT);
