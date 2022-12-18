@@ -51,11 +51,11 @@ typedef int luart_type;
 //--------------------------------------------------| Object registration
 
 //--- Register object function
-int lua_registerobject(lua_State *L, luart_type *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
+int lua_registerobject(lua_State *L, luart_type *type, const char *_typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
 
 //--- Object registration macros
-#define lua_regobjectmt(L, typename) lua_registerobject(L, &T##typename, #typename, typename##_constructor, typename##_methods, typename##_metafields)
-#define lua_regobject(L, typename) lua_registerobject(L, &T##typename, #typename, typename##_constructor, typename##_methods, NULL)
+#define lua_regobjectmt(L, _typename) lua_registerobject(L, &T##_typename, #_typename, _typename##_constructor, _typename##_methods, _typename##_metafields)
+#define lua_regobject(L, _typename) lua_registerobject(L, &T##_typename, #_typename, _typename##_constructor, _typename##_methods, NULL)
 
 //--------------------------------------------------| Lua object manipulation
 
@@ -92,7 +92,7 @@ void *lua_checkcinstance(lua_State *L, int idx, luart_type t);
 
 //--- Pushes a new instance from object name with the lasts narg arguments on stack as constructor arguments
 LUA_API void *lua_pushnewinstancebyname(lua_State *L, luart_type type, int narg);
-LUA_API void *lua_pushnewinstance(lua_State *L, const char *typename, int narg);
+LUA_API void *lua_pushnewinstance(lua_State *L, const char *_typename, int narg);
 #define lua_pushinstance(L, type, narg) lua_pushnewinstance(L, #type, narg)
 
 //--- Gets value type name at the specified index (supporting objects type names)
@@ -144,3 +144,7 @@ LUALIB_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l);
 LUALIB_API void luaL_require(lua_State *L, const char *modname);
 
 //--------------------------------------------------| LuaRT runtime objects
+
+#ifdef __cpluplus
+}
+#endif
