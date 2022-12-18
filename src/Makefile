@@ -185,14 +185,15 @@ luart_studio: rtc
 	@$(RM) lrtapi.o
 	@$(CC) $(CFLAGS) -DRTCOMPAT -c lrtapi.c -o lrtapi.o
 	$(info lrtapi.c)
-	$(info Linking lua54.dll for LuaRT-Studio...)
+	$(info Compiling lua54.dll...)
 	@$(CC) $(CFLAGS) -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LDFLAGS) $(LUART_LIBS)
-	@-copy /Y ..\bin\wluart.exe "..\tools\LuaRT-Studio\bin\luart.exe" >nul	
+	@-copy /Y ..\bin\luart.exe "..\tools\LuaRT-Studio\bin\luart.exe" >nul	
 	@-copy /Y ..\bin\wrtc.exe "..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
 	@-copy /Y lua54.dll "..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
 	@$(RM) lrtapi.o
+	@$(RM) lua54.dll
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
-	$(info done)
+	$(info LuaRT Studio interpreter updated)
 	
 clean:
 	@$(RM) $(ALL_T) >nul 2>&1
