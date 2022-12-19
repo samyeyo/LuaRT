@@ -61,9 +61,9 @@ DEFINES_RES= --target=$(TARGET) -D LUART_MINOR=$(LUART_MINOR) -D LUART_MAJOR=$(L
 BUILD := release
 
 DEST= ..\bin
-cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -std=c99 -Os -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\include" -Wall -Wextra -I"." -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
+cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -std=c99 -Os -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\include" -I"..\..\memdll" -Wall -Wextra -I"." -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
 ldflags.release= -s -static-libgcc -lm -Wl,--no-insert-timestamp -Wl,--no-seh -lgdi32 -L"." 
-cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -std=c99 -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\include" -I"." 
+cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -std=c99 -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\memdll" -I"..\include" -I"." 
 ldflags.debug= -g -static-libgcc -lm -lgdi32 -L"."
 
 CC= gcc
@@ -77,7 +77,7 @@ LUA_A=		lua54.dll
 CORE_O=		lua\lapi.o lrtapi.o lrtobject.o lua\lcode.o lua\lctype.o lua\ldebug.o lua\ldo.o lua\ldump.o lua\lfunc.o lua\lgc.o lua\llex.o lua\lmem.o lua\lobject.o lua\lopcodes.o lua\lparser.o lua\lstate.o lua\lstring.o lua\ltable.o lua\ltm.o lua\lundump.o lua\lvm.o lua\lzio.o
 OBJECTS_O=	sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o
 LIB_O=		$(LIBOBJ_O) lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o sys\sys.o console\console.o lua\liolib.o lua\loslib.o lua\lutf8lib.o
-LUART_OBJ_O= crypto\crypto.o net\net.o lembed.o compression\compression.o crypto\Cipher.o net\Socket.o net\Http.o net\Ftp.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o
+LUART_OBJ_O= crypto\crypto.o net\net.o lembed.o MemoryModule\MemoryModule.o compression\compression.o crypto\Cipher.o net\Socket.o net\Http.o net\Ftp.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o
 LUART_UI_O=  ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o
 BASE_O= 	$(CORE_O) $(LIB_O) $(OBJECTS_O)
 
@@ -306,3 +306,4 @@ compression\zip.o: compression\zip.c ..\include\File.h compression\lib\zip.h com
  ..\include\File.h ..\include\Buffer.h ..\include\luart.h lrtapi.h
 ui\Widget.o: ui\Widget.c ..\include\Widget.h ..\include\luart.h lrtapi.h
 ui\ui.o: ui\ui.c ui\ui.h ..\include\Widget.h ..\include\luart.h lrtapi.h
+MemoryModule\MemoryModule.o: MemoryModule\MemoryModule.c MemoryModule\MemoryModule.h

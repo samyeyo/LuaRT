@@ -6,11 +6,17 @@
  | lembed.c | LuaRT embed module implementation
 */
 
+#include "lrtapi.h"
 #include <luart.h>
 #include <File.h>
+#include <shlwapi.h>
+#include "MemoryModule\MemoryModule.h"
 
 #define MINIZ_HEADER_FILE_ONLY
 #include <compression\lib\zip.h>
+
+#define CMEMLIBS "Memory DLL"
+typedef void (*voidf)(void);
 
 extern int Zip_extract(lua_State *L); 
 struct zip_t *fs = NULL;
@@ -46,18 +52,39 @@ static void *fsload(lua_State *L, const char *fname) {
 
 static int luart_fsloader(lua_State *L) {
 	const char *modname = luaL_gsub(L, luaL_checkstring(L, 1), ".", "/");
-	size_t len = strlen(modname)+6;
+	size_t size, len = strlen(modname)+MAX_PATH;
 	void *buff;
 	char *fname;
 
 	fname = calloc(1, len);
 	_snprintf(fname, len, "%s.lua", modname);
 	if ( !(buff = fsload(L, fname)) ) {
+    lua_pushfstring(L, "no embedded module '%s' found", fname);
 		_snprintf(fname, len, "%s.wlua", modname);
-		buff = fsload(L, fname);
+    if (!(buff = fsload(L, fname))) {
+      lua_pushfstring(L, "no embedded module '%s' found", fname);
+      _snprintf(fname, len, "%s.dll", modname);
+      if (zip_entry_open(fs, fname) == 0) {
+        HMEMORYMODULE hm;
+        zip_entry_read(fs, &buff, &size);
+        if ( (hm = MemoryLoadLibrary(buff, size)) ) {   
+          _snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
+          lua_CFunction f = (lua_CFunction)(voidf)MemoryGetProcAddress(hm, fname);
+          if (f) {
+            lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS);
+            lua_pushlightuserdata(L, (void*)hm);
+            lua_rawseti(L, -2, luaL_len(L, -2)+1);
+            lua_pushcfunction(L, f);  
+            zip_entry_close(fs);
+            goto done;          
+          } else MemoryFreeLibrary(hm);
+        }
+    		zip_entry_close(fs);
+      }
+      lua_pushfstring(L, "no embedded module '%s.dll' found", modname);
+    }
 	}
-	if (!buff)
-		lua_pushfstring(L, "no embedded module '%s' found", modname);
+done:
  	free(fname);
 	free(buff);
 	return 1;
@@ -65,6 +92,13 @@ static int luart_fsloader(lua_State *L) {
 
 //-------------------------------------------------[luaL_embedclose() luaRT C API]
 LUALIB_API int luaL_embedclose(lua_State *L) {
+  if (lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS)) {
+    lua_Integer len = luaL_len(L, -1);
+    while (lua_rawgeti(L, -1, len--)) {
+      MemoryFreeLibrary(lua_touserdata(L, -1));
+      lua_pop(L, 1);
+    }
+  }
   free(datafs);
 	return 0;
 }
@@ -131,7 +165,7 @@ LUALIB_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
 LUA_METHOD(embed, File) {
     wchar_t tmp[MAX_PATH];
 
-	GetTempPathW(MAX_PATH, tmp);
+	  GetTempPathW(MAX_PATH, tmp);
     lua_getglobal(L, "embed");
     lua_pushcfunction(L, Zip_extract);
     lua_getfield(L, -2, "zip");
@@ -152,6 +186,7 @@ static const luaL_Reg embed_properties[] = {
 
 //-------------------------------------------------[luaopen_embed() "embed" module]
 int luaopen_embed(lua_State *L) {
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, CMEMLIBS);
 	lua_registermodule(L, "embed", embedlib, embed_properties, luaL_embedclose);
   lua_getglobal(L, "package");
   lua_getfield(L, -1, "loaded");
