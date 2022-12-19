@@ -17,6 +17,7 @@
 #include <luart.h>
 #include <wchar.h>
 #include <stdlib.h>
+#include <shlwapi.h>
 
 extern int _CRT_glob;
 void __wgetmainargs(int*,wchar_t***,wchar_t***,int,int*);
@@ -24,6 +25,7 @@ void __wgetmainargs(int*,wchar_t***,wchar_t***,int,int*);
 extern struct zip_t *fs;
 extern BYTE *datafs;
 static lua_State *L;
+static WCHAR exename[MAX_PATH];
 
 #ifdef RTC
 
@@ -144,6 +146,26 @@ static luaL_Reg luaRT_libs[] = {
   { NULL,		NULL }
 };
 
+//------- LuaRT specific C module loader to use paths inside modules folder
+LUALIB_API int luart_dllloader(lua_State *L) {
+	const char *modname = luaL_gsub(L, luaL_checkstring(L, 1), ".", "\\");
+	size_t len = strlen(modname)+MAX_PATH;
+	char *fname;
+
+	fname = calloc(1, len);
+    _snprintf(fname, len, "%.*ls..\\modules\\%s.dll", (int)(PathFindFileNameW(exename)-exename), exename, modname);
+	lua_getglobal(L, "package");
+	lua_getfield(L, -1, "loadlib");
+	lua_pushstring(L, fname);
+ 	_snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
+    lua_pushstring(L, fname);
+	lua_call(L, 2, LUA_MULTRET);
+ 	free(fname);
+	if (!lua_iscfunction(L, -1))
+		lua_pushnil(L);
+	return 1;
+ }
+
 void lua_stop() {
 	if (L) {
 		if (lua_getfield(L, LUA_REGISTRYINDEX, "atexit") == LUA_TFUNCTION) {
@@ -163,7 +185,6 @@ __attribute__((used)) int main() {
 #endif
 	INITCOMMONCONTROLSEX icex;
 	int i, result = EXIT_SUCCESS;
-	WCHAR exename[MAX_PATH];
 	BOOL is_embeded = FALSE;
 	const luaL_Reg *lib;
 	wchar_t **enpv, **wargv;
@@ -182,9 +203,18 @@ __attribute__((used)) int main() {
 	}
 	GetModuleFileNameW(NULL, (WCHAR*)exename, sizeof(exename));
 	if ((is_embeded = luaL_embedopen(L, exename))) {
-		luaL_requiref(L, "embed", luaopen_embed, 1);
+		luaL_requiref(L, "embed", luaopen_embed, 2);
 		lua_pop(L, 1);
 	}
+	lua_getglobal(L,"table");
+	lua_getfield(L, -1, "insert");
+	lua_getglobal(L, "package");
+	lua_getfield(L, -1, "searchers");
+	lua_remove(L, -2);
+	lua_pushinteger(L, 1);
+	lua_pushcfunction(L, luart_dllloader);
+	lua_call(L, 3, 0);
+	lua_pop(L, 1);
 	atexit(lua_stop);
 #ifdef RTC
 	lua_pushcfunction(L, update_exe_icon);
@@ -202,7 +232,7 @@ __attribute__((used)) int main() {
 		}
 		lua_setglobal(L, "arg");
 		lua_gc(L, LUA_GCGEN, 0, 0);
-		if (is_embeded) {
+		if (is_embeded) {			
 			if (luaL_dostring(L, "require '__mainLuaRTStartup__'"))
 				goto error;
 		}
