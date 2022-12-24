@@ -38,12 +38,27 @@ function x:onClick()
     end
 end
 
+local caption = "Install"
+local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LuaRT", "InstallLocation") or false
+
+if update then
+    local current = (sys.Pipe('luart -e "print(_VERSION)"'):read(100) or VERSION):match("%d%.%d%.%d")
+    if current == VERSION then
+        caption = "Reinstall"
+        update = false
+    elseif tonumber(current:gsub("%.", "")) < tonumber(VERSION:gsub("%.", "")) then
+        caption = "Downgrade to"
+    else
+        caption = "Update to"
+    end
+end
+
 local img = ui.Picture(win, File("img/luaRT.png").fullpath, 0, 20)
 win.width = img.width
 win.bgcolor = 0xFFFFFF
 win:center()
 
-local button = ui.Button(win, "Install LuaRT "..VERSION)
+local button = ui.Button(win, caption.." LuaRT "..VERSION)
 button:loadicon(File("img/install.ico"))
 button.cursor = "hand"
 button:center()
@@ -67,7 +82,7 @@ local function shortcut(name, target, icon)
 end
 
 function button:onClick()
-    local dir = ui.dirdialog("Select a directory to install LuaRT")
+    local dir = update or ui.dirdialog("Select a directory to install LuaRT")
     if dir ~= nil then
         win.installation = true
         local label = ui.Label(win, "", 40, 188)
@@ -76,19 +91,23 @@ function button:onClick()
         label.width = 312
         label.textalign = "left"
         label.fgcolor = 0x002A5A
-        local bar = ui.Progressbar(win, true, 40, 170, 312)
+        local bar = ui.Progressbar(win, true, 40, 170, 306)
         bar.fgcolor = 0xEFB42C
         bar.bgcolor = 0xFFFFFF
         local archive = compression.Zip(File("luaRT.zip"))
         bar.range = {0, archive.count}
         local size = 0
         self:hide()
-        for entry in each(archive) do
-            local fname = entry:gsub('/', '\\')
-            label.text = "Extracting "..fname:sub(1, 40).."..."
-            local result = archive:extract(entry, dir)
-            if not result then
-                error("Error extracting "..fname.."\n"..(sys.error or ""))
+        for entry, isdir in each(archive) do
+            if isdir then
+                sys.Directory(entry):make()
+            else
+                local fname = entry:gsub('/', '\\')
+                label.text = "Extracting "..fname:sub(1, 40).."..."
+                local result = archive:extract(entry, dir)
+                if not result then
+                    error("Error extracting "..fname.."\n"..(sys.error or ""))
+                end
             end
             bar:advance(1)
             ui.update()
