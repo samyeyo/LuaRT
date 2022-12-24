@@ -9,18 +9,16 @@
 # |--------------------------------------------------------------
 # | Usage (default release build)			 : make
 # | Usage (debug build) 		  			 : make debug
-# | Usage (release build with QuickRT) 		 : make all
-# | Usage (build QuickRT only)		 		 : make quickrt
-# | Usage (build setup executable)	  		 : make setup
+# | Usage (release with tools)		 		 : make all
 # | Usage (build only rtc) 				 	 : make rtc
+# | Usage (build setup executable)	  		 : make setup
+# | Usage (build tools)				  		 : make tools
 # | Usage (clean all)	 				 	 : make clean
 # |-------------------------------------------------------------
 # | Or you can use default release build for any platform 
 # | Usage (default x64 release build)		 : make x64
 # | Usage (default x86 release build)		 : make x86
 # |-------------------------------------------------------------
-# |	LuaRT-Studio uses a specific Lua54.dll 
-# | Usage 				 				 	 : make luart_studio
 
 #---- Platform selection
 #---- x86 for 32bits lua54.dll, liblua54.a and executables
@@ -41,6 +39,10 @@ $(info --------------------------------- Building for Windows x86 Platform)
  ARCH = -m32 -march=pentium4 -msse -msse2 -mmmx -fno-unwind-tables -fno-asynchronous-unwind-tables 
  _ARCH = x86
  TARGET = pe-i386
+ifneq (${BUILD}, debug)
+#--- Uncomment to try smaller executables, only tested with Mingw-w64 8.1.0 !
+#  LDSCRIPT=-Wl,-Tx86.ldscript 
+endif
  ifeq "$(wildcard $(windir)\system32\SensApi.dll)" ""
 	$(error $(PLATFORM) build requires "$(windir)\system32\SensApi.dll")
  endif
@@ -52,6 +54,10 @@ endif
  ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion
  _ARCH = x64
  TARGET = pe-x86-64
+ifneq (${BUILD}, debug)
+#--- Uncomment to try smaller executables, only tested with Mingw-w64 8.1.0 !
+LDSCRIPT=-Wl,-Tx64.ldscript
+endif
 endif
 endif
 
@@ -94,7 +100,7 @@ ALL_A= $(LUA_A)
 
 default: $(ALL_T)
 
-all: clean $(ALL_T) quickrt luart_studio
+all: clean $(ALL_T) tools
 	@echo --------------------------------- LuaRT has been successfully compiled
 
 o:	$(ALL_O)
@@ -119,9 +125,9 @@ x64: clean
 x86: clean
 	@$(MAKE) "PLATFORM=x86"
 
-setup: $(ALL_T) quickrt
+setup: $(ALL_T) tools
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
 	@..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@-copy /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
 	@echo --------------------------------- LuaRT setup has been successfully compiled
@@ -129,38 +135,32 @@ setup: $(ALL_T) quickrt
 wluart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	$(info Linking wluart-static.exe...)
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O)  $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O)  $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
 	@-copy /Y wluart-static.exe $(DEST)\wluart-static.exe >nul
 
 luart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
 	$(info Linking luart-static.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart-static.exe $(LUART_OBJ_O) $(BASE_O) -mconsole luart.c $(LDFLAGS) $(LUART_LIBS) 
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart-static.exe $(LUART_OBJ_O) $(BASE_O) -mconsole luart.c $(LDFLAGS) $(LUART_LIBS) $(LDSCRIPT)
 	@-copy /Y luart-static.exe $(DEST)\luart-static.exe >nul
 	
 $(LUA_A): $(BASE_O)
 	$(info Linking lua54.dll...)
-	@$(CC) $(CFLAGS) -DLUA_BUILD_AS_DLL -shared -o $@ $(BASE_O) $(LIBS) $(LDFLAGS) -Wl,--out-implib,liblua54.a
+	@$(CC) $(CFLAGS) -DLUA_BUILD_AS_DLL -shared -o $@ $(BASE_O) $(LIBS) $(LDFLAGS) -Wl,--out-implib,liblua54.a $(LDSCRIPT)
 	@-copy /Y $@ "$(DEST)\$@" >nul
 	@-copy /Y liblua54.a "..\lib\liblua54.a" >nul
 
 $(LUART_T): $(LUA_A) $(LUART_OBJ_O) luart.c
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
 	$(info Linking luart.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS)
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)
 	@-copy /Y $@ "$(DEST)\$@" >nul
-
 
 $(LUAWRT_T): $(LUA_A) $(LUART_OBJ_O) $(LUART_UI_O) luart.c ui\ui.o
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	$(info Linking wluart.exe...)
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
 	@-copy /Y $@ "$(DEST)\$@" >nul
-
-quickrt: rtc
-	$(info Compiling QuickRT.exe...)
-	@rtc -w -i ..\tools\QuickRT\contrib\quickrt.ico ..\tools\QuickRT\src\quickrt.lua -o ..\tools\QuickRT\QuickRT.exe ..\tools\QuickRT\src >nul
-	@-copy /Y ..\bin\lua54.dll ..\tools\QuickRT\lua54.dll >nul
 
 rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\tools\rtc\src\rtc.lua
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
@@ -168,11 +168,11 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\tools
 	@-copy $(DEST)\*.exe ..\tools\rtc\src >nul
 	@echo Compiling rtc.exe...
 	@windres $(DEFINES_RES) -I"." -I"../include/lua/" resources\resource.rc -o resource.o
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) 
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)
 	@luart.exe ..\tools\rtc\src\rtc.lua -o rtc.exe ..\tools\rtc\src >nul
 	@echo Compiling wrtc.exe...
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
-	@$(CC) -mwindows $(CFLAGS) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe -DRTC -DRTWIN luart.c -llua54 $(LUART_LIBS) -lgdi32 
+	@$(CC) -mwindows $(CFLAGS) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe -DRTC -DRTWIN luart.c -llua54 $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
 	@luart.exe ..\tools\rtc\src\rtc.lua -o wrtc.exe -w -i ..\tools\rtc\src\img\rtc.ico ..\tools\rtc\src\rtc.lua ..\tools\rtc\src >nul
 	@-copy /Y rtc.exe "$(DEST)\rtc.exe" >nul	
 	@-copy /Y wrtc.exe "$(DEST)\wrtc.exe" >nul	
@@ -180,12 +180,13 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\tools
 	@$(RM) wluart.exe >nul 2>&1
 	@$(RM) ..\tools\rtc\src\*.exe >nul 2>&1
 
+tools: rtc
+#---- [ LuaRT Studio ]
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-luart_studio: rtc
 	@$(RM) lrtapi.o
 	@$(CC) $(CFLAGS) -DRTCOMPAT -c lrtapi.c -o lrtapi.o
 	$(info lrtapi.c)
-	$(info Compiling lua54.dll...)
+	$(info Compiling LuaRT Studio lua54.dll...)
 	@$(CC) $(CFLAGS) -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LDFLAGS) $(LUART_LIBS)
 	@-copy /Y ..\bin\luart.exe "..\tools\LuaRT-Studio\bin\luart.exe" >nul	
 	@-copy /Y ..\bin\wrtc.exe "..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
@@ -193,8 +194,10 @@ luart_studio: rtc
 	@$(RM) lrtapi.o
 	@$(RM) lua54.dll
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
-	$(info LuaRT Studio interpreter updated)
-	
+	$(info Compiling QuickRT.exe...)
+	@rtc -i ..\tools\QuickRT\contrib\quickrt.ico ..\tools\QuickRT\src\quickrt.lua -o ..\tools\QuickRT\QuickRT.exe ..\tools\QuickRT\src >nul
+	@-copy /Y ..\bin\lua54.dll ..\tools\QuickRT\lua54.dll >nul	
+
 clean:
 	@$(RM) $(ALL_T) >nul 2>&1
 	@$(RM) $(LUART_T) >nul 2>&1
