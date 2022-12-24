@@ -7,6 +7,7 @@
 */
 
 #include <luart.h>
+#include "lrtapi.h"
 #include <locale.h>
 
 #include <Buffer.h>
@@ -204,10 +205,8 @@ LUA_PROPERTY_SET(sys, clipboard) {
 }
 
 LUA_PROPERTY_GET(sys, currentdir) {
-	size_t size = GetCurrentDirectoryW(0, NULL);
-	wchar_t *path = malloc(sizeof(wchar_t)*size);
-	GetCurrentDirectoryW(size, path);
-	lua_pushlwstring(L, path, size-1);
+	wchar_t *path = GetCurrentDir();
+	lua_pushwstring(L, path);
 	free(path);
 	return 1;
 }

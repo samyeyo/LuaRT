@@ -169,18 +169,43 @@ LUA_METHOD(Directory, list) {
 	return 1;
 }
 
-LUA_METHOD(Directory, removeall) {
-	Directory *d = lua_self(L, 1, Directory);
-	size_t size = wcslen(d->fullpath)+2;
-	wchar_t *path = calloc(sizeof(wchar_t), size);
-	SHFILEOPSTRUCTW shFileStruct = {0};
+static BOOL removeall_dir(wchar_t *path) {
+	if ( SetCurrentDirectoryW(path)) {
+        WIN32_FIND_DATAW fdata;
+        HANDLE h = FindFirstFileW(L"*.*", &fdata);
+        while (h != INVALID_HANDLE_VALUE) {
+            wchar_t *fname = fdata.cFileName;
+            if (wcscmp(fname, L".") && wcscmp(fname, L"..")) {
+				if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+               		if (!removeall_dir(fname))
+			   			return FALSE;
+				} else { 
+					if (!DeleteFileW(fname))
+						return FALSE;
+				}
+			}
+            if (!FindNextFileW(h, &fdata))
+                break;
+        }
+        FindClose(h);
+        SetCurrentDirectory("..");
+		return RemoveDirectoryW(path);
+    }
+	return FALSE;
+}	
 
-	wcsncpy(path, d->fullpath, size-2);
-    shFileStruct.wFunc= FO_DELETE;
-    shFileStruct.pFrom= path;
-    shFileStruct.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
-	lua_pushboolean(L, SHFileOperationW(&shFileStruct) == 0);
-	free(path);
+wchar_t * GetCurrentDir() {
+	DWORD size = GetCurrentDirectoryW(0, NULL)+1;
+	wchar_t *current = calloc(1, sizeof(wchar_t)*size);
+	GetCurrentDirectoryW(size, current);
+	return current;
+}
+
+LUA_METHOD(Directory, removeall) {
+	wchar_t *current = GetCurrentDir();
+	lua_pushboolean(L, removeall_dir(lua_self(L, 1, Directory)->fullpath));
+	SetCurrentDirectoryW(current);
+	free(current);
     return 1;
 }
 

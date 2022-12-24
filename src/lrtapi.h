@@ -35,3 +35,4 @@ LUAMOD_API int luaopen_com(lua_State *L);
 int lasterror(lua_State *L, DWORD err);
 
 int obj_each_iter(lua_State *L);
+extern wchar_t * GetCurrentDir();
