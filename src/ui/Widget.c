@@ -513,6 +513,7 @@ void do_align(Widget *w) {
 		if (w->wtype != UIWindow) {
 			Widget *win = (Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA);
 			if (win) {
+				MapWindowPoints(w->handle, win->handle, (LPPOINT) &rect, 2);
 				GetClientRect(win->handle, &r);
 				if (win->status) {	
 					RECT sr;
@@ -530,7 +531,7 @@ void do_align(Widget *w) {
 			case 0:	SetWindowPos(w->handle, NULL, r.left, r.top, r.right-r.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
 			case 1:	SetWindowPos(w->handle, NULL, r.left, r.top, rect.right-rect.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
 			case 2:	SetWindowPos(w->handle, NULL, r.right-(rect.right-rect.left), r.top, rect.right-rect.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
-			case 3:	SetWindowPos(w->handle, NULL, r.left, r.bottom-(rect.bottom-rect.top), r.right-r.left, rect.bottom-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
+			case 3:	SetWindowPos(w->handle, NULL, r.left, rect.top, r.right-r.left, (r.bottom-r.top)-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
 			case 4:	SetWindowPos(w->handle, NULL, r.left, r.top, r.right-r.left, rect.bottom-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
 		}	
 		if (w->wtype == UIPicture)
