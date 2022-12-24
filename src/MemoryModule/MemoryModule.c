@@ -35,6 +35,7 @@
 #include <stddef.h>
 #include <tchar.h>
 #include <stdio.h>
+#include <intrin.h>
 
 #if _MSC_VER
 // Disable warning about data -> function pointer conversion
