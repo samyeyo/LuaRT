@@ -171,8 +171,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
 }
 
-static const char *styles[] = {  "dialog", "fixed", "float", "raw", NULL };
-static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_EX_PALETTEWINDOW, WS_POPUP};
+static const char *styles[] = {  "dialog", "fixed", "float", "raw", "single", NULL };
+static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_EX_PALETTEWINDOW, WS_POPUP, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX};
 
 extern int size(Widget *w, lua_State *L, int offset_from, int offset_to, BOOL set, LONG value, BOOL iswidth);
 
