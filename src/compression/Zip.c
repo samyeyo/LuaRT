@@ -15,13 +15,14 @@
 #include <luart.h>
 
 #include <stdio.h>
+#include <wchar.h>
 #include <shlwapi.h>
 
 #include "lib\zip.h"
 #include <compression\lib\zip.h>
 
 
-const char *zip_modes[] = { "read", "append", "write", NULL };
+const char *zip_modes[] = { "read", "append", "write", "delete", NULL };
 extern struct zip_t *fs;
 
 /* ------------------------------------------------------------------------ */
@@ -74,7 +75,7 @@ LUA_METHOD(Zip, __gc) {
 }
 
 LUA_PROPERTY_GET(Zip, count) {
-	lua_pushinteger(L, zip_total_entries(lua_self(L, 1, Zip)->zip));
+	lua_pushinteger(L, zip_entries_total(lua_self(L, 1, Zip)->zip));
 	return 1;
 }
 
@@ -98,7 +99,7 @@ LUA_METHOD(Zip, reopen) {
 	Zip *z = lua_self(L, 1, Zip);
 	char mode;
 	
-	if (z->zip == fs)
+	if (fs && (z->zip == fs))
 		luaL_error(L, "cannot reopen bundled Zip archive");
 	mode = *zip_modes[luaL_checkoption(L, 2, "read", zip_modes)];
 	zip_close(z->zip);
@@ -147,7 +148,7 @@ static BOOL write_dir(Zip *z, wchar_t *dir, BOOL isfullpath, wchar_t* dest) {
 	HANDLE hFind;
 	WIN32_FIND_DATAW FindFileData;
 	wchar_t *path;
-	BOOL result = FALSE;
+	BOOL result = TRUE;
 
 	if (dest) {
 		int s = -1;
@@ -165,18 +166,20 @@ static BOOL write_dir(Zip *z, wchar_t *dir, BOOL isfullpath, wchar_t* dest) {
 				wchar_t *newdest = dest ? append_path(dest, FindFileData.cFileName) : NULL;
 
 				if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-					result = write_dir(z, newpath, isfullpath, newdest ?: FindFileData.cFileName);
-	        	else {
-	        		int s = -1;
-	        		char *entry = wchar_toutf8(newdest ?: FindFileData.cFileName, &s);
-			    	result = !zip_entry_open(z->zip, entry) && !zip_entry_fwrite(z->zip, newpath);
-	        		zip_entry_close(z->zip);
-			    	free(entry);
+					result &= write_dir(z, newpath, isfullpath, newdest ?: FindFileData.cFileName);
+				else {
+					int s = -1;
+					if ((FindFileData.nFileSizeHigh && FindFileData.nFileSizeLow) || (wcscmp(FindFileData.cFileName, z->fname) != 0)) {
+						char *entry = wchar_toutf8(newdest ?: FindFileData.cFileName, &s);
+						result &= !zip_entry_open(z->zip, entry) && !zip_entry_fwrite(z->zip, newpath);
+	        			zip_entry_close(z->zip);
+			    		free(entry);
+					}
 				}
 				free(newpath);
 				free(newdest);				
-			} else result = TRUE;
-	  	} while (result && FindNextFileW(hFind, &FindFileData));
+			}
+	  	} while (FindNextFileW(hFind, &FindFileData));
 	    FindClose(hFind);
 	}
 	free(path);
@@ -198,7 +201,7 @@ LUA_METHOD(Zip, write) {
 		fname = lua_towstring(L, 2);		
 		attrib = GetFileAttributesW(fname);
 		if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY)) {
-			result = write_dir(z, fname, !PathIsRelativeW(fname), dest) == 0;
+			result = write_dir(z, fname, !PathIsRelativeW(fname), dest);
 			goto done;
 		}
 		else
@@ -255,7 +258,7 @@ LUA_METHOD(Zip, read) {
 				luaL_pushresult(&b);
 				lua_pushinstance(L, Buffer, 1);
 			}
-		} else mz_zip_set_last_error(&z->zip->archive, MZ_ZIP_ENTRY_NOT_FILE);
+		} else mz_zip_set_last_error(&z->zip->archive, MZ_ZIP_FILE_NOT_FOUND);
 		zip_entry_close(z->zip);
 	}
 	return 1;
@@ -269,12 +272,13 @@ __int64 extract_zip(struct zip_t *z, const char *dir) {
 	BOOL success = TRUE;
 
 	while(success && (zip_entry_openbyindex(z, entry++) == 0)) {
-		const char *name = zip_entry_name(z, &size);
+		const char *name = zip_entry_name(z);
+		size = strlen(name);
 		char *fname = malloc(++size);
 		wchar_t *wfname;
 		int i;
 		
-		if (dir && (strncmp(dir, name, len) != 0)) {
+		if (dir && (strncmp(dir, name, len) == 0)) {
 			count++;
 			goto next;
 		}
@@ -303,9 +307,7 @@ next:
 
 static wchar_t *prep_destdir(lua_State *L, int idx) {
 	wchar_t *dir = lua_isstring(L, idx) ? lua_towstring(L, idx): _wcsdup(luaL_checkcinstance(L, idx, Directory)->fullpath);
-	size_t psize = GetCurrentDirectoryW(0, NULL);
-	wchar_t *oldpath = malloc(sizeof(wchar_t)*psize);
-	GetCurrentDirectoryW(psize, oldpath);
+	wchar_t *oldpath = GetCurrentDir();
 	make_path(dir);
 	SetCurrentDirectoryW(dir);
 	free(dir);
@@ -357,6 +359,21 @@ done:			lua_pushstring(L, name);
 	return 1;
 }
 
+LUA_METHOD(Zip, remove) {
+	Zip *z = lua_self(L, 1, Zip);	
+	int i, n = lua_gettop(L)-1;
+	char **fnames = malloc(sizeof(char*)*n);
+	
+	if (z->mode != 'd')
+		luaL_error(L, "Zip file must be opened in 'delete' mode to remove entries");
+	for (i=0; i < n; i++)
+		fnames[i] = (char*)luaL_checkstring(L, i+2);
+	lua_pushboolean(L, (n = zip_entries_delete(z->zip, fnames, (size_t)n)) > 0);
+	if (n == 0)
+	    z->zip->archive.m_last_error = MZ_ZIP_ENTRY_NOT_FOUND;
+	free(fnames);
+	return 1;
+}
 
 LUA_METHOD(Zip, extractall) {
 	wchar_t *oldpath = NULL;
@@ -395,8 +412,8 @@ static int Zip_iter(lua_State *L) {
 	Zip *z = lua_self(L, lua_upvalueindex(1), Zip); 
 	int entry = (int)lua_tointeger(L, lua_upvalueindex(2));
 	if (zip_entry_openbyindex(z->zip, entry) == 0) {
-		size_t len = 0;
-		const char *str = zip_entry_name(z->zip, &len);	
+		const char *str = zip_entry_name(z->zip);	
+		size_t len = strlen(str);
 		lua_pushlstring(L, str, str[len-1]=='/' ? len-1 : len);
 		lua_pushboolean(L, zip_entry_isdir(z->zip));
 		lua_pushinteger(L, ++entry);
@@ -428,6 +445,7 @@ const luaL_Reg Zip_methods[] = {
 	{"reopen",		Zip_reopen},
 	{"isdirectory",	Zip_isdirectory},
 	{"extractall",	Zip_extractall},
+	{"remove",		Zip_remove},
 	{"get_count",	Zip_getcount},
 	{"get_size",	Zip_getsize},
 	{"get_file",	Zip_getfile},

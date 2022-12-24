@@ -10,6 +10,7 @@
 #include <File.h>
 #include <Buffer.h>
 #include <Zip.h>
+#include <wchar.h>
 #include <compression\lib\zip.h>
 
 LUA_METHOD(compression, deflate) {
