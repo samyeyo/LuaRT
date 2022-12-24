@@ -40,7 +40,7 @@ $(info --------------------------------- Building for Windows x86 Platform)
  _ARCH = x86
  TARGET = pe-i386
 ifneq (${BUILD}, debug)
-#--- Uncomment to try smaller executables, only tested with Mingw-w64 8.1.0 !
+#--- Uncomment to try smaller lua54.dll, only tested with Mingw-w64 8.1.0 !
 #  LDSCRIPT=-Wl,-Tx86.ldscript 
 endif
  ifeq "$(wildcard $(windir)\system32\SensApi.dll)" ""
@@ -55,7 +55,7 @@ endif
  _ARCH = x64
  TARGET = pe-x86-64
 ifneq (${BUILD}, debug)
-#--- Uncomment to try smaller executables, only tested with Mingw-w64 8.1.0 !
+#--- Uncomment to try smaller lua54.dll, only tested with Mingw-w64 8.1.0 !
 LDSCRIPT=-Wl,-Tx64.ldscript
 endif
 endif
@@ -127,7 +127,7 @@ x86: clean
 
 setup: $(ALL_T) tools
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
 	@..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@-copy /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
 	@echo --------------------------------- LuaRT setup has been successfully compiled
@@ -135,13 +135,13 @@ setup: $(ALL_T) tools
 wluart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	$(info Linking wluart-static.exe...)
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O)  $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O)  $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
 	@-copy /Y wluart-static.exe $(DEST)\wluart-static.exe >nul
 
 luart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
 	$(info Linking luart-static.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart-static.exe $(LUART_OBJ_O) $(BASE_O) -mconsole luart.c $(LDFLAGS) $(LUART_LIBS) $(LDSCRIPT)
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart-static.exe $(LUART_OBJ_O) $(BASE_O) -mconsole luart.c $(LDFLAGS) $(LUART_LIBS)
 	@-copy /Y luart-static.exe $(DEST)\luart-static.exe >nul
 	
 $(LUA_A): $(BASE_O)
@@ -153,13 +153,13 @@ $(LUA_A): $(BASE_O)
 $(LUART_T): $(LUA_A) $(LUART_OBJ_O) luart.c
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
 	$(info Linking luart.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS)
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 $(LUAWRT_T): $(LUA_A) $(LUART_OBJ_O) $(LUART_UI_O) luart.c ui\ui.o
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	$(info Linking wluart.exe...)
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\tools\rtc\src\rtc.lua
@@ -168,11 +168,11 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\tools
 	@-copy $(DEST)\*.exe ..\tools\rtc\src >nul
 	@echo Compiling rtc.exe...
 	@windres $(DEFINES_RES) -I"." -I"../include/lua/" resources\resource.rc -o resource.o
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) 
 	@luart.exe ..\tools\rtc\src\rtc.lua -o rtc.exe ..\tools\rtc\src >nul
 	@echo Compiling wrtc.exe...
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
-	@$(CC) -mwindows $(CFLAGS) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe -DRTC -DRTWIN luart.c -llua54 $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
+	@$(CC) -mwindows $(CFLAGS) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe -DRTC -DRTWIN luart.c -llua54 $(LUART_LIBS) -lgdi32 
 	@luart.exe ..\tools\rtc\src\rtc.lua -o wrtc.exe -w -i ..\tools\rtc\src\img\rtc.ico ..\tools\rtc\src\rtc.lua ..\tools\rtc\src >nul
 	@-copy /Y rtc.exe "$(DEST)\rtc.exe" >nul	
 	@-copy /Y wrtc.exe "$(DEST)\wrtc.exe" >nul	
