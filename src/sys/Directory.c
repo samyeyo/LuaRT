@@ -81,7 +81,7 @@ static wchar_t *append_path(wchar_t *str, wchar_t* path) {
 //-------------------------------------[ Directory.make ]
 LUA_METHOD(Directory, make) {
 	Directory *dir = lua_self(L, 1, Directory);
-	wchar_t *trailing = append_path(dir->fullpath, L"");;
+	wchar_t *trailing = append_path(dir->fullpath, L"");
 
 	if (GetFileAttributesW(dir->fullpath) == INVALID_FILE_ATTRIBUTES) {
 		dir->exists = make_path(trailing);
@@ -209,6 +209,52 @@ LUA_METHOD(Directory, removeall) {
     return 1;
 }
 
+static BOOL copyall_dir(wchar_t *from, wchar_t *to) { 
+	wchar_t *trailing = append_path(to, L"");
+	
+	make_path(trailing);
+	free(trailing);
+	if ( SetCurrentDirectoryW(from)) {
+		WIN32_FIND_DATAW fdata;
+		HANDLE h = FindFirstFileW(L"*.*", &fdata);
+		while (h != INVALID_HANDLE_VALUE) {
+			wchar_t *fname = fdata.cFileName;
+			if (wcscmp(fname, L".") && wcscmp(fname, L"..")) {
+				wchar_t *newentry = append_path(to, fname);
+				if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+					if (!copyall_dir(fname, newentry))
+						return FALSE;
+				} else { 
+					if (!CopyFileW(fname, newentry, TRUE))
+						return FALSE;
+				}
+				free(newentry);
+			}
+			if (!FindNextFileW(h, &fdata))
+				break;
+		}
+		FindClose(h);
+		SetCurrentDirectory("..");
+		return TRUE;
+	}
+	return FALSE;
+}
+
+LUA_METHOD(Directory, copy) {
+	if ( lua_iscinstance(L, 2, TFile) )
+		luaL_typeerror(L, 2, "Directory");
+	else {
+		wchar_t *current = GetCurrentDir();
+		wchar_t *to = luaL_checkFilename(L, 2);
+		
+		lua_pushboolean(L, copyall_dir(lua_self(L, 1, Directory)->fullpath, to));
+		SetCurrentDirectoryW(current);
+		free(to);
+		free(current);
+	}
+	return 1;
+}
+
 LUA_METHOD(Directory, __iterate) {
 	return dir_create_iterator(L, L"*.*", 3);
 }
@@ -246,6 +292,7 @@ const luaL_Reg Directory_methods[] = {
 	{"removeall",		Directory_removeall},
 	{"get_isempty",		Directory_getisempty},
 	{"move",			File_move},
+	{"copy",			Directory_copy},
 	{"list",			Directory_list},
 	{"get_name",		File_getfilename},
 	{"get_parent",		File_getparent},
