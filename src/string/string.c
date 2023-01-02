@@ -1987,28 +1987,28 @@ int str_unpack (lua_State *L) {
 
 /* }====================================================== */
 
-
-static const luaL_Reg strlib[] = {
-  {"byte", str_byte},
-  {"char", str_char},
-  {"capitalize", str_capitalize},
+extern const luaL_Reg strlib[];
+static const luaL_Reg wstrlib[] = {
+  {"wbyte", str_byte},
+  {"wchar", str_char},
+  {"wcapitalize", str_capitalize},
   {"dump", str_dump},
-  {"find", str_find},
+  {"wfind", str_find},
   {"format", str_format},
-  {"gmatch", gmatch},
-  {"gsub", str_gsub},
-  {"len", str_len},
-  {"lower", str_lower},
-  {"match", str_match},
+  {"wgmatch", gmatch},
+  {"wgsub", str_gsub},
+  {"wlen", str_len},
+  {"wlower", str_lower},
+  {"wmatch", str_match},
   {"rep", str_rep},
-  {"reverse", str_reverse},
-  {"similarity", str_similarity},
-  {"sub", str_sub},
-  {"upper", str_upper},
+  {"wreverse", str_reverse},
+  {"wsimilarity", str_similarity},
+  {"wsub", str_sub},
+  {"wupper", str_upper},
   {"pack", str_pack},
   {"packsize", str_packsize},
   {"unpack", str_unpack},
-  {"search", str_search},
+  {"wsearch", str_search},
   {NULL, NULL}
 };
 
@@ -2031,7 +2031,8 @@ static void createmetatable (lua_State *L) {
 ** Open string library
 */
 LUAMOD_API int luaopen_string (lua_State *L) {
-  luaL_newlib(L, strlib);
+  luaL_newlib(L, wstrlib);
+  luaL_setfuncs(L, strlib, 0);
   createmetatable(L);
   return 1;
 }
