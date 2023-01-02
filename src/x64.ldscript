@@ -45,6 +45,7 @@ SECTIONS
      to include this between __data_start__ and __data_end__, but that
      breaks building the cygwin32 dll.  Instead, we name the section
      ".data_cygwin_nocopy" and explicitly include it after __data_end__. */
+  .rsrc BLOCK(__section_alignment__) : { KEEP (*(.rsrc*)) }     
   .data BLOCK(__section_alignment__) :
   {
     __data_start__ = . ;
@@ -97,8 +98,6 @@ SECTIONS
     *(.tls$)
     *(SORT(.tls$*))
     *(.tls$ZZZ)
-    *(.rsrc)
-    *(.rsrc$*)
     *(.eh_frame*)
   }
   .idata BLOCK(__section_alignment__) :
