@@ -178,7 +178,7 @@ LUA_METHOD(File, writeln) {
 
 static int FileRead(lua_State *L, File *f, size_t size, BOOL line) {
 	luaL_Buffer b;
-	char buff[sizeof(wchar_t)];
+	char buff[4];
 	wchar_t *c = (wchar_t*)buff;
 	int nbytes = f->std ? 2 : encoding_size[f->encoding];
 	size_t todo = size;
