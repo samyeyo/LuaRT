@@ -11,6 +11,7 @@
 #include <luart.h>
 #include "../include/Http.h"
 #include <Ftp.h>
+#include <File.h>
 
 #include <windns.h>
 #include <Ws2ipdef.h>
@@ -162,6 +163,18 @@ LUA_METHOD(net, urlparse) {
 	return lua_gettop(L)-n;
 }
 
+LUA_METHOD(net, getmime) {
+	LPWSTR mime = NULL;
+	wchar_t *uri = luaL_checkFilename(L, 1);
+	if (SUCCEEDED(FindMimeFromData(NULL, uri, NULL, 0, NULL, FMFD_URLASFILENAME, &mime, 0))) {
+		lua_pushwstring(L, mime);
+		CoTaskMemFree(mime);
+	}
+	else lua_pushnil(L);
+	free(uri);
+	return 1;
+}
+
 LUA_PROPERTY_GET(net, isalive) {
 	DWORD flags = NETWORK_ALIVE_LAN;
 	lua_pushboolean(L, IsNetworkAlive(&flags));
@@ -257,6 +270,7 @@ static const luaL_Reg net_properties[] = {
 };
 
 static const luaL_Reg netlib[] = {
+	{"getmime",		net_getmime},
 	{"select",		net_select},
 	{"resolve",		net_resolve},
 	{"reverse",		net_reverse},
