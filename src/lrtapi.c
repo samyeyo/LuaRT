@@ -172,18 +172,18 @@ static int luaB_type (lua_State *L) {
 //-------------------------------------------------[super() function]
 
 static int luaB_super(lua_State *L) {
-	BOOL is_super = TRUE;
-
-	if ( !(lua_istable(L, 1) && luaL_getmetafield(L, 1, "__name")) )
-		luaL_typeerror(L, 1, "Object or instance");
-	if (!luaL_getmetafield(L, 1, "__super")) {
-		luaL_getmetafield(L, 1, "__type");
-		if ((is_super = luaL_getmetafield(L, 1, "__call")))
-			lua_pop(L, 1);
+	if (lua_getmetatable(L, 1)) {
+		lua_getfield(L, -1, "__name");
+		lua_getfield(L, -2, "__type");
+		if (strcmp(lua_tostring(L, -2), "Object") != 0)
+			luaL_getmetafield(L, -1, "__type");
 		if (!luaL_getmetafield(L, -1, "__name"))
-			lua_pushnil(L);
-		else lua_pop(L, 1);
-	} else return 1;
+			goto done;
+		lua_pop(L, 1);
+		return 1;
+	}
+done:
+	lua_pushnil(L);
 	return 1;
 }
 
