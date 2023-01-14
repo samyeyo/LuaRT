@@ -225,7 +225,7 @@ __attribute__((used)) int main() {
 	lua_setglobal(L, "seticon");
 #endif
 	if (argc == 1 && !is_embeded)
-		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2022, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
+		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2023, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
 	else {
 		lua_createtable(L, argc, 0);	
 		lua_pushwstring(L, exename);

@@ -28,14 +28,14 @@ PLATFORM ?= x64
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 2
+LUART_MINOR= 3
 LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 CLEAN=clean
 
 ifeq ($(filter $(CLEAN),$(MAKECMDGOALS)),)
 ifeq ($(PLATFORM), x86)
-$(info --------------------------------- Building for Windows x86 Platform)
+$(info --------------------------------- Building LuaRT for Windows x86 Platform)
  ARCH = -m32 -march=pentium4 -msse -msse2 -mmmx -fno-unwind-tables -fno-asynchronous-unwind-tables 
  _ARCH = x86
  TARGET = pe-i386
@@ -50,7 +50,7 @@ endif
 endif
 ifeq ($(PLATFORM), x64)
 ifneq ($(MAKECMDGOALS),x86)
-$(info --------------------------------- Building for Windows x64 Platform)
+$(info --------------------------------- Building LuaRT for Windows x64 Platform)
 endif
  ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion
  _ARCH = x64
