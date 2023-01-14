@@ -120,60 +120,6 @@ static int str_reverse (lua_State *L) {
   return 1;
 }
 
-
-static int str_lower (lua_State *L) {
-  size_t l;
-  size_t i;
-  luaL_Buffer b;
-  const char *s = luaL_checklstring(L, 1, &l);
-  char *p = luaL_buffinitsize(L, &b, l);
-  for (i=0; i<l; i++)
-    p[i] = tolower(uchar(s[i]));
-  luaL_pushresultsize(&b, l);
-  return 1;
-}
-
-
-static int str_upper (lua_State *L) {
-  size_t l;
-  size_t i;
-  luaL_Buffer b;
-  const char *s = luaL_checklstring(L, 1, &l);
-  char *p = luaL_buffinitsize(L, &b, l);
-  for (i=0; i<l; i++)
-    p[i] = toupper(uchar(s[i]));
-  luaL_pushresultsize(&b, l);
-  return 1;
-}
-
-
-static int str_rep (lua_State *L) {
-  size_t l, lsep;
-  const char *s = luaL_checklstring(L, 1, &l);
-  lua_Integer n = luaL_checkinteger(L, 2);
-  const char *sep = luaL_optlstring(L, 3, "", &lsep);
-  if (n <= 0)
-    lua_pushliteral(L, "");
-  else if (l_unlikely(l + lsep < l || l + lsep > MAXSIZE / n))
-    return luaL_error(L, "resulting string too large");
-  else {
-    size_t totallen = (size_t)n * l + (size_t)(n - 1) * lsep;
-    luaL_Buffer b;
-    char *p = luaL_buffinitsize(L, &b, totallen);
-    while (n-- > 1) {  /* first n-1 copies (followed by separator) */
-      memcpy(p, s, l * sizeof(char)); p += l;
-      if (lsep > 0) {  /* empty 'memcpy' is not that cheap */
-        memcpy(p, sep, lsep * sizeof(char));
-        p += lsep;
-      }
-    }
-    memcpy(p, s, l * sizeof(char));  /* last copy (not followed by separator) */
-    luaL_pushresultsize(&b, totallen);
-  }
-  return 1;
-}
-
-
 static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
@@ -852,10 +798,8 @@ const luaL_Reg strlib[] = {
   {"gmatch", gmatch},
   {"gsub", str_gsub},
   {"len", str_len},
-  {"lower", str_lower},
   {"match", str_match},
   {"reverse", str_reverse},
   {"sub", str_sub},
-  {"upper", str_upper},
   {NULL, NULL}
 };
