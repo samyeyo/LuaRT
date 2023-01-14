@@ -34,5 +34,8 @@ local task = coroutine.create(display_img)
 
 repeat
     ui.update()
-    coroutine.resume(task)
+    local result, err = coroutine.resume(task)
+    if result == false then
+      ui.error(err)
+    end
 until not win.visible or coroutine.status(task) == "dead"

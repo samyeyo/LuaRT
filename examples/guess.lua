@@ -26,7 +26,7 @@ local word = "moon"
 while true do
 	console.writecolor("lightcyan", "Guess the word : ")
 	console.color = "brightwhite"
-	local response = console.stdin:readln() --:gsub("[\r\n]+$", "")
+	local response = console.stdin:readln()
 	if response ~= word then
 		console.writecolor("cyan", "The word '"..response.."' is not the response !\n")
 		console.writecolor("cyan", "Your response is nearly", response:similarity(word:lower()).."% similar\n\n")

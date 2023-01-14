@@ -11,4 +11,4 @@ local client = net.Http(url)
 local uri = "/json/"
 local response = client:get(uri)
 -- parse the response (a JSON string)
-print("You are located in "..response:match('"country":"(%w+)').." near "..response:match('"city":"(%w+)'))
+print("You are located in "..response:wmatch('"country":"(%w+)').." near "..response:wmatch('"city":"(%w+)'))

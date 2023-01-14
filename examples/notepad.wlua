@@ -59,7 +59,7 @@ function FileOpen:onClick()
 				encoding = "UTF8"
 				isRTF = true
 			else
-				encoding = file.encoding:capitalize()
+				encoding = file.encoding:upper()
 				if encoding == "Binary" then 
 					encoding = "ASCII"
 				end
