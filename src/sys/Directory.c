@@ -235,6 +235,7 @@ static BOOL copyall_dir(wchar_t *from, wchar_t *to) {
 		}
 		FindClose(h);
 		SetCurrentDirectory("..");
+		RemoveDirectoryW(from);
 		return TRUE;
 	}
 	return FALSE;
