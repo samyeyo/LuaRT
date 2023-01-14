@@ -252,7 +252,7 @@ static const luaL_Reg def_libs[] = {
   {"os",	luaopen_os },
   {"utf8",	luaopen_utf8 },
   {"sys",		luaopen_sys},
-#ifdef RTCOMPAT
+#ifdef AIO
   {"ui",		luaopen_ui },
   {"crypto",	luaopen_crypto },
   {"net",		luaopen_net },

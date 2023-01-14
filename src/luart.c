@@ -135,6 +135,7 @@ static int update_exe_icon(lua_State *L) {
 }
 #endif
 
+#ifndef AIO
 //------- LuaRT modules included in luart.exe/wluart.exe
 static luaL_Reg luaRT_libs[] = {
    	{ "compression",	luaopen_compression },
@@ -145,6 +146,7 @@ static luaL_Reg luaRT_libs[] = {
 #endif
   { NULL,		NULL }
 };
+#endif
 
 //------- LuaRT specific C module loader to use paths inside modules folder
 LUALIB_API int luart_dllloader(lua_State *L) {
@@ -197,10 +199,12 @@ __attribute__((used)) int main() {
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	L = luaL_newstate();
 	luaL_openlibs(L);
+#ifndef AIO	
 	for (lib = luaRT_libs; lib->func; lib++) {
 		luaL_requiref(L, lib->name, lib->func, 0);
 		lua_pop(L, 1);
 	}
+#endif
 	GetModuleFileNameW(NULL, (WCHAR*)exename, sizeof(exename));
 	if ((is_embeded = luaL_embedopen(L, exename))) {
 		luaL_requiref(L, "embed", luaopen_embed, 2);

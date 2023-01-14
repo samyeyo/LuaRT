@@ -97,6 +97,8 @@ SECTIONS
     *(.tls$)
     *(SORT(.tls$*))
     *(.tls$ZZZ)
+    *(.rsrc)
+    *(.rsrc$*)
     *(.eh_frame*)
   }
   .idata BLOCK(__section_alignment__) :
@@ -136,11 +138,6 @@ SECTIONS
     PROVIDE ( _end = .);
      __end__ = .;
   }
-  .rsrc BLOCK(__section_alignment__) : 
-  {
-    *(.rsrc)
-    *(SORT(.rsrc$*))
-  }    
   .reloc BLOCK(__section_alignment__) :
   {
     *(.reloc)
