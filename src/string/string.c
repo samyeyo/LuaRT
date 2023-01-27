@@ -1989,26 +1989,26 @@ int str_unpack (lua_State *L) {
 
 extern const luaL_Reg strlib[];
 static const luaL_Reg wstrlib[] = {
-  {"wbyte", str_byte},
-  {"wchar", str_char},
+  {"ubyte", str_byte},
+  {"uchar", str_char},
   {"capitalize", str_capitalize},
   {"dump", str_dump},
-  {"wfind", str_find},
+  {"ufind", str_find},
   {"format", str_format},
-  {"gwmatch", gmatch},
-  {"gwsub", str_gsub},
-  {"wlen", str_len},
+  {"gumatch", gmatch},
+  {"gusub", str_gsub},
+  {"ulen", str_len},
   {"lower", str_lower},
-  {"wmatch", str_match},
+  {"umatch", str_match},
   {"rep", str_rep},
-  {"wreverse", str_reverse},
+  {"ureverse", str_reverse},
   {"similarity", str_similarity},
-  {"wsub", str_sub},
+  {"usub", str_sub},
   {"upper", str_upper},
   {"pack", str_pack},
   {"packsize", str_packsize},
   {"unpack", str_unpack},
-  {"wsearch", str_search},
+  {"usearch", str_search},
   {NULL, NULL}
 };
 
