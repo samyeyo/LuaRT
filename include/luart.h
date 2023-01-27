@@ -103,7 +103,7 @@ LUA_API const char *lua_objectname(lua_State *L, int idx);
 #define luaL_typename(L, i) lua_objectname(L, i)
 
 //--- Returns the inherited Object
-LUA_API int lua_super(lua_State *L);
+LUA_API int lua_super(lua_State *L, int idx);
 
 //--------------------------------------------------| Module registration
 

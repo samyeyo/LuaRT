@@ -172,18 +172,8 @@ static int luaB_type (lua_State *L) {
 //-------------------------------------------------[super() function]
 
 static int luaB_super(lua_State *L) {
-	if (lua_getmetatable(L, 1)) {
-		lua_getfield(L, -1, "__name");
-		lua_getfield(L, -2, "__type");
-		if (strcmp(lua_tostring(L, -2), "Object") != 0)
-			luaL_getmetafield(L, -1, "__type");
-		if (!luaL_getmetafield(L, -1, "__name"))
-			goto done;
-		lua_pop(L, 1);
-		return 1;
-	}
-done:
-	lua_pushnil(L);
+	if (!lua_super(L, 1))
+		lua_pushnil(L);
 	return 1;
 }
 

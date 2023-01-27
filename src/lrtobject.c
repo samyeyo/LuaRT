@@ -69,18 +69,72 @@ static int get_mixins_field(lua_State *L, const char *field, CallMethod prop) {
 	return LUA_TNIL;
 }
 
-static int super_proxy(lua_State *L) {
-	int nargs = lua_gettop(L);
-	if (lua_getmetatable(L, 1)) {
-		lua_pushstring(L, "__super");
-		lua_pushvalue(L, lua_upvalueindex(1));
-		lua_rawset(L, -3);
-		lua_pop(L, 1);
+int lua_super(lua_State *L, int idx) {
+	luaL_checktype(L, idx, LUA_TTABLE);
+	if (lua_getmetatable(L, idx)) {
+		if (!lua_getfield(L, -1, "__super")) {
+			lua_pop(L, 1);
+			if (lua_getfield(L, -1, "__name")) {
+				lua_getfield(L, -2, "__type");
+				if (strcmp(lua_tostring(L, -2), "Object") != 0) {
+					luaL_getmetafield(L, -1, "__type");
+					lua_remove(L, -2);
+				}				
+			} else {
+				lua_pop(L, 2);
+				return 0;
+			}
+			lua_remove(L, -2);
+		} 
+		if (luaL_getmetafield(L, -1, "__name")) {
+			lua_pop(L, 1);
+			lua_pushvalue(L, idx);
+			lua_setfield(L, -3, "__superself");
+			lua_remove(L, -2);
+			return 1;
+		}
 	}
-	lua_pushvalue(L, lua_upvalueindex(2));
-	lua_insert(L, -lua_gettop(L));
-	lua_call(L, nargs, LUA_MULTRET);
-	return lua_gettop(L);
+	lua_pop(L, 1);
+	return 0;
+}
+
+static int super_proxy(lua_State *L) {
+	int len, nargs = lua_gettop(L);
+
+	if (nargs) {
+		lua_getmetatable(L, 1);
+		if (!lua_getfield(L, -1, "__ancestors")) {
+			lua_pop(L, 1);
+			lua_createtable(L, 3, 0);
+			lua_pushvalue(L, -1);
+			lua_setfield(L, -3, "__ancestors");
+		}
+		lua_getfield(L, -2, "__super");
+		lua_rawseti(L, -2, luaL_len(L, -2)+1);
+		lua_pop(L, 1);
+		lua_pushvalue(L, lua_upvalueindex(1));
+		lua_setfield(L, -2, "__super");
+		lua_pushvalue(L, 1);
+		lua_insert(L, 2);
+		lua_pushvalue(L, lua_upvalueindex(2));
+		lua_insert(L, 2);
+		lua_pop(L, 1);
+		lua_call(L, nargs, LUA_MULTRET);
+		lua_getmetatable(L, 1);
+		lua_getfield(L, -1, "__ancestors");
+		len = luaL_len(L, -1);
+		lua_rawgeti(L, -1, len);
+		lua_setfield(L, -3, "__super");
+		lua_pushnil(L);
+		lua_rawseti(L, -2, len);
+		lua_pop(L, 2);
+	}
+	else {
+		lua_pushvalue(L, lua_upvalueindex(2));
+		lua_insert(L, 1);
+		lua_call(L, nargs, LUA_MULTRET);
+	}
+	return lua_gettop(L)-1;
 }
 
 LUA_METHOD(type, __index) {
@@ -95,7 +149,7 @@ LUA_METHOD(type, __index) {
 		lua_pop(L, 1);
 		lua_pushvalue(L, 2);
 		if ((type = lua_rawget(L, -2))) {
-			if (!lua_iscfunction(L, -1) && (type == LUA_TFUNCTION))
+			if ((type == LUA_TFUNCTION) && !lua_iscfunction(L, -1))
 				lua_pushcclosure(L, super_proxy, 2);
 			return 1;
 		}
@@ -135,7 +189,7 @@ LUA_METHOD(type, __newindex) {
 __newindex:	if ( luaL_getmetafield(L, 1, "__metanewindex" ))
 				return lua_tocfunction(L, -1)(L);
 setfield:	lua_pushvalue(L, 2);
-			if (lua_isfunction(L, 3)) {
+			if (lua_isfunction(L, 3) && !lua_iscfunction(L, 3)) {
 				luaL_getmetafield(L, 1, "__type");
 				lua_pushvalue(L, 3);
 				lua_pushcclosure(L, super_proxy, 2);
@@ -413,7 +467,7 @@ int lua_isinstance(lua_State *L, int idx, const char **objectname) {
 			if (lua_getfield(L, -1, "__name")) {
 				*objectname = lua_tostring(L, -1);
 				lua_pop(L, 2);
-				return 1;
+				return strcmp(*objectname, "Object") != 0;
 			}
 		}
 		lua_pop(L, 1);

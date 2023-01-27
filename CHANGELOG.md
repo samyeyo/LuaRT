@@ -1,3 +1,78 @@
+## LuaRT v1.3.0 (Jan 28 2023)
+ 
+#### General / Highlights
+- New: compiled Lua scripts can now require for embedded DLL binary modules **without extraction** (may not work for all binary modules)
+- New: binary modules inside the `\modules` folder can now be required using a folder structure, while still using ``luaopen_modulename()`` function
+- Updated ``luart.exe``and ``wluart.exe`` command line arguments (-e and script can now be specified together : the -e statement will be executed first)
+- String module now uses non-encoded strings by default, as standard Lua (UTF8 compatible functions still available, see ``string`` module below)
+
+#### LuaRT installer
+- Now detects already installed LuaRT distribution 
+
+#### QuickRT
+- Updated for new string module
+
+#### LuaRT Studio
+- LuaRT toolchain updated to v1.3.0 
+- Updated examples to LuaRT v1.3.0
+- New integrated Lua code formatter/beautifier <kbd>Alt</kbd> + <kbd>F</kbd> (uses Stylua)
+- New Variables pane shown during debugging that list all current scope variables
+- New debugging view that shows Symbols and Variables pane during debugging
+- New UTF8/UNICODE complete support in Output pane
+- New LuaRT ``modules\`` folder autodetection
+- New keyboard shortcut to copy line(s) down <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>&#8595;</kbd> and up <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>&#8593;</kbd>
+- New keyboard shortcut to move line(s) down <kbd>Alt</kbd> + <kbd>&#8595;</kbd> and up <kbd>Alt</kbd> + <kbd>&#8593;</kbd>
+- Updated "Local console" pane to "Lua interpreter" pane
+- Updated "Remote console" pane to "Debugging console" pane
+- Updated breakpoint color to a more consensual one (red !)
+- Symbols pane now shows only symbols for the current opened file
+- Project view now shows EXE and DLL files
+- Removed Watch pane (replaced by the new Variables Pane)
+- Fixed Lua scripts cannot be executed in the IDE 
+- Fixed "Show console when running option" has no effect
+- Fixed document tab may contain more than one '*' after file change
+- Fixed Symbols pane showing global variables multiple times
+- Fixed Symbols pane showing a non transparent icon for anonymous functions
+- Fixed Output pane don't support reading from console input 
+- Fixed LuaRT Console output module breaking Output pane redirection 
+
+#### Examples
+- Examples have been updated to be used with the new string module
+
+#### Objects
+- Fixed ``super()`` global function do not returns inherited parent object (Fixes #42)
+- ``super()`` supports only method ancestor calls using the "." dot notation, specifying the self instance explicitly
+
+#### LuaRT C API
+- Fixed ``luart.h`` C++ inclusion that was throwing errors regarding `typename` keyword (Fixes #41)
+- New ``lua_super()`` function in LuaRT C API to push on the stack the ancestor of the provided indexed value on the stack
+
+### ``console`` module
+- Fixed bad standard input redirection with ``luart.exe`` and ``wluart.exe`` (Fixes #39)
+- Fixed ``console.readchar()`` running forever when interpreter input is redirected (Fixes #40)
+
+#### `string` module
+- Updated UTF8 functions in ``string`` module, now prefixed with a ``u`` to preserve compatibility with standard Lua
+
+#### `net` module
+- New ``net.getmime()`` function to retrieve MIME type from URL, filename or ``sys.File`` instance
+
+#### `sys` module
+- New ``Directory:copy()`` method to copy a folder recursively
+- Fixed buffer overflow when reading long sized UTF8 character from ``sys.File`` instance (Fixes #43)
+- Fixed ``Directory:removeall()`` that can be very slow on Windows 10 and later (Fixes #44)
+
+#### `compression` module
+- New ``Zip:open("delete")`` mode
+- New ``Zip.remove()`` method to delete one or more entries in ZIP a archive.
+- Updated dependencies zip to 0.2.6 and miniz to 2.2.0 
+
+#### `ui` module
+- New ``"single"`` Window style (standard Window that cannot be resized)
+- Fixed widgets ``align`` property not working correctly
+
+---
+
 ## LuaRT v1.2.0 (Dec 11 2022)
  
 #### General
@@ -61,6 +136,8 @@
 - Fixed taskbar showing ugly-resized Window icon when application is compiled with rtc -i option (Fixes #34)
 - Fixed ``Widget:center()`` not taking in count the presence of the window statusbar
 - Fixed selected ``TreeItem`` not staying higlighted
+
+16/10/2022 -------- LuaRT 1.0.2 (bugfix)
 
 ----------- General
 [ NEW ]			New examples img_viewer.wlua and binary.wlua
