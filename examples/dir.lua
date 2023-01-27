@@ -5,11 +5,11 @@
 local console = require "console"
 
 local function format_int(number)
-  local i, j, minus, int, fraction = tostring(number):wfind('([-]?)(%d+)([.]?%d*)')
-  int = int:wreverse():gwsub("(%d%d%d)", "%1 ")
-  local result = minus .. int:wreverse():gsub("^,", "") .. fraction
-  result = result:gwsub("^%s+", "")
-  local len = string.wlen(result)
+  local i, j, minus, int, fraction = tostring(number):ufind('([-]?)(%d+)([.]?%d*)')
+  int = int:ureverse():gusub("(%d%d%d)", "%1 ")
+  local result = minus .. int:ureverse():gsub("^,", "") .. fraction
+  result = result:gusub("^%s+", "")
+  local len = string.ulen(result)
   result = string.rep(" ", 16-len)..result
   return result
 end
