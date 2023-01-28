@@ -4,13 +4,17 @@
 - New: compiled Lua scripts can now require for embedded DLL binary modules **without extraction** (may not work for all binary modules)
 - New: binary modules inside the `\modules` folder can now be required using a folder structure, while still using ``luaopen_modulename()`` function
 - Updated ``luart.exe``and ``wluart.exe`` command line arguments (-e and script can now be specified together : the -e statement will be executed first)
-- String module now uses non-encoded strings by default, as standard Lua (UTF8 compatible functions still available, see ``string`` module below)
+- String module now uses non-encoded strings by default, as standard Lua (UTF8 functions are now available, see ``string`` module below)
 
 #### LuaRT installer
 - Now detects already installed LuaRT distribution 
 
+#### rtc
+- Updated ``wrtc`` so that it don't show a message box after compilation anymore
+- Updated to use the UTF8 string functions
+
 #### QuickRT
-- Updated for new string module
+- Updated to use the new UTF8 string functions
 
 #### LuaRT Studio
 - LuaRT toolchain updated to v1.3.0 
@@ -25,6 +29,7 @@
 - Updated "Local console" pane to "Lua interpreter" pane
 - Updated "Remote console" pane to "Debugging console" pane
 - Updated breakpoint color to a more consensual one (red !)
+- Updated wrtc to show message in Output panel after compilation succeeded instead of showing a message box
 - Symbols pane now shows only symbols for the current opened file
 - Project view now shows EXE and DLL files
 - Removed Watch pane (replaced by the new Variables Pane)
@@ -37,7 +42,7 @@
 - Fixed LuaRT Console output module breaking Output pane redirection 
 
 #### Examples
-- Examples have been updated to be used with the new string module
+- Examples have been updated to be used with the new UTF8 string functions
 
 #### Objects
 - Fixed ``super()`` global function do not returns inherited parent object (Fixes #42)
@@ -45,7 +50,7 @@
 
 #### LuaRT C API
 - Fixed ``luart.h`` C++ inclusion that was throwing errors regarding `typename` keyword (Fixes #41)
-- New ``lua_super()`` function in LuaRT C API to push on the stack the ancestor of the provided indexed value on the stack
+- New ``lua_super()`` function in LuaRT C API to push on the stack the ancestor of the provided indexed Object/instance on the stack
 
 ### ``console`` module
 - Fixed bad standard input redirection with ``luart.exe`` and ``wluart.exe`` (Fixes #39)
@@ -64,12 +69,13 @@
 
 #### `compression` module
 - New ``Zip:open("delete")`` mode
-- New ``Zip.remove()`` method to delete one or more entries in ZIP a archive.
+- New ``Zip.remove()`` method to delete one or more entries in ZIP archive.
 - Updated dependencies zip to 0.2.6 and miniz to 2.2.0 
 
 #### `ui` module
 - New ``"single"`` Window style (standard Window that cannot be resized)
 - Fixed widgets ``align`` property not working correctly
+- Fixed Parent align property don't propagate to childs widgets (Fixes #46)
 
 ---
 
