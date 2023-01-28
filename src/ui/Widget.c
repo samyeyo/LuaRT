@@ -472,6 +472,8 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     return w;
 }
 
+extern BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam);
+
 LUA_METHOD(Widget, show) {
 	Widget *w = lua_self(L, 1, Widget);
 
@@ -485,6 +487,7 @@ LUA_METHOD(Widget, show) {
 	SetWindowPos(w->handle, HWND_TOP, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE);
 	SetForegroundWindow(w->handle);
 	SetFocus(w->handle);
+	EnumChildWindows(w->handle, ResizeChilds, (LPARAM)w->handle);
 	return 0;
 }
 
@@ -533,7 +536,17 @@ void do_align(Widget *w) {
 			case 2:	SetWindowPos(w->handle, NULL, r.right-(rect.right-rect.left), r.top, rect.right-rect.left, r.bottom-r.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
 			case 3:	SetWindowPos(w->handle, NULL, r.left, rect.top, r.right-r.left, (r.bottom-r.top)-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
 			case 4:	SetWindowPos(w->handle, NULL, r.left, r.top, r.right-r.left, rect.bottom-rect.top, SWP_NOZORDER | SWP_NOOWNERZORDER); break;
-		}	
+		}
+	
+		if ((w->wtype == UIWindow) || (w->wtype == UIGroup))
+			EnumChildWindows(w->handle, ResizeChilds, (LPARAM)w->handle);	
+		else if ((w->wtype == UITab)) {
+			int i = SendMessageW(w->handle, TCM_GETCURSEL, 0, 0);
+			TCITEMW *item = __get_item(w, i, NULL);
+			EnumChildWindows(item->lParam, ResizeChilds, (LPARAM)item->lParam);
+			free(item->pszText);
+			free(item);
+		}
 		if (w->wtype == UIPicture)
 			InvalidateRect(GetParent(w->handle), NULL, TRUE);
 	}

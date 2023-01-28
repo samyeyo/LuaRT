@@ -21,9 +21,8 @@ BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam)
 {
 	if (GetParent(h) == (HWND)lParam) {	
 		Widget *w = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA);
-		if (w) {
+		if (w)
 			do_align(w);
-		}
 	}
 	return TRUE;
 }
