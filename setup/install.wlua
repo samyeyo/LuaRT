@@ -42,14 +42,21 @@ local caption = "Install"
 local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LuaRT", "InstallLocation") or false
 
 if update then
-    local current = (sys.Pipe('luart -e "print(_VERSION)"'):read(100) or VERSION):match("%d%.%d%.%d")
-    if current == VERSION then
-        caption = "Reinstall"
-        update = false
-    elseif tonumber(current:gsub("%.", "")) < tonumber(VERSION:gsub("%.", "")) then
-        caption = "Downgrade to"
+    local p = sys.Pipe('luart -e "print(_VERSION)"')
+    if p then
+        local current = (p:read(100) or VERSION):match("%d%.%d%.%d")
+        local numver = VERSION:gsub("%.", "")
+        local numcurr = current:gsub("%.", "")
+        if current == VERSION then
+            caption = "Reinstall"
+            update = false
+        elseif numcurr > numver then
+            caption = "Downgrade to"
+        else
+            caption = "Update to"
+        end
     else
-        caption = "Update to"
+
     end
 end
 
