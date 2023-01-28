@@ -16,7 +16,7 @@ win:show()
 
 local function display_img()
   for f in each(dir) do
-    if is(f, sys.File) and string.search(".png .jpg .jpeg .gif .tiff", f.extension or "") then
+    if is(f, sys.File) and string.usearch(".png .jpg .jpeg .gif .tiff", f.extension or "") then
       local time = sys.clock()
       img:load(f)
       win.width = img.width
