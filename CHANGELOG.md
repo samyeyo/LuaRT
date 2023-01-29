@@ -27,6 +27,9 @@
 - New LuaRT ``modules\`` folder autodetection
 - New keyboard shortcut to copy line(s) down <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>&#8595;</kbd> and up <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>&#8593;</kbd>
 - New keyboard shortcut to move line(s) down <kbd>Alt</kbd> + <kbd>&#8595;</kbd> and up <kbd>Alt</kbd> + <kbd>&#8593;</kbd>
+- Changed comment keyboard shortcut to <kbd>Ctrl</kbd> + <kbd>:</kbd>
+- Changed replace keyboard shortcut to <kbd>Ctrl</kbd> + <kbd>H</kbd>
+- Changed replace in files keyboard shortcut to <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>
 - Updated "Local console" pane to "Lua interpreter" pane
 - Updated "Remote console" pane to "Debugging console" pane
 - Updated breakpoint color to a more consensual one (red !)
@@ -41,9 +44,10 @@
 - Fixed Symbols pane showing a non transparent icon for anonymous functions
 - Fixed Output pane don't support reading from console input 
 - Fixed LuaRT Console output module breaking Output pane redirection 
+- Fixed binary modules in LuaRT "modules\\" folder not found during debugging session
 
 #### Examples
-- Examples have been updated to be used with the new UTF8 string functions
+- Examples have been updated to use the new UTF8 string functions
 
 #### Objects
 - Fixed ``super()`` global function do not returns inherited parent object (Fixes #42)
