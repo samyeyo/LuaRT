@@ -83,8 +83,8 @@ SET PATH=%PATH%;"C:\LuaRT\bin"
 ## :small_blue_diamond:Usage
 
 ```
-luart.exe [-e "statement"] | filename [arg1 arg2...]
-wluart.exe [-e "statement"] | filename [arg1 arg2...]
+luart.exe [-e "statement"] [filename] [arg1 arg2...]
+wluart.exe [-e "statement"] [filename] [arg1 arg2...]
 
 -e "statement"
 Executes the Lua statement in double quotes and exits.
@@ -102,7 +102,7 @@ For more details, check the LuaRT documentation.
   
 ## :small_blue_diamond:License
   
-LuaRT is copyright (c) 2022 Samir Tine.
+LuaRT is copyright (c) 2023 Samir Tine.
 LuaRT is open source, released under the MIT License.
 See full copyright notice in the LICENSE.txt file.
 
