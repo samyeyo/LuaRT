@@ -5,6 +5,7 @@
 - New: binary modules inside the `\modules` folder can now be required using a folder structure, while still using ``luaopen_modulename()`` function
 - Updated ``luart.exe``and ``wluart.exe`` command line arguments (-e and script can now be specified together : the -e statement will be executed first)
 - String module now uses non-encoded strings by default, as standard Lua (UTF8 functions are now available, see ``string`` module below)
+- Updated default desktop application icon 
 
 #### LuaRT installer
 - Now detects already installed LuaRT distribution 
