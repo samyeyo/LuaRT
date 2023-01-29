@@ -193,7 +193,9 @@ tools: rtc
 	$(info Compiling LuaRT Studio lua54.dll...)
 	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LDFLAGS) $(LUART_LIBS) $(DLLLDSCRIPT)
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
-	@-copy /Y ..\bin\luart.exe "..\tools\LuaRT-Studio\bin\luart.exe" >nul	
+	@windres $(DEFINES_RES) -D RTWIN -I"." -I"../include/lua/" resources\resource.rc -o resource.o
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)	
+	@-copy /Y luart.exe "..\tools\LuaRT-Studio\bin\luart.exe" >nul	
 	@-copy /Y ..\bin\wrtc.exe "..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
 	@-copy /Y lua54.dll "..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
 	@$(RM) lua54.dll
