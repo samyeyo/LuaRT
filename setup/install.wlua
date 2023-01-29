@@ -42,9 +42,9 @@ local caption = "Install"
 local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LuaRT", "InstallLocation") or false
 
 if update then
-    local p = sys.Pipe('luart -e "print(_VERSION)"')
+    local p = sys.Pipe('luart -e "print(_VERSION)"') or false
     if p then
-        local current = (p:read(100) or VERSION):match("%d%.%d%.%d")
+        local current = (p:read(200) or VERSION):match("%d%.%d%.%d")
         local numver = VERSION:gsub("%.", "")
         local numcurr = current:gsub("%.", "")
         if current == VERSION then
@@ -56,7 +56,7 @@ if update then
             caption = "Update to"
         end
     else
-
+        ui.info("Failed to get LuaRT version")
     end
 end
 
@@ -89,7 +89,7 @@ local function shortcut(name, target, icon)
 end
 
 function button:onClick()
-    local dir = update or ui.dirdialog("Select a directory to install LuaRT")
+    local dir = update and sys.Directory(update) or ui.dirdialog("Select a directory to install LuaRT")
     if dir ~= nil then
         win.installation = true
         local label = ui.Label(win, "", 40, 188)
@@ -106,9 +106,7 @@ function button:onClick()
         local size = 0
         self:hide()
         for entry, isdir in each(archive) do
-            if isdir then
-                sys.Directory(entry):make()
-            else
+             if not isdir then
                 local fname = entry:gsub('/', '\\')
                 label.text = "Extracting "..fname:sub(1, 40).."..."
                 local result = archive:extract(entry, dir)
