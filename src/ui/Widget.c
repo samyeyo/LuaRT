@@ -126,6 +126,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 						wchar_t *text = calloc(SendMessageW(w->status, CB_GETLBTEXTLEN, idx, 0)+1, sizeof(wchar_t));
 						SendMessageW((HWND)w->status, CB_GETLBTEXT, idx, (LPARAM)text);
 						SendMessageW((HWND)w->handle, WM_SETTEXT, 0, (LPARAM)text);
+						lua_callevent(w, onChange);
 						InvalidateRect(w->handle, NULL, TRUE);
 						SetFocus(GetParent(w->handle));
 						SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
