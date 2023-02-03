@@ -7,7 +7,6 @@
 #### `ui` module
 - Fixed Combobox:clear() don't clear at all items (Fixes #49)
 - Fixed Combobox:remove(), Listbox:remove(), Tree:remove(), Tab:remove() don't check for value type (Fixes #50)
-- Fixed Combobox:remove(), Listbox:remove(), Tree:remove(), Tab:remove() don't check for value type (Fixes #50)
 - Fixed Combobox:onChange() event not thrown when selection change
 
 ## LuaRT v1.3.0 (Jan 28 2023)
