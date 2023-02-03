@@ -544,7 +544,7 @@ void do_align(Widget *w) {
 		else if ((w->wtype == UITab)) {
 			int i = SendMessageW(w->handle, TCM_GETCURSEL, 0, 0);
 			TCITEMW *item = __get_item(w, i, NULL);
-			EnumChildWindows(item->lParam, ResizeChilds, (LPARAM)item->lParam);
+			EnumChildWindows((HWND)item->lParam, ResizeChilds, (LPARAM)item->lParam);
 			free(item->pszText);
 			free(item);
 		}
