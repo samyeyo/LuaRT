@@ -573,8 +573,10 @@ LUA_METHOD(Listbox, clear) {
 		ListView_DeleteAllItems(w->handle);
 		adjust_listvscroll(w, -1, 0);
 	}
-	else if (w->wtype == UICombo)
-		ComboBox_SetText(w->handle, "");		
+	else if (w->wtype == UICombo) {
+		ComboBox_SetText(w->handle, "");
+		SendMessage(w->handle, CB_RESETCONTENT, 0, 0);		
+	}
 	ImageList_RemoveAll(w->imglist);
 	return 0;
 }
@@ -598,6 +600,7 @@ LUA_METHOD(Listbox, remove) {
 									hti = item->item.treeitem->hItem;
 								else idx = item->index;
 							} break;
+				default:	luaL_typeerror(L, 2, "number, string or table");
 	}
 	__free_item(w, idx, hti);
 	return 0;
