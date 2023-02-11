@@ -110,8 +110,9 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				break;
 			if ((w->wtype == UIButton) || (w->wtype == UILabel) || (w->wtype >= UICheck && w->wtype <= UIGroup) || (w->wtype == UIPicture)) {
 				switch (cmd) {
+					case BN_CLICKED:	lua_callevent(w, onClick); break;
 					case BN_DOUBLECLICKED: 
-					case STN_DBLCLK:	lua_callevent(w, onDoubleClick);
+					case STN_DBLCLK:	lua_callevent(w, onDoubleClick); 
 				}
 				return 0;
 			} 				
@@ -140,7 +141,8 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 		} break;
 
 		case WM_LBUTTONDOWN:
-			lua_callevent(w, onClick);			
+			if ((w->wtype != UICheck) && (w->wtype != UIRadio))
+				lua_callevent(w, onClick);			
 			break;
 			
 		case WM_LBUTTONDBLCLK:
