@@ -590,7 +590,8 @@ LUA_METHOD(Listbox, remove) {
 	switch (lua_type(L, 2)) {
 		case LUA_TNUMBER:	idx = lua_tointeger(L, 2);
 							break;
-		case LUA_TSTRING:	idx = find_item_bytext(L, w, 0, &hti);
+		case LUA_TSTRING:	if ((idx = find_item_bytext(L, w, 2, &hti)) == -1)
+								luaL_error(L, "item not found");
 							break;
 		case LUA_TTABLE:	{
 								Widget *item = check_widget(L, 2, UIItem);
