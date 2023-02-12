@@ -141,7 +141,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 		} break;
 
 		case WM_LBUTTONDOWN:
-			if ((w->wtype != UICheck) && (w->wtype != UIRadio))
+			if ((w->wtype != UILabel) && (w->wtype != UICheck) && (w->wtype != UIRadio) && (w->wtype != UIPicture))
 				lua_callevent(w, onClick);			
 			break;
 			
@@ -202,10 +202,13 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 					return TRUE;
 				}
 			}
-			else if ((w->wtype == UICombo) && (lpNmHdr->code == CBEN_ENDEDITW)) {
-				lua_callevent(w, onChange);
-				return FALSE;
-			}
+			else if ((w->wtype == UICombo))
+				switch(lpNmHdr->code) {
+					case CBEN_ENDEDITW: lua_callevent(w, onChange);
+										return FALSE;
+					case CBEN_BEGINEDIT: lua_callevent(w, onClick);
+										return FALSE;
+				}
 			else if (w->wtype == UITree) {
 				TVHITTESTINFO hti;
 				switch(lpNmHdr->code) {		
