@@ -562,7 +562,7 @@ static int get_color(lua_State *L, Widget *w, int scf, BOOL isbg) {
 
 	format(L, w, isbg ? CFM_BACKCOLOR : CFM_COLOR, &cf, scf, FALSE);
 	col = isbg ? cf.crBackColor : cf.crTextColor;
-	if (isbg || !(cf.dwEffects & CFE_AUTOCOLOR))
+	if ((isbg && !(cf.dwEffects & CFE_AUTOBACKCOLOR)) || (!isbg && !(cf.dwEffects & CFE_AUTOCOLOR)))
 		result = GetRValue(col) << 16 | GetGValue(col) << 8 | GetBValue(col);
 	else
 		result =  GetSysColor(isbg ? COLOR_WINDOW : COLOR_WINDOWTEXT); 
