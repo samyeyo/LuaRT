@@ -104,6 +104,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				break;
 			case WM_LBUTTONDOWN:
 				lua_paramevent(w, onClick, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				SetFocus(w->handle);
         		return 0;
 			case WM_DESTROY:		
 				PostQuitMessage(0);
@@ -217,6 +218,7 @@ LUA_CONSTRUCTOR(Window) {
 	SetWindowLongPtr(w->handle, GWLP_USERDATA, (ULONG_PTR)w);
 	w->brush = GetSysColorBrush(COLOR_BTNFACE);
 	w->wtype = UIWindow;
+	w->align = -1;
 	w->hcursor = (HCURSOR)LoadCursor(NULL, IDC_ARROW);
 	ncm.cbSize = sizeof(NONCLIENTMETRICS);
 	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
