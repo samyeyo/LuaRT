@@ -478,7 +478,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
         w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
     w->wtype = type;
 	w->align = -1;	
-    if ((w->autosize = autosize) && (lua_gettop(L) < 6))
+    if (autosize && (lua_gettop(L) < 6))
         WidgetAutosize(w);
     lua_newinstance(L, w, Widget);
     lua_pushvalue(L, 1);
@@ -1076,7 +1076,8 @@ LUA_METHOD(Widget, loadicon) {
 	else if (w->wtype == UIButton) {
 		result = SendMessage(w->handle, BM_SETIMAGE, IMAGE_ICON, (LPARAM)icon); 
 		SetWindowPos(w->handle, NULL, 0, 0, 24, 24, SWP_NOMOVE | SWP_NOZORDER);
-		WidgetAutosize(w);
+		if (w->autosize)
+			WidgetAutosize(w);
 	}	
 	lua_pushboolean(L, result);
 	return 1;
