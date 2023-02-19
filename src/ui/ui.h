@@ -139,7 +139,7 @@ void Edit_update_scrollbar(HANDLE hwnd);
 extern int Widget_loadicon(lua_State *L);
 extern void pushDate(lua_State *L, HANDLE h);
 
-LRESULT widget_setcolors(Widget *w, HDC dc, HWND h);
+INT_PTR widget_setcolors(Widget *w, HDC dc, HWND h);
 Widget *check_widget(lua_State *L, int idx, WidgetType t);
 Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_t *classname, DWORD style, int caption, int autosize);
 HICON widget_loadicon(lua_State *L);
