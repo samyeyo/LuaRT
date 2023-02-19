@@ -96,6 +96,23 @@ static HANDLE HitTest(TCHITTESTINFO *hti, HWND h, DWORD msg, UINT flags, LPARAM 
 	return (HANDLE)SendMessage(h, msg, 0, (LPARAM)hti);
 }
 
+INT_PTR widget_setcolors(Widget *w, HDC dc, HWND h)
+{
+	Widget *c = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA);	
+	if (c) {	
+		SetBkMode(dc, TRANSPARENT);	
+		SetTextColor(dc, c->color);
+		if (c->brush) {
+			LOGBRUSH lbr;
+			GetObject(c->brush, sizeof(lbr), &lbr);
+			SetDCBrushColor(dc, lbr.lbColor);
+			return (INT_PTR)GetStockObject(DC_BRUSH);
+		}
+        return (INT_PTR)w->brush;		
+	}
+	return -1;
+}	
+
 extern BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam);
 
 int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uIdSubclass) {
@@ -141,7 +158,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 		} break;
 
 		case WM_LBUTTONDOWN:
-			if ((w->wtype != UILabel) && (w->wtype != UICheck) && (w->wtype != UIRadio) && (w->wtype != UIPicture))
+			if ((w->wtype != UIButton) && (w->wtype != UILabel) && (w->wtype != UICheck) && (w->wtype != UIRadio) && (w->wtype != UIPicture))
 				lua_callevent(w, onClick);			
 			break;
 			
@@ -309,13 +326,8 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				ReleaseDC(w->handle, hdc);
 				return 0;
 			} break;
-		case WM_ERASEBKGND:
-			if (w->wtype == UIGroup) {
-				HDC hdc = (HDC)(wParam); 
-				RECT rc; GetClientRect(w->handle, &rc); 
-				FillRect(hdc, &rc, w->brush); 
-				return TRUE;
-			}
+		case WM_CTLCOLORBTN:
+		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
 	}			
 	return -1;
 }
@@ -731,7 +743,7 @@ LUA_PROPERTY_GET(Widget, bgcolor) {
 	if (w->brush) {
 		LOGBRUSH lbr;
 		GetObject(w->brush, sizeof(lbr), &lbr);
-		lua_pushinteger(L, GetRValue(lbr.lbColor) + GetGValue(lbr.lbColor)*256 + GetBValue(lbr.lbColor)*65536);
+		lua_pushinteger(L, GetRValue(lbr.lbColor) << 16 | GetGValue(lbr.lbColor) << 8 | GetBValue(lbr.lbColor));
 	} else lua_pushnil(L);
 	return 1;
 }
@@ -1064,7 +1076,8 @@ LUA_METHOD(Widget, loadicon) {
 	else if (w->wtype == UIButton) {
 		result = SendMessage(w->handle, BM_SETIMAGE, IMAGE_ICON, (LPARAM)icon); 
 		SetWindowPos(w->handle, NULL, 0, 0, 24, 24, SWP_NOMOVE | SWP_NOZORDER);
-		WidgetAutosize(w);
+		if (w->autosize)
+			WidgetAutosize(w);
 	}	
 	lua_pushboolean(L, result);
 	return 1;
