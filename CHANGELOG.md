@@ -1,3 +1,25 @@
+## LuaRT v1.3.2 Bugfix (Feb 19 2023)
+
+#### LuaRT Studio
+- Fixed `print()` function prints only first argument in Lua interpreter panel (Fixes #15)
+
+#### `ui` module
+- Fixed Widgets inside a `Groupbox` don't display background and foreground colors correctly (Fixes #62)
+- Fixed Background colors of widgets may not display correctly (Fixes #61)
+- Fixed ``Groupbox`` widget displays incorrectly in TabItem (Fixes #60)
+- Fixed ``Button.onClick()`` event handler is called twice (Fixes #59)
+- Fixed Widgets ``bgcolor`` property returns wrong RGB color value (Fixes #58)
+- Fixed ``Window.align`` property returns ``"all"`` instead of ``nil`` (Fixes #57)
+- Fixed ``Edit.bgcolor`` property returns wrong value (Fixes #56)
+- Fixed ``Combobox:onClick()`` event not thrown (Fixes #55)
+- Fixed Clicking on Window keep the current widget focused (Fixes #54)
+- Fixed Fast ``Checkbox`` mouse click don't throw ``onClick()`` event (Fixes #53)
+- Fixed ``Edit`` selection is not visible when focus is lost (Fixes #52)
+- Fixed ``tree:remove()`` called with string argument throws an error (Fixes #51)
+- Fixed ``Combobox:remove()`` don't check for value type (Fixes #50)
+- Fixed ``Combobox:clear()`` don't clear at all items (Fixes #49)
+- Fixed ``Combobox:onChange()`` event not thrown when selection change
+
 ## LuaRT v1.3.1 Bugfix (Feb 04 2023)
 
 #### LuaRT Studio
