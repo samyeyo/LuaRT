@@ -1076,7 +1076,8 @@ LUA_METHOD(Widget, loadicon) {
 	else if (w->wtype == UIButton) {
 		result = SendMessage(w->handle, BM_SETIMAGE, IMAGE_ICON, (LPARAM)icon); 
 		SetWindowPos(w->handle, NULL, 0, 0, 24, 24, SWP_NOMOVE | SWP_NOZORDER);
-		WidgetAutosize(w);
+		if (w->autosize)
+			WidgetAutosize(w);
 	}	
 	lua_pushboolean(L, result);
 	return 1;
