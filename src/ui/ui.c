@@ -590,7 +590,8 @@ LUA_CONSTRUCTOR(Radiobutton) {
 }
 
 LUA_CONSTRUCTOR(Groupbox) {
-	Widget_create(L, UIGroup, 0, WC_BUTTONW, WS_VISIBLE | ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE)->brush = GetSysColorBrush(COLOR_BTNFACE);
+	Widget *w = Widget_create(L, UIGroup, 0, WC_BUTTONW, WS_VISIBLE | ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE);
+	w->brush = ((Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA))->brush ?: GetSysColorBrush(COLOR_BTNFACE);
 	return 1;
 }
 

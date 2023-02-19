@@ -156,16 +156,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				return 0;
 			}
 			case WM_CTLCOLORBTN:
-			case WM_CTLCOLORSTATIC: {
-				if (IsWindowEnabled((HWND)lParam)) {
-					Widget *c = (Widget*)GetWindowLongPtr((HWND)lParam, GWLP_USERDATA);	
-					if (c) {			
-						SetBkMode((HDC)wParam, TRANSPARENT);	
-						SetTextColor((HDC)wParam, c->color);
-						return (LRESULT)(c->brush ?: w->brush);
-					}
-				}
-			}
+			case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
 		}
 	}
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
