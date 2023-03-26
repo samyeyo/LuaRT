@@ -4,7 +4,7 @@
 
 #pragma once
 
-#ifdef __cpluplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -61,6 +61,7 @@ typedef struct Widget {
 	HICON		icon;
 	ACCEL		accel;
 	HACCEL		accel_table;
+	DWORD		style;
 	int			cursor;
 	HCURSOR  	hcursor;
 	BOOL 		autosize;
@@ -71,9 +72,9 @@ typedef struct Widget {
 } Widget;
 
 //--- Register a widget type
-void lua_registerwidget(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip);
-#define lua_regwidget(L, typename, methods, mt, has_text, has_font, has_cursor, has_icon, has_tooltip) lua_registerwidget(L, &T##typename, #typename, typename##_constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_tooltip)
-#define lua_regwidgetmt(L, typename, methods, has_text, has_font, has_cursor, has_icon, has_tooltip) lua_registerwidget(L, &T##typename, #typename, typename##_constructor, methods, typename##_mt, has_text, has_font, has_cursor, has_icon, has_tooltip)
+void lua_registerwidget(lua_State *L, int *type, const char *__typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip);
+#define lua_regwidget(L, __typename, methods, mt, has_text, has_font, has_cursor, has_icon, has_tooltip) lua_registerwidget(L, &T##__typename, #__typename, __typename##_constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_tooltip)
+#define lua_regwidgetmt(L, __typename, methods, has_text, has_font, has_cursor, has_icon, has_tooltip) lua_registerwidget(L, &T##__typename, #__typename, __typename##_constructor, methods, __typename##_metafields, has_text, has_font, has_cursor, has_icon, has_tooltip)
 
 lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction event) ;
 void *lua_getevent(lua_State *L, lua_Integer eventid, int *type);
@@ -81,11 +82,11 @@ void *lua_getevent(lua_State *L, lua_Integer eventid, int *type);
 #define WM_LUAEVENTRESULT 0
 
 //---- call event e associated with widget w
-#define lua_callevent(w, e) PostMessage(w->handle, e, 0, 0)
+#define lua_callevent(w, e) PostMessage((HWND)w->handle, e, 0, 0)
 //---- call event e associated with widget w with parameters p and pp
-#define lua_paramevent(w, e, p, pp) PostMessage(w->handle, e, (WPARAM)p, (LPARAM)pp)
+#define lua_paramevent(w, e, p, pp) PostMessage((HWND)w->handle, e, (WPARAM)p, (LPARAM)pp)
 //---- call event e associated with widget w with an index value i
-#define lua_indexevent(w, e, i) PostMessage(w->handle, e, (WPARAM)(i), 0)
+#define lua_indexevent(w, e, i) PostMessage((HWND)w->handle, e, (WPARAM)(i), 0)
 
 //--- Widget helper functions to be called inside widget constructor/destructor
 typedef void *(*WIDGET_INIT)(lua_State *L, Widget **wp);
@@ -101,7 +102,7 @@ extern WIDGET_PROC			lua_widgetproc;
 extern luaL_Reg 			*WIDGET_METHODS;
 extern luart_type 			TWidget;
 
-#ifdef __cpluplus
+#ifdef __cplusplus
 }
 #endif
 
