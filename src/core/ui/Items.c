@@ -66,6 +66,7 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			FillRect((HDC)wParam, &rect, w->brush);
 			return TRUE;
 		}
+		case WM_LBUTTONDOWN: lua_paramevent(w, onClick, GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)); break;
 		case WM_NOTIFY: 
 			return SendMessage(((LPNMHDR)lParam)->hwndFrom, Msg, wParam, lParam);
 		case WM_COMMAND:
