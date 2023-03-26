@@ -125,7 +125,7 @@ infosetup:
 
 lua: infolua $(LUA_O) 
 
-core: infocore $(REQ) $(LIB_O)
+core: infocore $(REQ) $(LIB_O) $(UI_O)
 
 toolchain: lua core $(LUA_A) infotoolchain $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe $(DEST)\rtc.exe $(DEST)\wrtc.exe
 	@cmd /c echo.
