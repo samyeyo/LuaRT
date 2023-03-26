@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | luaRT.h | LuaRT API header
@@ -8,7 +8,7 @@
 
 #pragma once
 
-#ifdef __cpluplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -41,6 +41,38 @@ extern "C" {
 //--- Define object get/set properties
 #define LUA_PROPERTY_GET(t, n) int t##_get##n(lua_State *L)
 #define LUA_PROPERTY_SET(t, n) int t##_set##n(lua_State *L)
+
+//--- Register property
+#define READWRITE_PROPERTY(obj, property) \
+    {"get_" #property,  obj##_get##property}, \
+    {"set_" #property,  obj##_set##property},
+
+#define READONLY_PROPERTY(obj, property) \
+    {"get_" #property,  obj##_get##property},
+
+//--- Register method
+#define METHOD(obj, method) \
+    {#method,  obj##_##method},
+
+//--- Register module methods
+#define MODULE_FUNCTIONS(module) \
+static const luaL_Reg module##lib[] = {
+
+#define MODULE_PROPERTIES(module) \
+const luaL_Reg module##_properties[] = {
+
+//--- Register object methods
+#define OBJECT_MEMBERS(obj) \
+const luaL_Reg obj##_methods[] = {
+
+//--- Register object metefields
+#define OBJECT_METAFIELDS(obj) \
+const luaL_Reg obj##_metafields[] = {
+
+
+#define END \
+    {NULL, NULL} \
+};
 
 //--------------------------------------------------| Internal Object management
 
@@ -132,19 +164,22 @@ LUA_API void lua_pushlwstring(lua_State *L, const wchar_t *str, int len);
 LUA_API int lua_optstring(lua_State *L, int idx, const char *options[], int def);
 
 //--- Returns true if the specified executable has embedded content, and loads global "embed" module to access it 
-LUALIB_API int luaL_embedopen(lua_State *L, const wchar_t *exename);
+LUA_API int luaL_embedopen(lua_State *L, const wchar_t *exename);
 
 //--- Closes embedded content previously opened with luaL_embedopen()
-LUALIB_API int luaL_embedclose(lua_State *L);
+LUA_API int luaL_embedclose(lua_State *L);
 
 //--- luaL_setfuncs() alternative with lua_rawset() and without upvalues
-LUALIB_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l);
+LUA_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l);
 
 //--- luaL_require() alternative with luaL_requiref()
-LUALIB_API void luaL_require(lua_State *L, const char *modname);
+LUA_API void luaL_require(lua_State *L, const char *modname);
 
-//--------------------------------------------------| LuaRT runtime objects
+//--------------------------------------------------| LuaRT runtime errors
 
-#ifdef __cpluplus
+//--- Pushes Windows system error string on stack
+int luaL_getlasterror(lua_State *L, DWORD err);
+
+#ifdef __cplusplus
 }
 #endif
