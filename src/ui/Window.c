@@ -17,6 +17,152 @@ luart_type TWindow;
 
 static HANDLE hwndPrevious;
 
+#define Stringify(x) case x: return #x
+
+static const char *VKString(int vk) {
+    if (vk >= '0' && vk <= '9')
+		return NULL;
+    if (vk >= 'A' && vk <= 'Z')
+		return NULL;
+    switch(vk) {
+        Stringify(VK_LBUTTON);
+        Stringify(VK_RBUTTON);
+        Stringify(VK_CANCEL);
+        Stringify(VK_MBUTTON);  
+        Stringify(VK_XBUTTON1); 
+        Stringify(VK_XBUTTON2); 
+        Stringify(VK_BACK);
+        Stringify(VK_TAB);
+        Stringify(VK_CLEAR);
+        Stringify(VK_RETURN);
+        Stringify(VK_SHIFT);
+        Stringify(VK_CONTROL);
+        Stringify(VK_MENU);
+        Stringify(VK_PAUSE);
+        Stringify(VK_CAPITAL);
+        Stringify(VK_KANA);
+        Stringify(VK_JUNJA);
+        Stringify(VK_FINAL);
+        Stringify(VK_KANJI);
+        Stringify(VK_ESCAPE);
+        Stringify(VK_CONVERT);
+        Stringify(VK_NONCONVERT);
+        Stringify(VK_ACCEPT);
+        Stringify(VK_MODECHANGE);
+        Stringify(VK_SPACE);
+        Stringify(VK_PRIOR);
+        Stringify(VK_NEXT);
+        Stringify(VK_END);
+        Stringify(VK_HOME);
+        Stringify(VK_LEFT);
+        Stringify(VK_UP);
+        Stringify(VK_RIGHT);
+        Stringify(VK_DOWN);
+        Stringify(VK_SELECT);
+        Stringify(VK_PRINT);
+        Stringify(VK_EXECUTE);
+        Stringify(VK_SNAPSHOT);
+        Stringify(VK_INSERT);
+        Stringify(VK_DELETE);
+        Stringify(VK_HELP);
+        Stringify(VK_LWIN);
+        Stringify(VK_RWIN);
+        Stringify(VK_APPS);
+        Stringify(VK_SLEEP);
+        Stringify(VK_NUMPAD0);
+        Stringify(VK_NUMPAD1);
+        Stringify(VK_NUMPAD2);
+        Stringify(VK_NUMPAD3);
+        Stringify(VK_NUMPAD4);
+        Stringify(VK_NUMPAD5);
+        Stringify(VK_NUMPAD6);
+        Stringify(VK_NUMPAD7);
+        Stringify(VK_NUMPAD8);
+        Stringify(VK_NUMPAD9);
+        Stringify(VK_MULTIPLY);
+        Stringify(VK_ADD);
+        Stringify(VK_SEPARATOR);
+        Stringify(VK_SUBTRACT);
+        Stringify(VK_DECIMAL);
+        Stringify(VK_DIVIDE);
+        Stringify(VK_F1);
+        Stringify(VK_F2);
+        Stringify(VK_F3);
+        Stringify(VK_F4);
+        Stringify(VK_F5);
+        Stringify(VK_F6);
+        Stringify(VK_F7);
+        Stringify(VK_F8);
+        Stringify(VK_F9);
+        Stringify(VK_F10);
+        Stringify(VK_F11);
+        Stringify(VK_F12);
+        Stringify(VK_F13);
+        Stringify(VK_F14);
+        Stringify(VK_F15);
+        Stringify(VK_F16);
+        Stringify(VK_F17);
+        Stringify(VK_F18);
+        Stringify(VK_F19);
+        Stringify(VK_F20);
+        Stringify(VK_F21);
+        Stringify(VK_F22);
+        Stringify(VK_F23);
+        Stringify(VK_F24);
+        Stringify(VK_NUMLOCK);
+        Stringify(VK_SCROLL);
+        Stringify(VK_OEM_NEC_EQUAL);
+        Stringify(VK_OEM_FJ_MASSHOU);
+        Stringify(VK_OEM_FJ_TOUROKU);
+        Stringify(VK_OEM_FJ_LOYA);
+        Stringify(VK_OEM_FJ_ROYA);
+        Stringify(VK_LSHIFT);
+        Stringify(VK_RSHIFT);
+        Stringify(VK_LCONTROL);
+        Stringify(VK_RCONTROL);
+        Stringify(VK_LMENU);
+        Stringify(VK_RMENU);
+        Stringify(VK_BROWSER_BACK);
+        Stringify(VK_BROWSER_FORWARD);
+        Stringify(VK_BROWSER_REFRESH);
+        Stringify(VK_BROWSER_STOP);
+        Stringify(VK_BROWSER_SEARCH);
+        Stringify(VK_BROWSER_FAVORITES);
+        Stringify(VK_BROWSER_HOME);
+        Stringify(VK_VOLUME_MUTE);
+        Stringify(VK_VOLUME_DOWN);
+        Stringify(VK_VOLUME_UP);
+        Stringify(VK_MEDIA_NEXT_TRACK);
+        Stringify(VK_MEDIA_PREV_TRACK);
+        Stringify(VK_MEDIA_STOP);
+        Stringify(VK_MEDIA_PLAY_PAUSE);
+        Stringify(VK_LAUNCH_MAIL);
+        Stringify(VK_LAUNCH_MEDIA_SELECT);
+        Stringify(VK_LAUNCH_APP1);
+        Stringify(VK_LAUNCH_APP2);
+        Stringify(VK_OEM_1);
+        Stringify(VK_OEM_PLUS);
+        Stringify(VK_OEM_COMMA);
+        Stringify(VK_OEM_MINUS);
+        Stringify(VK_OEM_PERIOD);
+        Stringify(VK_OEM_2);
+        Stringify(VK_OEM_3);
+        Stringify(VK_OEM_4);
+        Stringify(VK_OEM_5);
+        Stringify(VK_OEM_6);
+        Stringify(VK_OEM_7);
+        Stringify(VK_OEM_8);
+        Stringify(VK_OEM_AX);
+        Stringify(VK_OEM_102);
+        Stringify(VK_ICO_HELP);
+        Stringify(VK_ICO_00);
+        Stringify(VK_PROCESSKEY);
+        Stringify(VK_ICO_CLEAR);
+        Stringify(VK_PACKET);
+    }
+	return NULL;
+}
+
 BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam)
 {
 	if (GetParent(h) == (HWND)lParam) {	
@@ -145,7 +291,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 					case WM_MOUSEMOVE:		lua_callevent(w, onTrayHover);
 											break;
 				} return 0;
-
+			case WM_SYSKEYDOWN:
+			case WM_KEYDOWN:
+				lua_paramevent(w, onKey, VKString(wParam), wParam);
+				break;
 			case WM_PAINT:	{
 				PAINTSTRUCT ps;
 				RECT rc;
@@ -197,11 +346,17 @@ LUA_CONSTRUCTOR(Window) {
 	r.bottom = luaL_optinteger(L, i+1, 480);
 	r.right = luaL_optinteger(L, i, 640);
 	w->handle = CreateWindowExW(0, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, HWND_DESKTOP, NULL, hInstance, NULL);
-	if (style == 1)
-		SetWindowLong(w->handle, GWL_STYLE, GetWindowLongPtr(w->handle, GWL_STYLE) & ~WS_MAXIMIZEBOX);
-	else if (style == 3) {
-		DWM_WINDOW_CORNER_PREFERENCE d = DWMWCP_ROUND;
-		DwmSetWindowAttribute(w->handle, DWMWA_WINDOW_CORNER_PREFERENCE, &d, sizeof(DWM_WINDOW_CORNER_PREFERENCE));
+	switch(style) {
+		case 3: 	{
+						DWM_WINDOW_CORNER_PREFERENCE d = DWMWCP_ROUND;
+						DwmSetWindowAttribute(w->handle, DWMWA_WINDOW_CORNER_PREFERENCE, &d, sizeof(DWM_WINDOW_CORNER_PREFERENCE));
+					} 
+					w->style = WS_POPUP; break;
+		case 0:		w->style = WS_CAPTION | WS_THICKFRAME; break;
+		case 1:		SetWindowLong(w->handle, GWL_STYLE, GetWindowLongPtr(w->handle, GWL_STYLE) & ~WS_MAXIMIZEBOX); 
+		case 4:		
+		case 2:
+		default:	w->style = WS_CAPTION;
 	}
   	AdjustWindowRectEx(&r, GetWindowLongPtr(w->handle, GWL_STYLE), FALSE, GetWindowLongPtr(w->handle, GWL_EXSTYLE));
 	SetWindowPos(w->handle, 0, 0, 0, r.right-r.left, r.bottom-r.top, SWP_HIDEWINDOW | SWP_NOMOVE);
@@ -243,6 +398,34 @@ LUA_METHOD(Window, showmodal) {
 	child->tooltip = parent;
 	ShowWindow(child->handle, SW_SHOWDEFAULT);
 	EnableWindow(parent, FALSE);
+	return 0;
+}
+
+LUA_PROPERTY_GET(Window, fullscreen) {
+	Widget *w = lua_self(L, 1, Widget);
+	HWND h = w->handle;
+	// DWORD flag = w->index ? WS_CAPTION : (WS_CAPTION | WS_THICKFRAME);
+
+  	lua_pushboolean(L, !(GetWindowLongPtr(h, GWL_STYLE) & w->style));
+	return 1;
+}
+
+LUA_PROPERTY_SET(Window, fullscreen) {
+	Widget *w = lua_self(L, 1, Widget);
+	HWND h = w->handle;
+	DWORD dwStyle = GetWindowLongPtr(h, GWL_STYLE);
+	// DWORD flag = w->index ? WS_CAPTION : (WS_CAPTION | WS_THICKFRAME);
+
+	if (lua_toboolean(L, 2)) {
+		MONITORINFO mi;
+		mi.cbSize = sizeof(mi);
+		SetWindowLongPtr(h, GWL_STYLE, dwStyle & ~w->style);
+		if (GetMonitorInfo(MonitorFromWindow(h, MONITOR_DEFAULTTOPRIMARY), &mi))
+			SetWindowPos(h, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom-mi.rcMonitor.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+	} else {
+		SetWindowLongPtr(h, GWL_STYLE, dwStyle | w->style);
+		SetWindowPos(h, HWND_TOP, 640, 480, 640, 480, SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+	}
 	return 0;
 }
 
@@ -430,6 +613,8 @@ luaL_Reg Window_methods[] = {
 	{"set_traytooltip", Window_settraytooltip},
 	{"loadicon",		Widget_loadicon},
 	{"shortcut",		Window_shortcut},
+	{"set_fullscreen",	Window_setfullscreen},
+	{"get_fullscreen",	Window_getfullscreen},
 	{"popup",			Window_popup},
 	{"set_title",		Widget_settext},
 	{"get_title",		Widget_gettext},

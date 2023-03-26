@@ -364,7 +364,8 @@ LUA_METHOD(ui, update) {
 						if (type == LUA_TFUNCTION) {
 							lua_pushvalue(L, -2);
 							lua_pushlightuserdata(L, &msg);
-							lua_call(L, 2, LUA_MULTRET);
+							if (lua_pcall(L, 2, LUA_MULTRET, 0))
+								lua_error(L);
 							count = lua_gettop(L)-count;
 							if (count == 1) {
 								if (lua_isnil(L, -1))
@@ -383,10 +384,10 @@ LUA_METHOD(ui, update) {
 								case WM_LUACONTEXT:	if (((w->wtype >= UIList) && (w->wtype <= UITab)) && (msg.wParam > 0))
 														__push_item(L, w, msg.wParam-1, w->wtype == UITree ? (HTREEITEM)msg.wParam : NULL);
 													break;							
-								case WM_LUACLICK:	if (w->wtype == UIWindow || w->wtype == UIMenuItem) {
+								case WM_LUACLICK:	//if (w->wtype == UIWindow || w->wtype == UIMenuItem) {
 		push_params:									lua_pushinteger(L, msg.wParam);
 														lua_pushinteger(L, msg.lParam);	
-													} 
+													//} 
 													break;
 								case WM_LUAHOVER:	goto push_params;
 								case WM_LUACHANGE:	if (w->wtype == UICombo)
@@ -410,6 +411,9 @@ LUA_METHOD(ui, update) {
 													else if (w->wtype == UIEdit)
 														goto push_params;
 													break;
+								case WM_LUAKEY:		if (!msg.wParam)
+														lua_pushlstring(L, (const char*)&msg.lParam, 1);
+													else lua_pushstring(L, (const char *)msg.wParam);
 							}
 						} else lua_pop(L, 1);		
 					} 		

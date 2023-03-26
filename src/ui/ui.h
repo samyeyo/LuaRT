@@ -181,6 +181,7 @@ LUA_METHOD(Widget, __gc);
 #define WM_LUATRAYCONTEXT 	(WM_LUAMIN + 16)
 #define WM_LUATRAYHOVER 	(WM_LUAMIN + 17)
 #define WM_LUAMENU 			(WM_LUAMIN + 18)
+#define WM_LUAKEY 			(WM_LUAMIN + 19)
 
 typedef enum {
 	onHide			= WM_LUAHIDE,
@@ -201,7 +202,8 @@ typedef enum {
     onTrayDoubleClick=WM_LUATRAYDBLCLICK,
     onTrayContext 	= WM_LUATRAYCONTEXT,
     onTrayHover 	= WM_LUATRAYHOVER,
-	onMenu			= WM_LUAMENU
+	onMenu			= WM_LUAMENU,
+	onKey			= WM_LUAKEY
 } WidgetEvent;
 
 //---- call close event a associated with window w

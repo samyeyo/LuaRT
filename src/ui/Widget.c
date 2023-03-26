@@ -26,7 +26,7 @@ const char *luart_wtypes[] = {
 };
 
 const char *events[] = {
-	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick" };
+	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick", "onKey" };
 
 const char *cursors[] = {
 	"arrow", "working", "cross", "hand", "help", "ibeam", "forbidden", "cardinal", "horizontal", "vertical", "leftdiagonal", "rightdiagonal", "up", "wait", "none"
@@ -159,7 +159,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 
 		case WM_LBUTTONDOWN:
 			if ((w->wtype != UIButton) && (w->wtype != UILabel) && (w->wtype != UICheck) && (w->wtype != UIRadio) && (w->wtype != UIPicture))
-				lua_callevent(w, onClick);			
+				lua_paramevent(w, onClick, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));		
 			break;
 			
 		case WM_LBUTTONDBLCLK:
@@ -257,7 +257,11 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 		case WM_KEYDOWN:
 			if (w->wtype == UIEntry)
 				SendMessage(w->handle, WM_COMMAND, EN_CHANGE, 0);
-			break; 
+			SendMessage(GetParent(w->handle), WM_KEYDOWN, wParam, lParam);
+			break;
+		case WM_SYSKEYDOWN:
+			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
+			break;
 		case WM_MOUSEMOVE:		
 			CallWindowProc(WindowProc, w->handle, uMsg, wParam, lParam);
 			break;
