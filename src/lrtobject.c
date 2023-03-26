@@ -1,10 +1,12 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | lrtobject.c | LuaRT C API object implementation
 */
+
+#define LUA_LIB
 
 #include <luart.h>
 #include <Widget.h>
@@ -549,7 +551,7 @@ static void property(lua_State *L, const char *prop) {
 	}
 }
 
-void lua_registerwidget(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip) {
+void lua_registerwidget(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip) {
 	lua_registerobject(L, type, typename, constructor, methods, mt);
 	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 	if (!lua_getfield(L, LUA_REGISTRYINDEX, "Radiobutton"))

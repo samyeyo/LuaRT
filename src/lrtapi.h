@@ -1,12 +1,18 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | lrtapi.h | LuaRT internal header
 */
 
 #pragma once
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 #define FDSET_SIZE 1024
 #include <luart.h>
@@ -31,8 +37,10 @@ LUAMOD_API int luaopen_os(lua_State *L);
 LUAMOD_API int luaopen_utf8(lua_State *L);
 LUAMOD_API int luaopen_com(lua_State *L);
 
-//--- Pushes Windows system error string on stack
-int lasterror(lua_State *L, DWORD err);
-
 int obj_each_iter(lua_State *L);
 extern wchar_t * GetCurrentDir();
+
+
+#ifdef __cplusplus
+}
+#endif
