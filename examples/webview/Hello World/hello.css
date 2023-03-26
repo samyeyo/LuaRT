@@ -1,0 +1,14 @@
+html {
+    font: 100% "Segoe UI";
+    background-color: #312791;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1 {
+    font-size: 62px;
+    font-weight:100;
+    color: white;
+    margin-top : 30%;
+    text-align: center;
+  }

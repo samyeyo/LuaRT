@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>FluentUI application with LuaRT</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>        
+        <script type="module" src="https://unpkg.com/@fluentui/web-components"></script>
+        <style>
+            * {
+                -webkit-touch-callout:none;
+                -webkit-user-select:none;
+                -moz-user-select:none;
+                -ms-user-select:none;
+                user-select:none;
+            }
+        </style>
+    </head>
+    <body style="visibility: hidden; overflow:hidden">
+        <fluent-tabs activeid="entrees">
+            <fluent-tab id="cpu"><i class="fas fa-microchip"></i><span style="margin-left:4px">CPU</span></fluent-tab>
+            <fluent-tab id="memory"><i class="fas fa-memory"></i><span style="margin-left:4px">Memory</span></fluent-tab>
+            <fluent-tab id="display"><i class="fas fa-display"></i><span style="margin-left:4px">Display</span></fluent-tab>
+            <fluent-tab-panel id="cpuPanel" >
+                <div style="margin-top: 22px; margin-left:5%; margin-right:5%">
+                    <fluent-text style="color: #1565C0"><b>CPU brand name</b><br>
+                    </fluent-text><fluent-text id="cpuname"></fluent-text>
+                </div>
+            </fluent-tab-panel>
+            <fluent-tab-panel id="memoryPanel">
+                <div style="margin-top: 22px; margin-left:5%; margin-right:5%">
+                    <fluent-text style="color: #1565C0"><b>Physical memory size</b></fluent-text><br>
+                    <fluent-text id="memorysize"></fluent-text>
+                </div>
+            </fluent-tab-panel>
+            <fluent-tab-panel id="displayPanel">
+                <div style="margin-top: 22px; margin-left:5%; margin-right:5%">
+                    <fluent-text style="color: #1565C0"><b>Graphic card</b><br>
+                    </fluent-text><fluent-text id="graphic"></fluent-text>
+                </div>
+        </fluent-tab-panel>
+        </fluent-tabs>
+    </body>
+</html>

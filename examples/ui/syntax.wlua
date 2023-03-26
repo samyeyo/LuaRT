@@ -72,6 +72,7 @@ end
 local win = ui.Window("Syntax highlighting sample", "fixed", 520, 490)
 local edit = SyntaxEdit(win, "", 10, 10, 500, 440)
 local button = ui.Button(win, "Run script", 230, 456) 
+
 -- set edit.properties
 edit.font = "Lucida Console"
 edit.fontsize = 9
