@@ -65,7 +65,7 @@ win.width = img.width
 win.bgcolor = 0xFFFFFF
 win:center()
 
-local button = ui.Button(win, caption.." LuaRT "..VERSION)
+local button = ui.Button(win, caption.." LuaRT "..VERSION.." for "..(arg[0]:find("x64") and "x64" or "x86"))
 button:loadicon(File("img/install.ico"))
 button.cursor = "hand"
 button:center()
