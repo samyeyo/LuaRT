@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Http.h | LuaRT Http object header
@@ -13,6 +13,9 @@
 #include <wininet.h>
 #include <shlwapi.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
 	luart_type		type;
@@ -44,3 +47,7 @@ LUA_PROPERTY_GET(Http, port);
 URL_COMPONENTSW *get_url(lua_State *L, int idx, wchar_t **url_str);
 int get_response(lua_State *L, Http *http);
 int constructor(lua_State *L, BOOL isFTP);
+
+#ifdef __cplusplus
+}
+#endif

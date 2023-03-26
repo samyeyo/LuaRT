@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Zip.h | LuaRT Zip object header
@@ -11,6 +11,9 @@
 
 #include <luart.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //---------------------------------------- Zip type
 
@@ -29,3 +32,7 @@ typedef struct {
 LUA_CONSTRUCTOR(Zip);
 extern const luaL_Reg Zip_methods[];
 extern const luaL_Reg Zip_metafields[];
+
+#ifdef __cplusplus
+}
+#endif

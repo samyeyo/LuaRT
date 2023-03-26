@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Socket.h | LuaRT Socket object header
@@ -16,6 +16,10 @@
 #define SECURITY_WIN32
 #include <security.h>
 #include <schnlsp.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct 
 {
@@ -53,3 +57,7 @@ extern luart_type TSocket;
 LUA_CONSTRUCTOR(Socket);
 extern const luaL_Reg Socket_methods[];
 extern const luaL_Reg Socket_metafields[];
+
+#ifdef __cplusplus
+}
+#endif

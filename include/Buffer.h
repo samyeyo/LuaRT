@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Buffer.h | LuaRT Buffer object header
@@ -11,7 +11,9 @@
 #include <luart.h>
 #include <stdlib.h>
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
 	luart_type		type;
@@ -30,3 +32,6 @@ void lua_toBuffer(lua_State *L, void *p, size_t len);
 Buffer *luart_tobuffer(lua_State *L, int idx);
 int base64_encode(lua_State *L, Buffer *b);
 
+#ifdef __cplusplus
+}
+#endif

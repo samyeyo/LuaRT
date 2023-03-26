@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Pipe.h | LuaRT Pipe object header
@@ -8,6 +8,10 @@
 
 #include <luart.h>
 #include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //---------------------------------------- Pipe object
 typedef struct {
@@ -27,3 +31,7 @@ extern luart_type TPipe;
 LUA_CONSTRUCTOR(Pipe);
 extern const luaL_Reg Pipe_methods[];
 extern const luaL_Reg Pipe_metafields[];
+
+#ifdef __cplusplus
+}
+#endif
