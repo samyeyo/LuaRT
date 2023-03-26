@@ -1,8 +1,8 @@
 # | LuaRT - A Windows programming framework for Lua
-# | Luart.org, Copyright (c) Tine Samir 2022.
+# | Luart.org, Copyright (c) Tine Samir 2023
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
-# | LuaRT Makefile
+# | LuaRT Core Makefile for the toolchain, the Core framework and the tools
 # | You can prefix all the following tasks with PLATFORM=x64|x86  
 # | Don't forget to get all submodules :
 # | git clone --recurse-submodules git://github.com/samyeyo/LuaRT.git
@@ -35,7 +35,6 @@ CLEAN=clean
 
 ifeq ($(filter $(CLEAN),$(MAKECMDGOALS)),)
 ifeq ($(PLATFORM), x86)
-$(info --------------------------------- Building LuaRT for Windows x86 Platform)
  ARCH = -m32 -march=pentium4 -msse -msse2 -mmmx -fno-unwind-tables -fno-asynchronous-unwind-tables 
  _ARCH = x86
  TARGET = pe-i386
@@ -49,9 +48,6 @@ endif
  endif
 endif
 ifeq ($(PLATFORM), x64)
-ifneq ($(MAKECMDGOALS),x86)
-$(info --------------------------------- Building LuaRT for Windows x64 Platform)
-endif
  ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion
  _ARCH = x64
  TARGET = pe-x86-64
@@ -60,6 +56,9 @@ ifneq (${BUILD}, debug)
 LDSCRIPT=-Wl,-Tx64.ldscript
 DLLLDSCRIPT=-Wl,-Tx64-dll.ldscript
 endif
+CODEPAGE := $(shell chcp 65001)
+$(info )
+$(info ━━━━━━━━━━━━━━━━━━━━  Building LuaRT $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE) for $(PLATFORM)  ━━━━━━━━━━━━━━━━━━━━)
 endif
 endif
 
@@ -68,52 +67,82 @@ DEFINES_RES= --target=$(TARGET) -D LUART_MINOR=$(LUART_MINOR) -D LUART_MAJOR=$(L
 
 BUILD := release
 
-DEST= ..\bin
-cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -std=c99 -Os -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\include" -I"..\..\memdll" -Wall -Wextra -I"." -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
+DEST= ..\..\bin
+cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -std=c99 -Os -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\include" -Wall -Wextra -I"." -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
 ldflags.release= -s -static-libgcc -lm -Wl,--no-insert-timestamp -Wl,--no-seh -lgdi32 -L"." 
-cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -std=c99 -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\memdll" -I"..\include" -I"." 
+cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -std=c99 -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\include" -I"." 
 ldflags.debug= -g -static-libgcc -lm -lgdi32 -L"."
 
 CC= gcc
 CFLAGS := ${cflags.${BUILD}}
 LDFLAGS := ${ldflags.${BUILD}}
-LIBS= -lshlwapi -loleaut32 -lole32 -lcrypt32 -lwininet -luuid
-LUART_LIBS= -lshlwapi -lcomctl32 -lws2_32 -lSecur32 -ldnsapi -lcrypt32 -lcredui -luxtheme -loleaut32 -lole32 -lwininet -liphlpapi -lwindowscodecs -ldwmapi -lsensapi -lcomdlg32 -luuid -lurlmon
+LIBS= -lshlwapi -lcomctl32 -lcrypt32 -lcredui -luxtheme -loleaut32 -lole32 -lwindowscodecs -ldwmapi -lsensapi -lcomdlg32 -luuid -lwininet -lws2_32 -lSecur32 -ldnsapi -liphlpapi -lurlmon
 RM= del /Q
 
 LUA_A=		lua54.dll
-CORE_O=		lua\lapi.o lrtapi.o lrtobject.o lua\lcode.o lua\lctype.o lua\ldebug.o lua\ldo.o lua\ldump.o lua\lfunc.o lua\lgc.o lua\llex.o lua\lmem.o lua\lobject.o lua\lopcodes.o lua\lparser.o lua\lstate.o lua\lstring.o lua\ltable.o lua\ltm.o lua\lundump.o lua\lvm.o lua\lzio.o
-OBJECTS_O=	sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o
-LIB_O=		$(LIBOBJ_O) lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o string\lstrlib.o sys\sys.o console\console.o lua\liolib.o lua\loslib.o lua\lutf8lib.o
-LUART_OBJ_O= crypto\crypto.o net\net.o lembed.o MemoryModule\MemoryModule.o compression\compression.o crypto\Cipher.o net\Socket.o net\Http.o net\Ftp.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o
-LUART_UI_O=  ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o
-BASE_O= 	$(CORE_O) $(LIB_O) $(OBJECTS_O)
+LUA_O=		lua\lapi.o lua\lcode.o lua\lctype.o lua\ldebug.o lua\ldo.o lua\ldump.o lua\lfunc.o lua\lgc.o lua\llex.o lua\lmem.o lua\lobject.o lua\lopcodes.o lua\lparser.o lua\lstate.o lua\lstring.o lua\ltable.o lua\ltm.o lua\lundump.o lua\lvm.o lua\lzio.o	
+LIB_O=		lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o string\lstrlib.o sys\sys.o console\console.o lua\liolib.o lua\loslib.o lua\lutf8lib.o MemoryModule\MemoryModule.o compression\compression.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o lrtapi.o lrtobject.o sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o lembed.o
+UI_O=  		ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o
+
+BASE_O= 	$(LUA_O) $(LIB_O)
+STATIC_O=	..\modules\net\src\Socket.o ..\modules\net\src\Http.o ..\modules\net\src\Ftp.o ..\modules\net\src\net.o ..\modules\crypto\src\Cipher.o ..\modules\crypto\src\crypto.o
 
 LUART_T=	luart.exe
 LUAWRT_T=	wluart.exe
 
 ALL_O= $(BASE_O)
 ifeq ($(PLATFORM), x86)
-ALL_T= libsensapi.a $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe rtc
+REQ= libsensapi.a
+ALL_T= libsensapi.a $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe $(DEST)\rtc.exe $(DEST)\wrtc.exe
 else
-ALL_T= $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe rtc
+ALL_T= $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe $(DEST)\rtc.exe $(DEST)\wrtc.exe
 endif
 ALL_A= $(LUA_A)
 
-default: $(ALL_T)
+MODULES := $(wildcard ../modules/*/.)
 
-all: clean $(ALL_T) tools
-	@echo --------------------------------- LuaRT has been successfully compiled
+default: toolchain
+
+infolua:
+	@cmd /c echo.
+	@echo|set /p dummy="▸  Building Lua 5.4.4 VM          "
+
+infocore:
+	@cmd /c echo.
+	@echo|set /p dummy="▸  Building LuaRT core framework  "
+
+infotoolchain:
+	@cmd /c echo.
+	@echo|set /p dummy="▸  Building LuaRT toolchain       "
+
+infotools:
+	@cmd /c echo.
+	@echo|set /p dummy="▸  Building QuickRT and LuaRT Studio library  "
+
+infosetup:
+	@cmd /c echo.
+	@echo|set /p dummy="▸  Building LuaRT installer       "
+
+lua: infolua $(LUA_O) 
+
+core: infocore $(REQ) $(LIB_O)
+
+toolchain: lua core $(LUA_A) infotoolchain $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe $(DEST)\rtc.exe $(DEST)\wrtc.exe
+	@cmd /c echo.
+
+all: clean toolchain tools
 
 o:	$(ALL_O)
 
+lua\lvm.o: 
+	@$(CC) $(CFLAGS) -O2 -c lua\lvm.c -o lua\lvm.o
+
 %.o : %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
-	$(info $<)
+	@echo|set /p dummy="■"
 
 # libsensapi.a must be generated for i686 mingw-w64 (32bits)
 libsensapi.a:
-	@echo Generating $@
 	@gendef $(firstword "$(windir)\syswow64\SensApi.dll" "$(windir)\system32\SensApi.dll") >nul 2>&1
 	@dlltool -mi386 -f--32 -d SensApi.def -k -l $@
 	@$(RM) SensApi.def
@@ -127,85 +156,98 @@ x64: clean
 x86: clean
 	@$(MAKE) "PLATFORM=x86"
 
-setup: $(ALL_T) tools
+setup: toolchain tools infosetup
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32
-	@..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
-	@-copy /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
-	@echo --------------------------------- LuaRT setup has been successfully compiled
-
-wluart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LUART_T)
+	@echo|set /p dummy="■"
+	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUA_O) $(UI_O) $(LIB_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LIBS) -lgdi32
+	@echo|set /p dummy="■"
+	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
+	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
+	@cmd /c echo.
+	
+wluart-static.exe: $(BASE_O) $(UI_O) $(STATIC_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
-	$(info Linking wluart-static.exe...)
-	@$(CC) -mwindows $(LDFLAGS) $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O)  $(BASE_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
+	@echo|set /p dummy="■"
+	@$(CC) -mwindows $(LDFLAGS) $(CFLAGS) -DRTWIN -DLUART_STATIC $(BASE_O) $(STATIC_O) $(UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LIBS) -lgdi32 $(LDSCRIPT)
+	@echo|set /p dummy="■"
 	@-copy /Y wluart-static.exe $(DEST)\wluart-static.exe >nul
 
-luart-static.exe: $(BASE_O) $(LUART_OBJ_O) $(LUART_T)
+luart-static.exe: $(BASE_O) $(STATIC_O) $(LUART_T)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
-	$(info Linking luart-static.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart-static.exe $(LUART_OBJ_O) $(BASE_O) -mconsole luart.c $(LDFLAGS) $(LUART_LIBS) $(LDSCRIPT)
+	@echo|set /p dummy="■"
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -DLUART_STATIC -o luart-static.exe $(BASE_O) $(STATIC_O) -mconsole luart.c $(LDFLAGS) $(LIBS) $(LDSCRIPT)
+	@echo|set /p dummy="■"
 	@-copy /Y luart-static.exe $(DEST)\luart-static.exe >nul
 	
 $(LUA_A): $(BASE_O)
-	$(info Linking lua54.dll...)
-	@$(CC) $(CFLAGS) -DLUA_BUILD_AS_DLL -shared -o $@ $(BASE_O) $(LIBS) $(DLLLDSCRIPT) $(LDFLAGS) -Wl,--out-implib,liblua54.a
+	@$(CC) $(CFLAGS) -shared -o $@ $(BASE_O) $(DLLLDSCRIPT) $(LDFLAGS) $(LIBS) -Wl,--out-implib,liblua54.a
+	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
-	@-copy /Y liblua54.a "..\lib\liblua54.a" >nul
+	@-copy /Y liblua54.a "..\..\lib\liblua54.a" >nul
 
-$(LUART_T): $(LUA_A) $(LUART_OBJ_O) luart.c
+$(LUART_T): $(LUA_A) luart.c
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
-	$(info Linking luart.exe...)
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)
+	@echo|set /p dummy="■"
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ -mconsole luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)
+	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
-$(LUAWRT_T): $(LUA_A) $(LUART_OBJ_O) $(LUART_UI_O) luart.c ui\ui.o
+$(LUAWRT_T): $(LUA_A) $(UI_O) luart.c ui\ui.o
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
-	$(info Linking wluart.exe...)
-	@$(CC) -mwindows $(LDFLAGS) $(CFLAGS) -DRTWIN $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
+	@echo|set /p dummy="■"
+	@$(CC) -mwindows $(LDFLAGS) $(CFLAGS) -DRTWIN $(UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o $@ luart.c -llua54 $(LIBS) -lgdi32 $(LDSCRIPT)
+	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
-rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\tools\rtc\src\rtc.lua
+$(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe ..\..\tools\rtc\src\rtc.lua
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
-	@-copy $(DEST)\*.exe ..\tools\rtc\src >nul
-	@echo Compiling rtc.exe...
-	@windres $(DEFINES_RES) -I"." -I"../include/lua/" resources\resource.rc -o resource.o
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_OBJ_O) -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)
-	@luart.exe ..\tools\rtc\src\rtc.lua -o rtc.exe ..\tools\rtc\src >nul
-	@echo Compiling wrtc.exe...
+	@-copy $(DEST)\*.exe ..\..\tools\rtc\src >nul
+	@windres $(DEFINES_RES) -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
+	@echo|set /p dummy="■"
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)
+	@luart.exe ..\..\tools\rtc\src\rtc.lua -o rtc.exe ..\..\tools\rtc\src >nul
+	@echo|set /p dummy="■"
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
-	@$(CC) -mwindows $(CFLAGS) $(LUART_OBJ_O) $(LUART_UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe -DRTC -DRTWIN luart.c -llua54 $(LUART_LIBS) -lgdi32 $(LDSCRIPT)
-	@luart.exe ..\tools\rtc\src\rtc.lua -o wrtc.exe -w -i ..\tools\rtc\src\img\rtc.ico ..\tools\rtc\src\rtc.lua ..\tools\rtc\src >nul 
+	@echo|set /p dummy="■"
+	@$(CC) -mwindows $(CFLAGS) $(UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe -DRTC -DRTWIN luart.c -llua54 $(LIBS) -lgdi32 $(LDSCRIPT)
+	@echo|set /p dummy="■"
+	@luart.exe ..\..\tools\rtc\src\rtc.lua -o wrtc.exe -w -i ..\..\tools\rtc\src\img\rtc.ico ..\..\tools\rtc\src\rtc.lua ..\..\tools\rtc\src >nul 
 	@-copy /Y rtc.exe "$(DEST)\rtc.exe" >nul	
 	@-copy /Y wrtc.exe "$(DEST)\wrtc.exe" >nul	
 	@$(RM) luart.exe >nul 2>&1
 	@$(RM) wluart.exe >nul 2>&1
-	@$(RM) ..\tools\rtc\src\*.exe >nul 2>&1
+	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1 
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-tools: rtc
-	$(info Compiling QuickRT.exe...)
+tools: infotools rtc
 	@$(CC) $(CFLAGS) -DAIO -c lrtapi.c -o lrtapi.o
-	@$(CC) $(CFLAGS) -DAIO -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LDFLAGS) $(LUART_LIBS) $(DLLLDSCRIPT)
-	@rtc -i ..\tools\QuickRT\contrib\quickrt.ico ..\tools\QuickRT\src\quickrt.lua -o ..\tools\QuickRT\QuickRT.exe ..\tools\QuickRT\src >nul
-	@-copy /Y lua54.dll ..\tools\QuickRT\lua54.dll >nul		
+	@echo|set /p dummy="■"
+	@$(CC) $(CFLAGS) -DAIO -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT)
+	@echo|set /p dummy="■"
+	@rtc -i ..\..\tools\QuickRT\contrib\quickrt.ico ..\..\tools\QuickRT\src\quickrt.lua -o ..\..\tools\QuickRT\QuickRT.exe ..\..\tools\QuickRT\src >nul
+	@-copy /Y lua54.dll ..\..\tools\QuickRT\lua54.dll >nul	
+	@echo|set /p dummy="■"	
 	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -c lrtapi.c -o lrtapi.o
-	$(info Compiling LuaRT Studio lua54.dll...)
-	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(LUART_OBJ_O) $(LUART_UI_O) $(LDFLAGS) $(LUART_LIBS) $(DLLLDSCRIPT)
+	@echo|set /p dummy="■"
+	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT)
+	@echo|set /p dummy="■"
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
-	@windres $(DEFINES_RES) -D RTWIN -I"." -I"../include/lua/" resources\resource.rc -o resource.o
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe $(LUART_OBJ_O) -mconsole luart.c $(LDFLAGS) -llua54 $(LUART_LIBS) $(LDSCRIPT)	
-	@-copy /Y luart.exe "..\tools\LuaRT-Studio\bin\luart.exe" >nul	
-	@-copy /Y ..\bin\wrtc.exe "..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
-	@-copy /Y lua54.dll "..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
+	@echo|set /p dummy="■"
+	@windres $(DEFINES_RES) -D RTWIN -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
+	@echo|set /p dummy="■"
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe -mconsole luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)	
+	@-copy /Y luart.exe "..\..\tools\LuaRT-Studio\bin\luart.exe" >nul	
+	@-copy /Y ..\..\bin\wrtc.exe "..\..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
+	@-copy /Y lua54.dll "..\..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
 	@$(RM) lua54.dll
+	@cmd /c echo.
 
 clean:
 	@$(RM) $(ALL_T) >nul 2>&1
 	@$(RM) $(LUART_T) >nul 2>&1
 	@$(RM) $(LUAWRT_T)  >nul 2>&1
-	@$(RM) $(LUART_UI_O) >nul 2>&1
-	@$(RM) $(LUART_OBJ_O) >nul 2>&1
+	@$(RM) $(UI_O) >nul 2>&1
 	@$(RM) $(BASE_O) >nul 2>&1
 	@$(RM) $(DEST)\luart*.exe >nul 2>&1
 	@$(RM) $(DEST)\wluart*.exe >nul 2>&1
@@ -221,95 +263,16 @@ clean:
 	@$(RM) wluart*.exe >nul 2>&1
 	@$(RM) quickrt.exe >nul 2>&1
 	@$(RM) libsensapi.a >nul 2>&1
-	@$(RM) ..\lib\liblua54.a >nul 2>&1
-	@$(RM) ..\tools\rtc\src\*.exe >nul 2>&1
-	@$(RM) ..\setup\luaRT.zip >nul 2>&1
-	@$(RM) ..\tools\QuickRT\QuickRT.exe >nul 2>&1
-	@$(RM) ..\tools\QuickRT\lua54.dll >nul 2>&1
+	@$(RM) ..\..\lib\liblua54.a >nul 2>&1
+	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1
+	@$(RM) ..\..\setup\luaRT.zip >nul 2>&1
+	@$(RM) ..\..\tools\QuickRT\QuickRT.exe >nul 2>&1
+	@$(RM) ..\..\tools\QuickRT\lua54.dll >nul 2>&1
 	@$(RM) LuaRT-$(VERSION)-x64.exe >nul 2>&1
 	@$(RM) LuaRT-$(VERSION)-x86.exe >nul 2>&1
-	@$(RM) ..\LuaRT-$(VERSION)-x64.exe >nul 2>&1
-	@$(RM) ..\LuaRT-$(VERSION)-x86.exe >nul 2>&1
+	@$(RM) ..\..\LuaRT-$(VERSION)-x64.exe >nul 2>&1
+	@$(RM) ..\..\LuaRT-$(VERSION)-x86.exe >nul 2>&1
 
 ALL= all
 
 .PHONY: all clean
-
-lvm.o: 
-	$(CC) $(CFLAGS) -c -O2 lvm.c -o $@ 
-
-lua\lapi.o: lua\lapi.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lapi.h lua\llimits.h lua\lstate.h \
- lua\lobject.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldebug.h lua\ldo.h lua\lfunc.h lua\lgc.h lua\lstring.h \
- lua\ltable.h lua\lundump.h lua\lvm.h
-lua\lauxlib.o: lua\lauxlib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h
-lua\lbaselib.o: lua\lbaselib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\lcode.o: lua\lcode.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lcode.h lua\llex.h lua\lobject.h \
- lua\llimits.h lua\lzio.h lua\lmem.h lua\lopcodes.h lua\lparser.h lua\ldebug.h lua\lstate.h lua\ltm.h \
- lua\ldo.h lua\lgc.h lua\lstring.h lua\ltable.h lua\lvm.h
-lua\lcorolib.o: lua\lcorolib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\lctype.o: lua\lctype.c lua\lprefix.h lua\lctype.h lua\lua.h lua\luaconf.h lua\llimits.h
-lua\ldblib.o: lua\ldblib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\ldebug.o: lua\ldebug.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lapi.h lua\llimits.h lua\lstate.h \
- lua\lobject.h lua\ltm.h lua\lzio.h lua\lmem.h lua\lcode.h lua\llex.h lua\lopcodes.h lua\lparser.h \
- lua\ldebug.h lua\ldo.h lua\lfunc.h lua\lstring.h lua\lgc.h lua\ltable.h lua\lvm.h
-lua\ldo.o: lua\ldo.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lapi.h lua\llimits.h lua\lstate.h \
- lua\lobject.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldebug.h lua\ldo.h lua\lfunc.h lua\lgc.h lua\lopcodes.h \
- lua\lparser.h lua\lstring.h lua\ltable.h lua\lundump.h lua\lvm.h
-lua\ldump.o: lua\ldump.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lobject.h lua\llimits.h lua\lstate.h \
- lua\ltm.h lua\lzio.h lua\lmem.h lua\lundump.h
-lua\lfunc.o: lua\lfunc.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\ldebug.h lua\lstate.h lua\lobject.h \
- lua\llimits.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lfunc.h lua\lgc.h
-lua\lgc.o: lua\lgc.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\ldebug.h lua\lstate.h lua\lobject.h \
- lua\llimits.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lfunc.h lua\lgc.h lua\lstring.h lua\ltable.h
-lua\liolib.o: lua\liolib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\llex.o: lua\llex.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lctype.h lua\llimits.h lua\ldebug.h \
- lua\lstate.h lua\lobject.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lgc.h lua\llex.h lua\lparser.h \
- lua\lstring.h lua\ltable.h
-lua\lmathlib.o: lua\lmathlib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\lmem.o: lua\lmem.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\ldebug.h lua\lstate.h lua\lobject.h \
- lua\llimits.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lgc.h
-lua\loadlib.o: lua\loadlib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\lobject.o: lua\lobject.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lctype.h lua\llimits.h \
- lua\ldebug.h lua\lstate.h lua\lobject.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lstring.h lua\lgc.h \
- lua\lvm.h
-lua\lopcodes.o: lua\lopcodes.c lua\lprefix.h lua\lopcodes.h lua\llimits.h lua\lua.h lua\luaconf.h
-lua\loslib.o: lua\loslib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\lparser.o: lua\lparser.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lcode.h lua\llex.h lua\lobject.h \
- lua\llimits.h lua\lzio.h lua\lmem.h lua\lopcodes.h lua\lparser.h lua\ldebug.h lua\lstate.h lua\ltm.h \
- lua\ldo.h lua\lfunc.h lua\lstring.h lua\lgc.h lua\ltable.h
-lua\lrtapi.o: lua\lrtapi.c lua\luart.h lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h
-lua\lstate.o: lua\lstate.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lapi.h lua\llimits.h lua\lstate.h \
- lua\lobject.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldebug.h lua\ldo.h lua\lfunc.h lua\lgc.h lua\llex.h \
- lua\lstring.h lua\ltable.h
-lua\lstring.o: lua\lstring.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\ldebug.h lua\lstate.h \
- lua\lobject.h lua\llimits.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lstring.h lua\lgc.h
-string\string.o: string\string.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-string\lstrlib.o: string\lstrlib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\ltable.o: lua\ltable.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\ldebug.h lua\lstate.h lua\lobject.h \
- lua\llimits.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lgc.h lua\lstring.h lua\ltable.h lua\lvm.h
-lua\ltablib.o: lua\ltablib.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\lauxlib.h lua\lualib.h
-lua\ltm.o: lua\ltm.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\ldebug.h lua\lstate.h lua\lobject.h \
- lua\llimits.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lgc.h lua\lstring.h lua\ltable.h lua\lvm.h
-lua\lundump.o: lua\lundump.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\ldebug.h lua\lstate.h \
- lua\lobject.h lua\llimits.h lua\ltm.h lua\lzio.h lua\lmem.h lua\ldo.h lua\lfunc.h lua\lstring.h lua\lgc.h \
- lua\lundump.h
-lua\lzio.o: lua\lzio.c lua\lprefix.h lua\lua.h lua\luaconf.h lua\llimits.h lua\lmem.h lua\lstate.h \
- lua\lobject.h lua\ltm.h lua\lzio.h
-
-# LuaRT standard objects
-sys\File.o: sys\File.c ..\include\File.h ..\include\Buffer.h ..\include\luart.h
-sys\Directory.o: sys\Directory.c ..\include\Directory.h ..\include\File.h ..\include\luart.h
-sys\Pipe.o: sys\Pipe.c ..\include\Pipe.h ..\include\File.h ..\include\Buffer.h ..\include\luart.h
-sys\Buffer.o: sys\Buffer.c ..\include\Buffer.h ..\include\luart.h
-sys\Date.o: sys\Date.c ..\include\Date.h ..\include\luart.h
-sys\Com.o: sys\Com.c ..\include\Com.h ..\include\luart.h
-compression\Zip.o: compression\Zip.c ..\include\Zip.h ..\include\luart.h
-
- # LuaRT library modules
-sys\sys.o: sys\sys.c ..\include\Date.h ..\include\File.h ..\include\Buffer.h ..\include\luart.h lrtapi.h
-console\console.o: console\console.c ..\include\Date.h ..\include\File.h ..\include\Buffer.h ..\include\luart.h lrtapi.h
-compression\zip.o: compression\zip.c ..\include\File.h compression\lib\zip.h compression\lib\miniz.h \
- ..\include\File.h ..\include\Buffer.h ..\include\luart.h lrtapi.h
-ui\Widget.o: ui\Widget.c ..\include\Widget.h ..\include\luart.h lrtapi.h
-ui\ui.o: ui\ui.c ui\ui.h ..\include\Widget.h ..\include\luart.h lrtapi.h
-MemoryModule\MemoryModule.o: MemoryModule\MemoryModule.c MemoryModule\MemoryModule.h
