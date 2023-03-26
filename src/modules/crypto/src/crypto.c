@@ -1,21 +1,37 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | crypto.c | LuaRT crypto module
 */
 
-#include <luart.h>
 #include <Cipher.h>
 #include <Buffer.h>
 #include <stdlib.h>
 
-#define MINIZ_HEADER_FILE_ONLY
-#include <compression\lib\miniz.h>
-
 HCRYPTPROV hProv = 0;
 UNCRYPT uncrypt = NULL;
+
+/* Karl Malbrain's compact CRC-32. See "A compact CCITT crc16 and crc32 C
+ * implementation that balances processor cache usage against speed":
+ * http://www.geocities.com/malbrain/ */
+ULONG32 crc32(ULONG crc, const UINT8 *ptr, size_t buf_len)
+{
+    static const UINT32 s_crc32[16] = { 0, 0x1db71064, 0x3b6e20c8, 0x26d930ac, 0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+                                            0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c, 0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c };
+    UINT32 crcu32 = (UINT32)crc;
+    if (!ptr)
+        return 0;
+    crcu32 = ~crcu32;
+    while (buf_len--)
+    {
+        UINT8 b = *ptr++;
+        crcu32 = (crcu32 >> 4) ^ s_crc32[(crcu32 & 0xF) ^ (b & 0xF)];
+        crcu32 = (crcu32 >> 4) ^ s_crc32[(crcu32 & 0xF) ^ (b >> 4)];
+    }
+    return ~crcu32;
+}
 
 /* -- crypt library functions ----------------------------------------------- */
 
@@ -68,7 +84,7 @@ LUA_METHOD(crypto, generate) {
 LUA_METHOD(crypto, crc32) {
 	size_t len;
 	const unsigned char *b = (const unsigned char*)luaL_tolstring(L, 1, &len);
-	lua_pushinteger(L, mz_crc32(0, b, len));
+	lua_pushinteger(L, crc32(0, b, len));
 	return 1;
 }
 

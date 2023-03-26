@@ -1,12 +1,12 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Http.c | LuaRT Http object implementation
 */
 
-#include "lrtapi.h"
+// #include "lrtapi.h"
 #include <luart.h>
 #include <Http.h>
 #include <Buffer.h>
@@ -80,7 +80,7 @@ int constructor(lua_State *L, BOOL isFTP) {
 		if (connect_to(L, http))
 			return 1;
 	}
-	lasterror(L, GetLastError());
+	luaL_getlasterror(L, GetLastError());
 	return lua_error(L);	
 }
 
@@ -282,7 +282,7 @@ static size_t ExtractRequest(lua_State *L, HINTERNET req) {
 								break;
 			case LUA_TTABLE:	file = luaL_checkcinstance(L, -1, File);
 								if ( (h = CreateFileW(file->fullpath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)  {
-									lasterror(L, GetLastError());
+									luaL_getlasterror(L, GetLastError());
 									luaL_error(L, "cannot open File : %s", lua_tostring(L, -1));
 								}
 								GetFileSizeEx(h, &size); 

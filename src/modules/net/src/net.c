@@ -1,13 +1,13 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | net.c | LuaRT net module
 */
 
 #include <Socket.h>
-#include "lrtapi.h"
+// #include "lrtapi.h"
 #include <luart.h>
 #include "../include/Http.h"
 #include <Ftp.h>
@@ -258,7 +258,7 @@ LUA_PROPERTY_GET(net, ipv6) {
 }
 
 LUA_PROPERTY_GET(net, lasterror) {
-	return lasterror(L, WSAGetLastError());
+	return luaL_getlasterror(L, WSAGetLastError());
 }
 
 static const luaL_Reg net_properties[] = {
@@ -284,7 +284,9 @@ LUALIB_API int net_finalize(lua_State *L) {
 	return 0;
 }
 
-LUAMOD_API int luaopen_net(lua_State *L) {
+//------------------------------- net module entry
+
+int __declspec(dllexport) luaopen_net(lua_State *L) {
 	WSAStartup(MAKEWORD(2, 2), &wsadata); 
 	lua_regmodulefinalize(L, net);
 	lua_regobjectmt(L, Socket);

@@ -1,19 +1,15 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Cipher.c | LuaRT Cipher object implementation
 */
 
-#include "lrtapi.h"
 #include <luart.h>
 #include <Cipher.h>
 #include <Buffer.h>
 #include <stdlib.h>
-
-#define MINIZ_HEADER_FILE_ONLY
-#include <compression\lib\miniz.h>
 
 // __declspec(dllexport) luart_type TCipher;
 
@@ -88,7 +84,7 @@ LUA_CONSTRUCTOR(Cipher) {
 				if (keylen != cipher->algo->blocksize)
 					luaL_error(L, "wrong initialization vector length (expected %d bytes, found %d)", cipher->algo->blocksize, keylen);
 				if (!CryptSetKeyParam(cipher->key, KP_IV, (BYTE*)buff, 0)) {
-			err:	lasterror(L, GetLastError()); 
+			err:	luaL_getlasterror(L, GetLastError()); 
 					luaL_error(L, "key error (%s)", lua_tostring(L, -1));
 				}
 			} else luaL_typeerror(L, 3, "Buffer or string");

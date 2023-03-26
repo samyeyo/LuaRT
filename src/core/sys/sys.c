@@ -106,8 +106,8 @@ LUA_METHOD(sys, tempfile) {
 	return pushtmp(L, FALSE);
 }
 
--------------------------------------[ sys.fsentry() ]
-LUA_METHOD(sys, isfile) {
+//-------------------------------------[ sys.fsentry() ]
+LUA_METHOD(sys, fsentry) {
 	wchar_t *entry = lua_towstring(L, 1);
 	DWORD dwAttrib = GetFileAttributesW(entry);
 

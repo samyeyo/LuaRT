@@ -1,13 +1,13 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Socket.c | LuaRT Socket object implementation
 */
 
 #include <Socket.h>
-#include "lrtapi.h"
+// #include "lrtapi.h"
 #include <luart.h>
 #include <Buffer.h>
 
@@ -52,7 +52,7 @@ addr:	if (inet_pton(AF_INET, str, &(s->addr.sin_addr)) != 0 ) {
 		}
 		WSAAddressToStringA((LPSOCKADDR)&s->addr, s->sizeaddr, NULL, s->ip, &len);
 		if ( (s->sock = socket(s->sizeaddr == sizeof(SOCKADDR_IN) ? AF_INET : AF_INET6, SOCK_STREAM, 0)) == INVALID_SOCKET ) {
-			lasterror(L, WSAGetLastError());
+			luaL_getlasterror(L, WSAGetLastError());
 			lua_error(L);
 		}
 	}
