@@ -75,6 +75,12 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			lParam = MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam));		
 		case WM_MOUSELEAVE:
 			return WidgetProc(hWnd, Msg, 0, lParam, 0, 0);
+		case WM_KEYDOWN:
+			SendMessage(GetParent(w->handle), WM_KEYDOWN, wParam, lParam);
+			break;
+		case WM_SYSKEYDOWN:
+			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
+			break;			
 		case WM_CTLCOLORBTN:
 		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
 		default: break;

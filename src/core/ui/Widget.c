@@ -104,8 +104,8 @@ INT_PTR widget_setcolors(Widget *w, HDC dc, HWND h)
 		SetTextColor(dc, c->color);
 		if (c->brush) {
 			LOGBRUSH lbr;
-			GetObject(c->brush, sizeof(lbr), &lbr);
-			SetDCBrushColor(dc, lbr.lbColor);
+			if(GetObject(c->brush, sizeof(lbr), &lbr))
+				SetDCBrushColor(dc, lbr.lbColor);
 			return (INT_PTR)GetStockObject(DC_BRUSH);
 		}
         return (INT_PTR)w->brush;		
@@ -258,6 +258,8 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			if (w->wtype == UIEntry)
 				SendMessage(w->handle, WM_COMMAND, EN_CHANGE, 0);
 			SendMessage(GetParent(w->handle), WM_KEYDOWN, wParam, lParam);
+			if (w->wtype == UIGroup)
+				return 0;				
 			break;
 		case WM_SYSKEYDOWN:
 			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
@@ -357,7 +359,7 @@ int GetText(lua_State *L, HANDLE h) {
 }
 
 static int width[] = {0, 20, 0, 60, 250, 16, 24, 24, 180, 226, 80, 100, 120, 300, 300, 150};
-static int height[] = {0, 24, 0, 20, 200, 9, 9, 9, 200, 160, 100, 150, 160, 200, 200, 16};
+static int height[] = {0, 24, 0, 22, 200, 9, 9, 9, 200, 160, 100, 150, 160, 200, 200, 16};
 static int margins[] = {0, 0, 2, 7, 100, 9, 9, 9, 10, 0, 150, 20, 100, 0, 0, 0, 0};
 
 static void WidgetAutosize(Widget *w) {	
