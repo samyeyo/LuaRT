@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | sys.c | LuaRT sys module
@@ -106,6 +106,21 @@ LUA_METHOD(sys, tempfile) {
 	return pushtmp(L, FALSE);
 }
 
+-------------------------------------[ sys.fsentry() ]
+LUA_METHOD(sys, isfile) {
+	wchar_t *entry = lua_towstring(L, 1);
+	DWORD dwAttrib = GetFileAttributesW(entry);
+
+	if (dwAttrib != INVALID_FILE_ATTRIBUTES) {
+		lua_pushvalue(L, 1);
+		if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
+			lua_pushinstance(L, Directory, 1);
+		else lua_pushinstance(L, File, 1);
+	} else lua_pushnil(L);
+	free(entry);
+	return 1;
+}
+
 //-------------------------------------[ sys.tempdir() ]
 LUA_METHOD(sys, tempdir) {
 	return pushtmp(L, TRUE);
@@ -137,7 +152,7 @@ LUA_METHOD(sys, halt) {
 }
 
 //-------------------------------------[ sys.lasterror ]
-int lasterror(lua_State *L, DWORD err) {
+int luaL_getlasterror(lua_State *L, DWORD err) {
 	char* msg = 0;
 	HMODULE mod = NULL;
 	DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
@@ -163,7 +178,7 @@ int lasterror(lua_State *L, DWORD err) {
 }
 
 LUA_PROPERTY_GET(sys, lasterror) {
-	return lasterror(L, GetLastError());
+	return luaL_getlasterror(L, GetLastError());
 }
 
 LUA_PROPERTY_GET(sys, atexit) {
@@ -415,6 +430,7 @@ static const luaL_Reg syslib[] = {
 	{"tempdir",		sys_tempdir},
 	{"cmd",			sys_cmd},
 	{"halt",		sys_halt},
+	{"fsentry",		sys_fsentry},
 	{NULL, NULL}
 };
 

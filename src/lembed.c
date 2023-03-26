@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | lembed.c | LuaRT embed module implementation
@@ -8,18 +8,19 @@
 
 #include "lrtapi.h"
 #include <luart.h>
+
 #include <File.h>
 #include <shlwapi.h>
 #include "MemoryModule\MemoryModule.h"
 
 #define MINIZ_HEADER_FILE_ONLY
 #include <compression\lib\zip.h>
-
 #define CMEMLIBS "Memory DLL"
-typedef void (*voidf)(void);
 
+
+typedef void (*voidf)(void);
 extern int Zip_extract(lua_State *L); 
-struct zip_t *fs = NULL;
+extern zip_t *fs;
 BYTE *datafs  = NULL;
 
 struct zip_t *open_fs(void *ptr, size_t size) {
@@ -42,7 +43,7 @@ static void *fsload(lua_State *L, const char *fname) {
         zip_entry_read(fs, &buff, &size);
 		if (memcmp(buff, "\xEF\xBB\xBF", 3)==0)
 			idx = 3;
-		if (luaL_loadbuffer(L, buff+idx, size-idx, fname))
+		if (luaL_loadbuffer(L, (const char*)(buff+idx), size-idx, fname))
 			lua_error(L);
 		zip_entry_close(fs);
 		return buff;
@@ -56,7 +57,7 @@ static int luart_fsloader(lua_State *L) {
 	void *buff;
 	char *fname;
 
-	fname = calloc(1, len);
+	fname = (char *)calloc(1, len);
 	_snprintf(fname, len, "%s.lua", modname);
 	if ( !(buff = fsload(L, fname)) ) {
     lua_pushfstring(L, "no embedded module '%s' found", fname);
@@ -91,7 +92,7 @@ done:
  }
 
 //-------------------------------------------------[luaL_embedclose() luaRT C API]
-LUALIB_API int luaL_embedclose(lua_State *L) {
+LUA_API int luaL_embedclose(lua_State *L) {
   if (lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS)) {
     lua_Integer len = luaL_len(L, -1);
     while (lua_rawgeti(L, -1, len--)) {
@@ -104,7 +105,7 @@ LUALIB_API int luaL_embedclose(lua_State *L) {
 }
 
 //-------------------------------------------------[luaL_embedopen() luaRT C API]
-LUALIB_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
+LUA_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
   DWORD read;
   HANDLE hFile;
   BYTE buff[4096];
@@ -146,7 +147,7 @@ LUALIB_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
   filesize = GetFileSize(hFile, NULL);
   SetFilePointer(hFile, exesize, NULL, FILE_BEGIN);
   if ((fssize = filesize - exesize)) {
-	  datafs = malloc(fssize);
+	  datafs = (BYTE*)malloc(fssize);
 	  ReadFile(hFile, datafs, fssize, &read, NULL);
 	  CloseHandle(hFile);
 	  if ((fs = open_fs(datafs, fssize))) {
@@ -185,7 +186,7 @@ static const luaL_Reg embed_properties[] = {
 };
 
 //-------------------------------------------------[luaopen_embed() "embed" module]
-int luaopen_embed(lua_State *L) {
+LUAMOD_API int luaopen_embed(lua_State *L) {
   luaL_getsubtable(L, LUA_REGISTRYINDEX, CMEMLIBS);
 	lua_registermodule(L, "embed", embedlib, embed_properties, luaL_embedclose);
   lua_getglobal(L, "package");
@@ -198,4 +199,4 @@ int luaopen_embed(lua_State *L) {
   lua_rawset(L, -6);
   lua_pop(L, 3);
 	return 1;
-}
+};

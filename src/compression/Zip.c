@@ -1,7 +1,7 @@
 
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Zip.c | LuaRT Zip object implementation
@@ -23,7 +23,7 @@
 
 
 const char *zip_modes[] = { "read", "append", "write", "delete", NULL };
-extern struct zip_t *fs;
+struct zip_t *fs = NULL;
 
 /* ------------------------------------------------------------------------ */
 

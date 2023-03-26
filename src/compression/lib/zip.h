@@ -30,11 +30,11 @@
 #endif
 #endif
 
+#include "miniz.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "miniz.h"
 
 #if !defined(_POSIX_C_SOURCE) && defined(_MSC_VER)
 // 64-bit Windows is the only mainstream platform

@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | luart.c | LuaRT interpreter
@@ -137,36 +137,19 @@ static int update_exe_icon(lua_State *L) {
 
 #ifndef AIO
 //------- LuaRT modules included in luart.exe/wluart.exe
-static luaL_Reg luaRT_libs[] = {
-   	{ "compression",	luaopen_compression },
-   	{ "crypto",			luaopen_crypto },
-  	{ "net",			luaopen_net },
-#ifdef RTWIN
-    { "ui",				luaopen_ui },
+	#if defined(LUART_STATIC) || defined(RTWIN)
+		static luaL_Reg luaRT_libs[] = {
+			#ifdef LUART_STATIC
+				{"crypto",	luaopen_crypto },
+				{"net",		luaopen_net },
+			#endif
+			#ifdef RTWIN
+				{ "ui",				luaopen_ui },
+			#endif
+			{ NULL,		NULL }
+		};
+	#endif
 #endif
-  { NULL,		NULL }
-};
-#endif
-
-//------- LuaRT specific C module loader to use paths inside modules folder
-LUALIB_API int luart_dllloader(lua_State *L) {
-	const char *modname = luaL_gsub(L, luaL_checkstring(L, 1), ".", "\\");
-	size_t len = strlen(modname)+MAX_PATH;
-	char *fname;
-
-	fname = calloc(1, len);
-    _snprintf(fname, len, "%.*ls..\\modules\\%s.dll", (int)(PathFindFileNameW(exename)-exename), exename, modname);
-	lua_getglobal(L, "package");
-	lua_getfield(L, -1, "loadlib");
-	lua_pushstring(L, fname);
- 	_snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
-    lua_pushstring(L, fname);
-	lua_call(L, 2, LUA_MULTRET);
- 	free(fname);
-	if (!lua_iscfunction(L, -1))
-		lua_pushnil(L);
-	return 1;
- }
 
 void lua_stop() {
 	if (L) {
@@ -188,7 +171,6 @@ __attribute__((used)) int main() {
 	INITCOMMONCONTROLSEX icex;
 	int i, result = EXIT_SUCCESS;
 	BOOL is_embeded = FALSE;
-	const luaL_Reg *lib;
 	wchar_t **enpv, **wargv;
 	int argc, si = 0, argfile = 1;
 
@@ -200,25 +182,20 @@ __attribute__((used)) int main() {
 	L = luaL_newstate();
 	luaL_openlibs(L);
 #ifndef AIO	
-	for (lib = luaRT_libs; lib->func; lib++) {
-		luaL_requiref(L, lib->name, lib->func, 0);
-		lua_pop(L, 1);
-	}
+	#if defined(LUART_STATIC) || defined(RTWIN)
+		const luaL_Reg *lib;
+		for (lib = luaRT_libs; lib->func; lib++) {
+			luaL_requiref(L, lib->name, lib->func, 0);
+			lua_pop(L, 1);
+		}
+	#endif
 #endif
 	GetModuleFileNameW(NULL, (WCHAR*)exename, sizeof(exename));
 	if ((is_embeded = luaL_embedopen(L, exename))) {
 		luaL_requiref(L, "embed", luaopen_embed, 2);
 		lua_pop(L, 1);
 	}
-	lua_getglobal(L,"table");
-	lua_getfield(L, -1, "insert");
-	lua_getglobal(L, "package");
-	lua_getfield(L, -1, "searchers");
-	lua_remove(L, -2);
-	lua_pushinteger(L, 1);
-	lua_pushcfunction(L, luart_dllloader);
-	lua_call(L, 3, 0);
-	lua_pop(L, 1);
+
 	atexit(lua_stop);
 #ifdef RTC
 	lua_pushcfunction(L, update_exe_icon);

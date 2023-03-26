@@ -594,9 +594,9 @@ typedef struct mz_dummy_time_t_tag {
 #define MZ_ZIP64_MAX_CENTRAL_EXTRA_FIELD_SIZE                                  \
   (sizeof(mz_uint16) * 2 + sizeof(mz_uint64) * 3)
 
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern MINIZ_EXPORT void *miniz_def_alloc_func(void *opaque, size_t items,
                                                size_t size);
@@ -1114,14 +1114,14 @@ typedef void *const voidpc;
 #include <stdlib.h>
 #include <string.h>
 
-// #ifdef __cplusplus
-// }
-// #endif
-// #pragma once
+#ifdef __cplusplus
+}
+#endif
+#pragma once
 
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* ------------------- Low-level Compression API Definitions */
 
 /* Set TDEFL_LESS_MEMORY to 1 to use less memory (compression will be slightly

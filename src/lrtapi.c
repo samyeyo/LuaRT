@@ -1,14 +1,17 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | lrtapi.c | LuaRT API implementation
 */
 
+#define LUA_LIB
+
 #include <luart.h>
 #include "lrtapi.h"
 #include <windows.h>
+
 
 //-------------------------------------------------[UTF8 strings conversion functions]
 char *wchar_toutf8(const wchar_t *str, int *len) {
@@ -242,11 +245,9 @@ static const luaL_Reg def_libs[] = {
   {"os",	luaopen_os },
   {"utf8",	luaopen_utf8 },
   {"sys",		luaopen_sys},
+  {"compression",	luaopen_compression },
 #ifdef AIO
   {"ui",		luaopen_ui },
-  {"crypto",	luaopen_crypto },
-  {"net",		luaopen_net },
-  {"compression",	luaopen_compression },
 #endif  
   {NULL, NULL}
 };
