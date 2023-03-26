@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Menu.c | LuaRT Menu object implementation
@@ -51,7 +51,7 @@ static void SetMenuItem(lua_State *L, HMENU menu, int idx, wchar_t *str, HBITMAP
 		mi.hSubMenu = popup;
 	}
 	if (!SetMenuItemInfoW(menu, idx == -1 ? GetMenuItemCount(menu)-1 : idx, TRUE, &mi)) {
-		lasterror(L, GetLastError());
+		luaL_getlasterror(L, GetLastError());
 		printf("SetMenuItemInfo error : %s ", lua_tostring(L, -1));
 	}
 	free(str);
