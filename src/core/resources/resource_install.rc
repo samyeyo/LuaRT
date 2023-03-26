@@ -3,8 +3,8 @@
 #include "resource.h"
 
 WINICON ICON "resources\\box.ico"
-102 ICON "..\\setup\\img\\luart.ico"
-103 ICON "..\\setup\\img\\logo.ico"
+102 ICON "..\\..\\setup\\img\\luart.ico"
+103 ICON "..\\..\\setup\\img\\logo.ico"
 
 1 24 "Application.manifest.xml"
 
