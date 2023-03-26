@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Items.c | LuaRT Tree, List, Combobox, Tab and associated items object implementation
@@ -730,7 +730,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 			SetFocus(w->handle);
 		}
 		else if (w->wtype == UITab)
-			SendMessageW(GetParent(w->handle), TCM_SETCURSEL, sel->index, 1);
+			SendMessageW(w->handle, TCM_SETCURFOCUS, sel->index, 0);
 		else if (w->wtype == UICombo) {
 			SendMessageW(w->status ?: w->handle, CB_SETCURSEL, sel->index, 1);
 			SetWindowTextW(w->handle, sel->item.cbitem->pszText);
