@@ -8,7 +8,7 @@
 
 extern "C" {
 #include <luart.h>
-#include <widget.h>
+#include <Widget.h>
 #include <windows.h>
 }
 
@@ -133,12 +133,30 @@ static ID2D1Brush *getBrush(lua_State *L, Direct2D *d, int idx) {
   return brush;
 }
 
+LUA_METHOD(Canvas, map) {
+	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
+  size_t len;
+  const char *str = luaL_checklstring(L, 2, &len);
+  ID2D1Bitmap *bmp;
+  D2D1_SIZE_F size;
+  D2D1_RECT_U rect;
+
+  d->Render->GetBitmap(&bmp);
+  size = bmp->GetSize();
+  rect = D2D1::RectU(0, 0, size.width, size.height);
+  if (len < (size.width * size.height * 4) || FAILED(bmp->CopyFromMemory(NULL, str, size.width * 4)))
+    len = 0;
+  lua_pushboolean(L, len);
+  bmp->Release();
+	return 1;
+}
+
 LUA_METHOD(Canvas, point) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   ID2D1Brush *brush = getBrush(L, d, 4);
   float x = static_cast<FLOAT>(luaL_checknumber(L, 2));
   float y = static_cast<FLOAT>(luaL_checknumber(L, 3));
-	d->Render->DrawRectangle(D2D1::RectF(x, y, x+0.5f, y+0.5f), brush ?: d->colorBrush, luaL_optnumber(L, 5, 1.0f), NULL);
+	d->Render->DrawRectangle(D2D1::RectF(x, y, x+0.5f, y+0.5f), brush ?: d->colorBrush, 0.5f, NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -191,9 +209,9 @@ LUA_METHOD(Canvas, fillroundrect) {
 
 LUA_METHOD(Canvas, ellipse) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 7);
+  ID2D1Brush *brush = getBrush(L, d, 6);
 
-	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ?: d->colorBrush, luaL_optnumber(L, 8, 1.0f), NULL);
+	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ?: d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -211,9 +229,10 @@ LUA_METHOD(Canvas, fillellipse) {
 
 LUA_METHOD(Canvas, circle) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 6);
-
-	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 4))), brush ?: d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
+  lua_Number radius = luaL_checknumber(L, 4);
+  ID2D1Brush *brush = getBrush(L, d, 5);
+  
+	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(radius), static_cast<FLOAT>(radius)), brush ?: d->colorBrush, luaL_optnumber(L, 6, 1.0f), NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -277,9 +296,10 @@ LUA_METHOD(Canvas, measure) {
 }
 
 LUA_METHOD(Canvas, flip) {
-	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
+  Widget *w = lua_self(L, 1, Widget);
+	Direct2D *d = (Direct2D*)w->user;
   d->Render->EndDraw();
-  InvalidateRect((HWND)lua_self(L, 1, Widget)->handle, NULL, TRUE);
+  InvalidateRect((HWND)w->handle, NULL, TRUE);
 	return 0;
 }
 
@@ -296,13 +316,12 @@ LUA_METHOD(Canvas, clear) {
     lua_Integer rgba = luaL_checkinteger(L, 2);
     color = D2D1::ColorF(GetR(rgba)/255, GetG(rgba)/255, GetB(rgba)/255, GetA(rgba)/255);
   }
-  d->Render->BeginDraw();
 	d->Render->Clear(color);
 	return 0;
 }
 
 static int new_instance(lua_State *L, const char *type) {
-	int n = lua_gettop(L);
+	int i, n = lua_gettop(L);
   lua_pushlightuserdata(L,(lua_self(L, 1, Widget))->user);
   lua_insert(L, 2);
   lua_pushnewinstance(L, type, n);
@@ -346,10 +365,15 @@ LUA_PROPERTY_GET(Canvas, bgcolor) {
 }
 
 LUA_PROPERTY_SET(Canvas, bgcolor) {
-  Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
+  Widget *w = lua_self(L, 1, Widget);
+  Direct2D *d = (Direct2D*)w->user;
   lua_Integer bgcolor = luaL_checkinteger(L, 2);
   
   d->bgcolor = D2D1::ColorF(GetR(bgcolor)/255, GetG(bgcolor)/255, GetB(bgcolor)/255, GetA(bgcolor)/255);
+  d->Render->BeginDraw();
+  d->Render->Clear(d->bgcolor);
+  d->Render->EndDraw();    
+  InvalidateRect((HWND)w->handle, NULL, TRUE);
   return 0;
 }
 
@@ -369,6 +393,7 @@ LUA_PROPERTY_SET(Canvas, sync) {
       KillTimer((HWND)w->handle, 1001);
     else  
       SetTimer((HWND)w->handle, 1001, 30, NULL);
+    d->synced = flag;
   }
 	return 0;
 }
@@ -443,14 +468,14 @@ LUA_PROPERTY_GET(Canvas, fontstyle) {
 }
 
 int event_onPaint(lua_State *L) {
-  Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
+  Widget *w = lua_self(L, 1, Widget);
+  Direct2D *d = (Direct2D*)w->user;
   if (lua_getfield(L, 1, "onPaint") == LUA_TFUNCTION) {
     d->Render->BeginDraw();
-	  d->Render->Clear(d->bgcolor);  
 	  lua_pushvalue(L, 1);
     lua_call(L, 1, 0);
     d->Render->EndDraw();
-    InvalidateRect((HWND)lua_self(L, 1, Widget)->handle, NULL, TRUE);
+    InvalidateRect((HWND)w->handle, NULL, TRUE);
   }
   else lua_pop(L, 1);
   lua_pushnil(L);
@@ -465,6 +490,7 @@ int event_onRelease(lua_State *L) {
 OBJECT_MEMBERS(Canvas)
 	METHOD(Canvas, print)
 	METHOD(Canvas, measure)
+	METHOD(Canvas, map)
 	METHOD(Canvas, point)
 	METHOD(Canvas, line)
   METHOD(Canvas, rect)
@@ -476,7 +502,6 @@ OBJECT_MEMBERS(Canvas)
   METHOD(Canvas, clear)
   METHOD(Canvas, circle) 
   METHOD(Canvas, fillcircle) 
-  METHOD(Canvas, clear)
   METHOD(Canvas, flip)
   METHOD(Canvas, begin)
   METHOD(Canvas, Image)
