@@ -26,6 +26,7 @@ const char *halt_modes[] = { "logoff", "shutdown", "reboot",  NULL };
 const unsigned long halt_values[] = { EWX_LOGOFF, EWX_SHUTDOWN | EWX_POWEROFF, EWX_REBOOT };
 const char *reg_keys[] = { "HKEY_CLASSES_ROOT", "HKEY_CURRENT_CONFIG", "HKEY_CURRENT_USER", "HKEY_LOCAL_MACHINE", "HKEY_USERS", NULL };
 const HKEY reg_values[] = { HKEY_CLASSES_ROOT, HKEY_CURRENT_CONFIG, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS };
+wchar_t temp_path[MAX_PATH];
 
 /* clock definitions */
 static LARGE_INTEGER freq;
@@ -82,11 +83,10 @@ LUA_METHOD(sys, cmd) {
 }
 
 static int pushtmp(lua_State *L, BOOL isdir) {
-	wchar_t *prefix = NULL, tmp[MAX_PATH], path[MAX_PATH];
+	wchar_t *prefix = NULL, tmp[MAX_PATH];
 	if (lua_gettop(L))
 		prefix = lua_towstring(L, 1);
-	GetTempPathW(MAX_PATH, path);
-	if (GetTempFileNameW(path, prefix, 0, tmp)) {
+	if (GetTempFileNameW(temp_path, prefix, 0, tmp)) {
 		lua_pushwstring(L, tmp);
 		if (isdir) {
 			DeleteFileW(tmp);
@@ -460,5 +460,6 @@ LUAMOD_API int luaopen_sys(lua_State *L) {
 	lua_regobjectmt(L, Directory);
 	lua_regobjectmt(L, Datetime);
 	lua_regobjectmt(L, COM);
+	GetTempPathW(MAX_PATH, temp_path);
 	return 1;
 }

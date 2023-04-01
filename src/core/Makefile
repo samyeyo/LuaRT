@@ -48,7 +48,7 @@ endif
  endif
 endif
 ifeq ($(PLATFORM), x64)
- ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion
+ ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion -fno-unwind-tables -fno-asynchronous-unwind-tables 
  _ARCH = x64
  TARGET = pe-x86-64
 ifneq (${BUILD}, debug)
@@ -81,7 +81,7 @@ RM= del /Q
 
 LUA_A=		lua54.dll
 LUA_O=		lua\lapi.o lua\lcode.o lua\lctype.o lua\ldebug.o lua\ldo.o lua\ldump.o lua\lfunc.o lua\lgc.o lua\llex.o lua\lmem.o lua\lobject.o lua\lopcodes.o lua\lparser.o lua\lstate.o lua\lstring.o lua\ltable.o lua\ltm.o lua\lundump.o lua\lvm.o lua\lzio.o	
-LIB_O=		lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o string\lstrlib.o sys\sys.o console\console.o lua\liolib.o lua\loslib.o lua\lutf8lib.o MemoryModule\MemoryModule.o compression\compression.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o lrtapi.o lrtobject.o sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o lembed.o
+LIB_O=		lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o string\lstrlib.o sys\sys.o console\console.o lua\liolib.o lua\loslib.o lua\lutf8lib.o compression\compression.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o lrtapi.o lrtobject.o sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o lembed.o
 UI_O=  		ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o
 
 BASE_O= 	$(LUA_O) $(LIB_O)
@@ -243,27 +243,32 @@ tools: infotools rtc
 	@$(RM) lua54.dll
 	@cmd /c echo.
 
-clean:
+clean:	
+	@echo|set /p dummy="▸  Cleaning Lua 5.4 VM... "
+	@$(RM) $(BASE_O) >nul 2>&1
+	@echo ✓
+	@echo|set /p dummy="▸  Cleaning LuaRT Core framework... "
+	@$(RM) lua54*.dll >nul 2>&1
+	@$(RM) liblua54.a >nul 2>&1
+	@$(RM) resource.o >nul 2>&1
+	@$(RM) libsensapi.a >nul 2>&1
+	@$(RM) ..\..\lib\liblua54.a >nul 2>&1
 	@$(RM) $(ALL_T) >nul 2>&1
 	@$(RM) $(LUART_T) >nul 2>&1
 	@$(RM) $(LUAWRT_T)  >nul 2>&1
 	@$(RM) $(UI_O) >nul 2>&1
-	@$(RM) $(BASE_O) >nul 2>&1
+	@echo ✓
+	@echo|set /p dummy="▸  Cleaning LuaRT toolchain... "
 	@$(RM) $(DEST)\luart*.exe >nul 2>&1
 	@$(RM) $(DEST)\wluart*.exe >nul 2>&1
 	@$(RM) $(DEST)\lua54*.dll >nul 2>&1
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
-	@$(RM) lua54*.dll >nul 2>&1
-	@$(RM) liblua54.a >nul 2>&1
-	@$(RM) resource.o >nul 2>&1
 	@$(RM) rtc.exe >nul 2>&1
 	@$(RM) wrtc.exe >nul 2>&1
 	@$(RM) luart*.exe >nul 2>&1
 	@$(RM) wluart*.exe >nul 2>&1
 	@$(RM) quickrt.exe >nul 2>&1
-	@$(RM) libsensapi.a >nul 2>&1
-	@$(RM) ..\..\lib\liblua54.a >nul 2>&1
 	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1
 	@$(RM) ..\..\setup\luaRT.zip >nul 2>&1
 	@$(RM) ..\..\tools\QuickRT\QuickRT.exe >nul 2>&1
@@ -272,6 +277,7 @@ clean:
 	@$(RM) LuaRT-$(VERSION)-x86.exe >nul 2>&1
 	@$(RM) ..\..\LuaRT-$(VERSION)-x64.exe >nul 2>&1
 	@$(RM) ..\..\LuaRT-$(VERSION)-x86.exe >nul 2>&1
+	@echo ✓
 
 ALL= all
 

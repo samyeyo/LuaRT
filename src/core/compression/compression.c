@@ -12,6 +12,7 @@
 #include <Zip.h>
 #include <wchar.h>
 #include <compression\lib\zip.h>
+#include "lrtapi.h"
 
 LUA_METHOD(compression, deflate) {
 	size_t len; 
@@ -69,15 +70,14 @@ LUA_METHOD(compression, gunzip) {
     unsigned char out[CHUNK];
 	wchar_t *fname;
 	FILE *filefrom, *fileto;
-	wchar_t path[MAX_PATH], tmp[MAX_PATH];
+	wchar_t tmp[MAX_PATH];
 
     if (mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS) != MZ_OK)
 		luaL_error(L, "Failed to initialize deflate compression");
  	fname = luaL_checkFilename(L, 1);
 	if (!(filefrom = _wfopen(fname, L"rb")))
 		luaL_error(L, "File not found");
-	GetTempPathW(MAX_PATH, path);
-	GetTempFileNameW(path, NULL, 0, tmp);
+	GetTempFileNameW(temp_path, NULL, 0, tmp);
 	if (!(fileto = _wfopen(tmp, L"wb")))
 		luaL_error(L, "Cannot create temporary uncompressed file");
 	fread(in, 1, GZIP_HEADER_MINSIZE, filefrom);
@@ -119,7 +119,7 @@ LUA_METHOD(compression, gzip) {
     unsigned char out[CHUNK];
 	wchar_t *fname;
 	FILE *filefrom, *fileto;
-	wchar_t path[MAX_PATH], tmp[MAX_PATH];
+	wchar_t tmp[MAX_PATH];
 	static unsigned char gzip_header[] = { 0x1F, 0x8B, 0x08, 0, 0, 0, 0, 0, 0, 0x0B };
 	mz_ulong crc = 0;
 	LONGLONG fsize = 0;
@@ -129,8 +129,7 @@ LUA_METHOD(compression, gzip) {
  	fname = luaL_checkFilename(L, 1);
 	if (!(filefrom = _wfopen(fname, L"rb")))
 		luaL_error(L, "File not found");
-	GetTempPathW(MAX_PATH, path);
-	GetTempFileNameW(path, NULL, 0, tmp);
+	GetTempFileNameW(temp_path, NULL, 0, tmp);
 	if (!(fileto = _wfopen(tmp, L"wb")))
 		luaL_error(L, "Cannot create temporary gzip file");
 	fwrite(gzip_header, 1, GZIP_HEADER_MINSIZE, fileto);

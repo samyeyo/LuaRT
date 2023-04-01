@@ -39,7 +39,7 @@ LUAMOD_API int luaopen_com(lua_State *L);
 
 int obj_each_iter(lua_State *L);
 extern wchar_t * GetCurrentDir();
-
+extern wchar_t temp_path[MAX_PATH];
 
 #ifdef __cplusplus
 }
