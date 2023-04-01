@@ -20,7 +20,6 @@ all clean debug: $(SUBDIRS)
 $(SUBDIRS):
 	@chcp 65001 >nul 2>&1
 	@$(MAKE) -C $@ $(MAKECMDGOALS) --no-print-directory
-	@cmd /c echo.
 
 setup:
 	@$(MAKE) -C core\ $(MAKECMDGOALS)  --no-print-directory

@@ -56,7 +56,7 @@ LUART_LIB = -L$(LUART_PATH)\lib
 
 BUILD := release
 
-cflags.release = $(ARCH) -shared -s -Os -mfpmath=sse -mieee-fp -DWIDL_EXPLICIT_AGGREGATE_RETURNS -DLUART_TYPE=__decl(dllimport) -D__MINGW64__ $(LUART_INCLUDE) -static-libgcc -static-libstdc++ -fno-rtti -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh
+cflags.release = $(ARCH) -shared -s -Os -mfpmath=sse -mieee-fp -DWIDL_EXPLICIT_AGGREGATE_RETURNS -DLUART_TYPE=__decl(dllimport) -D__MINGW64__ $(LUART_INCLUDE) -static-libgcc -static-libstdc++ -fno-exceptions -fno-rtti -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh
 ldflags.release= -Wl,--no-insert-timestamp $(LUART_LIB)
 cflags.debug = $(ARCH) -shared -g -O0 -mfpmath=sse -mieee-fp -DDEBUG -DWIDL_EXPLICIT_AGGREGATE_RETURNS -D__MINGW64__ $(LUART_INCLUDE)
 ldflags.debug= $(LUART_LIB)
@@ -100,7 +100,9 @@ clean:
 ifneq ($(wildcard $(MODULE).dll),)
 	@$(RM) $(MODULE).dll >nul 2>&1
 endif
+	@echo|set /p dummy="▸  Cleaning $(MODULE) module... "
 	@$(RM) $(SRC) >nul 2>&1
+	@echo ✓
 ifneq ($(wildcard $(LUART_PATH)\modules\$(MODULE)\$(MODULE).dll),)
 	@$(RM) $(LUART_PATH)\modules\$(MODULE)\$(MODULE).dll >nul 2>&1
 endif

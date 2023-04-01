@@ -98,7 +98,9 @@ clean:
 ifneq ($(wildcard $(MODULE).dll),)
 	@$(RM) $(MODULE).dll >nul 2>&1
 endif
+	@echo|set /p dummy="▸  Cleaning $(MODULE) module... "
 	@$(RM) $(SRC) >nul 2>&1
+	@echo ✓
 ifneq ($(wildcard $(LUART_PATH)\modules\$(MODULE)\$(MODULE).dll),)
 	@$(RM) $(LUART_PATH)\modules\$(MODULE)\$(MODULE).dll >nul 2>&1
 endif
