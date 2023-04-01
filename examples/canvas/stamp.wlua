@@ -12,7 +12,6 @@ c.sync = false
 
 -- Create an Image instance from file
 local img = c:Image("LuaRT.png")
-
 win:show()
 
 -- Flag to draw on the canvas or not
@@ -35,7 +34,7 @@ function c:onHover(x, y)
     -- draws only when a previous mouse click occured
 	if self.drawing then
 		self:begin()
-		img:draw(x-img.width/2*0.4, y-img.height/2*0.4, 0.6, 0.4)
+		img:draw(x-img.width/2*0.4, y-img.height/2*0.4, 0.4, 0.6)
 		self:flip()		
 	end
 end
