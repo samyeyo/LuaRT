@@ -14,8 +14,9 @@
 
 #define MINIZ_HEADER_FILE_ONLY
 #include <compression\lib\zip.h>
-#define CMEMLIBS "Memory DLL"
+#include "resources\resource.h"
 
+#define CMEMLIBS "DLL binary modules"
 
 typedef void (*voidf)(void);
 extern int Zip_extract(lua_State *L); 
@@ -132,59 +133,17 @@ LUA_API int luaL_embedclose(lua_State *L) {
 
 //-------------------------------------------------[luaL_embedopen() luaRT C API]
 LUA_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
-  DWORD read;
-  HANDLE hFile;
-  BYTE buff[4096];
-  IMAGE_DOS_HEADER* dosheader;
-#ifdef _WIN64
-#define HEADERS	IMAGE_NT_HEADERS64
-#else
-#define HEADERS	IMAGE_NT_HEADERS32
-#endif
-  HEADERS* header;
-  DWORD maxpointer = 0, exesize = 0;
-  int i;  
-  DWORD filesize;
-  size_t fssize;
-  IMAGE_SECTION_HEADER* sectiontable;
-
-  luaL_embedclose(L);
-  hFile = CreateFileW(exename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(INVALID_HANDLE_VALUE == hFile)
-      return FALSE;
-  ReadFile(hFile, buff, sizeof(buff), &read, NULL);
-  dosheader = (IMAGE_DOS_HEADER*)buff;
-
-  // Locate PE header
-  header = (HEADERS*)((DWORD_PTR)buff + dosheader->e_lfanew);
-  if(dosheader->e_magic != IMAGE_DOS_SIGNATURE || header->Signature != IMAGE_NT_SIGNATURE) {
-    CloseHandle(hFile);
-    return FALSE;
-  }
-  sectiontable = (IMAGE_SECTION_HEADER*)((BYTE*)header + sizeof(HEADERS));
-  for(i = 0; i < header->FileHeader.NumberOfSections; i++) {
-    if(sectiontable->PointerToRawData > maxpointer) {
-      maxpointer = sectiontable->PointerToRawData;
-      exesize = sectiontable->PointerToRawData +
-        sectiontable->SizeOfRawData;
-    }
-    sectiontable++;
-  }
-  filesize = GetFileSize(hFile, NULL);
-  SetFilePointer(hFile, exesize, NULL, FILE_BEGIN);
-  if ((fssize = filesize - exesize)) {
-	  datafs = (BYTE*)malloc(fssize);
-	  ReadFile(hFile, datafs, fssize, &read, NULL);
-	  CloseHandle(hFile);
-	  if ((fs = open_fs(datafs, fssize))) {
-	  	lua_getglobal(L, "package");
-      lua_getfield(L, -1, "searchers");
-      lua_pushcfunction(L, luart_fsloader);
-      lua_rawseti(L, -2, luaL_len(L, -2)+1);
-      lua_pop(L, 2);
-      return TRUE;
-	  }
-    free(datafs);
+  HRSRC hres = FindResource(NULL, MAKEINTRESOURCE(EMBED), RT_RCDATA);
+  HGLOBAL hdata = LoadResource(NULL, hres);
+  datafs = LockResource(hdata);
+  size_t size = SizeofResource(NULL, hres);
+  if (datafs && (size > 2) && (fs = open_fs(datafs, size))) {
+	  lua_getglobal(L, "package");
+    lua_getfield(L, -1, "searchers");
+    lua_pushcfunction(L, luart_fsloader);
+    lua_rawseti(L, -2, luaL_len(L, -2)+1);
+    lua_pop(L, 2);
+    return TRUE;
   }
   return FALSE;
 }

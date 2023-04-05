@@ -33,6 +33,28 @@ static WCHAR exename[MAX_PATH];
 #include <stdint.h>
 #include <File.h>
 
+int link(lua_State *L) {
+	wchar_t *fname = lua_towstring(L, 1);
+	wchar_t *fexe = lua_towstring(L, 2);
+	HANDLE hFile = CreateFileW(fname, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD FileSize = GetFileSize(hFile, NULL);
+	BYTE *pBuffer = calloc(1, FileSize);
+	DWORD dwBytesRead;
+	HANDLE hExeFile;
+	BOOL result = FALSE;
+	
+	if (ReadFile(hFile, pBuffer, FileSize, &dwBytesRead, NULL)) {
+		hExeFile = BeginUpdateResourceW(fexe, FALSE);
+		result = UpdateResource(hExeFile, RT_RCDATA, MAKEINTRESOURCE(100), MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), (LPVOID)pBuffer, FileSize);
+	}
+	EndUpdateResource(hExeFile, FALSE);
+	CloseHandle(hFile);
+	free(pBuffer);
+	free(fname);
+	free(fexe);
+	return result;
+}
+
 #pragma pack(2)
 struct resource_directory
 {
@@ -198,8 +220,8 @@ __attribute__((used)) int main() {
 
 	atexit(lua_stop);
 #ifdef RTC
-	lua_pushcfunction(L, update_exe_icon);
-	lua_setglobal(L, "seticon");
+	lua_register(L, "seticon", update_exe_icon);
+	lua_register(L, "link", link);
 #endif
 	if (argc == 1 && !is_embeded)
 		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2023, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");

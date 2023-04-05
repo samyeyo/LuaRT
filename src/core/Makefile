@@ -48,7 +48,7 @@ endif
  endif
 endif
 ifeq ($(PLATFORM), x64)
- ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion -fno-unwind-tables -fno-asynchronous-unwind-tables 
+ ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-int-conversion
  _ARCH = x64
  TARGET = pe-x86-64
 ifneq (${BUILD}, debug)
@@ -203,12 +203,12 @@ $(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.e
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\..\tools\rtc\src >nul
-	@windres $(DEFINES_RES) -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
+	@windres $(DEFINES_RES) -D RTC -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
 	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)
 	@luart.exe ..\..\tools\rtc\src\rtc.lua -o rtc.exe ..\..\tools\rtc\src >nul
 	@echo|set /p dummy="■"
-	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
+	@windres $(DEFINES_RES) -D RTC -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
 	@$(CC) -mwindows $(CFLAGS) $(UI_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart.exe -DRTC -DRTWIN luart.c -llua54 $(LIBS) -lgdi32 $(LDSCRIPT)
 	@echo|set /p dummy="■"

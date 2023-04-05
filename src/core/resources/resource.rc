@@ -5,6 +5,13 @@
 #ifdef RTWIN
 WINICON ICON "desktop.ico"
 #endif
+
+#ifdef RTC
+EMBED RCDATA {
+   0
+}
+#endif
+
 1 24 "Application.manifest.xml"
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
