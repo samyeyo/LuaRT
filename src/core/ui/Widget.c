@@ -533,6 +533,16 @@ LUA_METHOD(Widget, hide) {
 	return 0;
 }
 
+LUA_METHOD(Widget, tofront) {
+	SetWindowPos(lua_self(L, 1, Widget)->handle, lua_gettop(L) > 1 ? lua_self(L, 2, Widget)->handle : HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOREDRAW | SWP_NOSIZE);
+	return 0;
+}
+
+LUA_METHOD(Widget, toback) {
+	SetWindowPos(lua_self(L, 1, Widget)->handle, lua_gettop(L) > 1 ? lua_self(L, 2, Widget)->handle : HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	return 0;
+}
+
 void do_align(Widget *w) {
 	if (w->align >= 0) {
 		RECT r, rect;
@@ -1380,6 +1390,8 @@ luaL_Reg Widget_methods[] = {
 	{"set_align",		Widget_setalign},
 	{"get_parent",		Widget_getparent},
 	{"center",			Widget_center},
+	{"tofront",			Widget_tofront},
+	{"toback",			Widget_toback},
 	{NULL, NULL}
 };
 
