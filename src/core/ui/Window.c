@@ -258,7 +258,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			case WM_SIZE: {
 				RECT sbRect;
 				UINT sbheight;				
-				if (w->status) {
+				if (w->status && IsWindowVisible(hWnd)) {
 					GetWindowRect(w->status, &sbRect);
 					sbheight = sbRect.bottom - sbRect.top;
 					SetWindowPos(w->status, HWND_TOP, 0, HIWORD(lParam)-sbheight, LOWORD(lParam), sbheight, SWP_SHOWWINDOW);
@@ -312,7 +312,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 }
 
 static const char *styles[] = {  "dialog", "fixed", "float", "raw", "single", NULL };
-static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_EX_PALETTEWINDOW, WS_POPUP, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX};
+static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_EX_PALETTEWINDOW, WS_POPUP, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX};
 
 extern int size(Widget *w, lua_State *L, int offset_from, int offset_to, BOOL set, LONG value, BOOL iswidth);
 
@@ -353,9 +353,9 @@ LUA_CONSTRUCTOR(Window) {
 					} 
 					w->style = WS_POPUP; break;
 		case 0:		w->style = WS_CAPTION | WS_THICKFRAME; break;
-		case 1:		SetWindowLong(w->handle, GWL_STYLE, GetWindowLongPtr(w->handle, GWL_STYLE) & ~WS_MAXIMIZEBOX); 
 		case 4:		
-		case 2:
+		case 1:		SetWindowLong(w->handle, GWL_STYLE, GetWindowLongPtr(w->handle, GWL_STYLE) & ~WS_MAXIMIZEBOX); 
+		case 2:		
 		default:	w->style = WS_CAPTION;
 	}
   	AdjustWindowRectEx(&r, GetWindowLongPtr(w->handle, GWL_STYLE), FALSE, GetWindowLongPtr(w->handle, GWL_EXSTYLE));
