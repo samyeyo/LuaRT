@@ -504,10 +504,20 @@ void *lua_checkcinstancebyname(lua_State *L, int idx, const char *name) {
 
 void *lua_checkcinstance(lua_State *L, int idx, luart_type t) {
 	void *p;
+	if (l_unlikely(lua_type(L, idx) == LUA_TNONE))
+		goto error;
 	if ( (p = lua_iscinstance(L, idx, t)) )
 		return p;
-	else
-		luaL_typeerror(L, idx, "object instance");
+	else 
+error:	
+	{
+		char typename[256];
+		lua_getfield(L, LUA_REGISTRYINDEX, LUART_OBJECTS);
+		lua_rawgeti(L, -1, t);
+		_snprintf(typename, 128, "%s instance", lua_tostring(L, -1));
+		lua_pop(L, 2);
+		luaL_typeerror(L, idx, typename);
+	}
 	return NULL;
 }
 
