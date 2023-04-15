@@ -36,7 +36,7 @@ SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x86-dll.ldscript
 endif
 
 ifeq ($(PLATFORM),x64)
-ARCH = -m64 -mavx2 -mfma -fno-unwind-tables -fno-asynchronous-unwind-tables
+ARCH = -m64 -mavx2 -mfma
 SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x64-dll.ldscript
 endif
 
@@ -48,7 +48,7 @@ $(error )
 endif
 endif
 
-SRC= src\audio.o src\sound.o
+SRC= src\audio.o src\sound.o src\ma_reverb_node.o
 
 LUART_INCLUDE = -I$(LUART_PATH)\include
 LUART_LIB = -L$(LUART_PATH)\lib 

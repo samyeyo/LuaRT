@@ -10,6 +10,7 @@
 
 #include <luart.h>
 #include "miniaudio.h"
+#include "ma_reverb_node.h"
 
 
 //---------------- Sound object
@@ -17,18 +18,18 @@
 typedef struct {
     luart_type  type;
 	  ma_sound    sound;
-    ma_result   r;
-    BOOL        echo;
+    ma_delay_node *delayNode;
+    ma_reverb_node *reverbNode;
 } Sound;
 
-#define vector_objproperty(obj, property, member, func) \
+#define vector_objproperty(obj, idx, property, member, func) \
 LUA_PROPERTY_GET(obj, property) { \
   ma_vec3f v = ma_sound_get_##func(&lua_self(L, 1, Sound)->sound); \
   return set_vector(L, &v, member); \
 } \
 \
 LUA_PROPERTY_SET(obj, property) { \
-  ma_vec3f v = get_vector(L, member); \
+  ma_vec3f v = get_vector(L, idx, member); \
   ma_sound_set_##func(&lua_self(L, 1, Sound)->sound, v.x, v.y, v.z); \
   return 0; \
 } 

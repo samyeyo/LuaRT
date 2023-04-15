@@ -9,8 +9,17 @@
 #include <luart.h>
 #include <File.h>
 
+#define STB_VORBIS_HEADER_ONLY
+#include "stb_vorbis.c"   
+
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
+
+#undef STB_VORBIS_HEADER_ONLY
+#include "stb_vorbis.c"
+
+#undef L
+
 #include "audio.h"
 #include "sound.h"
 
@@ -18,8 +27,7 @@ const char *vector_members[] = { "x", "y", "z" };
 const char *cone_members[] = { "inangle", "outangle", "outgain" };
 
 ma_engine *engine;
-ma_delay_node *delayNode = NULL;
-static float volume = 0, gain = 0;
+static float volume = 1, gain = 0;
 
 int set_vector(lua_State *L, ma_vec3f *v, const char **members) {
   lua_createtable(L, 3, 0);
@@ -31,23 +39,23 @@ int set_vector(lua_State *L, ma_vec3f *v, const char **members) {
   return 1;
 }
 
-ma_vec3f get_vector(lua_State *L, const char **members) {
+ma_vec3f get_vector(lua_State *L, int idx, const char **members) {
   ma_vec3f v;
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checktype(L, idx, LUA_TTABLE);
   for (int i = 0; i < 3; i++) {
     lua_pushstring(L, members[i]);
-    if (lua_rawget(L, 1) == LUA_TNUMBER) {
+    if (lua_rawget(L, idx) == LUA_TNUMBER) {
       *(float*)(((char*)&v)+(i*sizeof(float))) = lua_tonumber(L, -1);
       lua_pop(L, 1);
-    } else luaL_argerror(L, 2, "(array table {x, y, z} expected)");
+    } else luaL_argerror(L, 2, members == vector_members ? "table {x, y, z} expected" : "table {inangle, outangle, outgain} expected");
   }    
   return v;
 }
 
-vector_property(audio, position, vector_members, position);
-vector_property(audio, direction, vector_members, direction);
-vector_property(audio, velocity, vector_members, velocity);
-vector_property(audio, worldup, vector_members, world_up);
+vector_property(audio, 1, position, vector_members, position);
+vector_property(audio, 1, direction, vector_members, direction);
+vector_property(audio, 1, velocity, vector_members, velocity);
+vector_property(audio, 1, worldup, vector_members, world_up);
 
 LUA_PROPERTY_GET(audio, cone) {
   ma_vec3f v;
@@ -56,7 +64,7 @@ LUA_PROPERTY_GET(audio, cone) {
 }
 
 LUA_PROPERTY_SET(audio, cone) { 
-  ma_vec3f v = get_vector(L, cone_members); 
+  ma_vec3f v = get_vector(L, 2, cone_members); 
   ma_engine_listener_set_cone(engine, 0, v.x, v.y, v.z); 
   return 0; 
 } 
@@ -96,7 +104,7 @@ LUA_PROPERTY_GET(audio, device) {
 
 LUA_PROPERTY_SET(audio, gain) {
   gain = lua_tonumber(L, 1);
-  ma_engine_set_volume(engine, gain);
+  ma_engine_set_gain_db(engine, gain);
   return 1;
 }
 
@@ -108,25 +116,6 @@ LUA_METHOD(audio, play) {
   if (r != MA_SUCCESS)
     luaL_error(L, ma_result_description(r));
   lua_pushboolean(L, r == MA_SUCCESS);
-  return 1;
-}
-
-LUA_METHOD(audio, echo) {
-  ma_result result;
-  ma_delay_node_config delayNodeConfig;
-  ma_uint32 sampleRate;
-
-  if (delayNode) {
-    ma_delay_node_uninit(delayNode, NULL);
-    free(delayNode);
-  }
-  delayNode = calloc(1, sizeof(delayNode));
-  sampleRate = ma_engine_get_sample_rate(engine);
-  delayNodeConfig = ma_delay_node_config_init(ma_engine_get_channels(engine), ma_engine_get_sample_rate(engine), (ma_uint32)(sampleRate * luaL_checknumber(L, 1)), luaL_checknumber(L, 2));
-  result = ma_delay_node_init(ma_engine_get_node_graph(engine), &delayNodeConfig, NULL, delayNode);
-  if (result == MA_SUCCESS)
-    result =ma_node_attach_output_bus(delayNode, 0, ma_engine_get_endpoint(engine), 0);  
-  lua_pushboolean(L, result == MA_SUCCESS);
   return 1;
 }
 
@@ -149,7 +138,6 @@ END
 
 MODULE_FUNCTIONS(audio)
   METHOD(audio, play)
-  METHOD(audio, echo)
 END
 
 //------------------------------- audio module finalizer
@@ -157,10 +145,6 @@ END
 int audio_finalize(lua_State *L)
 { 
   if (engine) {
-    if (delayNode) {
-      ma_delay_node_uninit(delayNode, NULL);    
-      free(delayNode); 
-    }
     ma_engine_uninit(engine);
     free(engine); 
     engine = NULL;
@@ -213,9 +197,6 @@ BOOL WINAPI DllMain( IN HINSTANCE hDllHandle, DWORD nReason, LPVOID Reserved ) {
       DisableThreadLibraryCalls( hDllHandle );
       break;
     case DLL_PROCESS_DETACH:
-      if (delayNode)
-        ma_delay_node_uninit(delayNode, NULL);   
-      free(delayNode);
       if (engine) {
         ma_engine_uninit_rescue(engine);
         free(engine);
