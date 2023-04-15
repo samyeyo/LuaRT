@@ -37,7 +37,7 @@ SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x86-dll.ldscript
 endif
 
 ifeq ($(PLATFORM),x64)
-ARCH = -m64 -mavx2 -mfma -fno-unwind-tables -fno-asynchronous-unwind-tables -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
 SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x64-dll.ldscript
 endif
 
