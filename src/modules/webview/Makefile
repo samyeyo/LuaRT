@@ -1,5 +1,5 @@
 # | Webview module for LuaRT
-# | Luart.org, Copyright (c) Tine Samir 2022.
+# | Luart.org, Copyright (c) Tine Samir 2023.
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
 # | Makefile
