@@ -88,20 +88,6 @@ static int luart_fsloader(lua_State *L) {
               }
             }
             free(tmp);
-        // HMEMORYMODULE hm;
-        // zip_entry_read(fs, &buff, &size);
-        // if ( (hm = MemoryLoadLibrary(buff, size)) ) {   
-        //   _snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
-        //   lua_CFunction f = (lua_CFunction)(voidf)MemoryGetProcAddress(hm, fname);
-        //   if (f) {
-        //     lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS);
-        //     lua_pushlightuserdata(L, (void*)hm);
-        //     lua_rawseti(L, -2, luaL_len(L, -2)+1);
-        //     lua_pushcfunction(L, f);  
-        //     zip_entry_close(fs);
-        //     goto done;          
-        //   } else MemoryFreeLibrary(hm);
-        // }
     		zip_entry_close(fs);
       }
       lua_pushfstring(L, "no embedded module '%s.dll' found", modname);
@@ -119,7 +105,6 @@ LUA_API int luaL_embedclose(lua_State *L) {
     wchar_t *path;
     lua_pushnil(L);
     while (lua_next(L, -2)) {
-      // MemoryFreeLibrary(lua_touserdata(L, -1));
       path = lua_towstring(L, -2);
       DeleteFileW(path);
       free(path);
@@ -127,7 +112,6 @@ LUA_API int luaL_embedclose(lua_State *L) {
       lua_pop(L, 1);
     }
   }
-  free(datafs);
 	return 0;
 }
 
