@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
+ | Luart.org, Copyright (c) Tine Samir 2023.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Widget.c | LuaRT Widget object implementation
@@ -534,12 +534,15 @@ LUA_METHOD(Widget, hide) {
 }
 
 LUA_METHOD(Widget, tofront) {
-	SetWindowPos(lua_self(L, 1, Widget)->handle, lua_gettop(L) > 1 ? lua_self(L, 2, Widget)->handle : HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOREDRAW | SWP_NOSIZE);
+	SetWindowPos(lua_self(L, 1, Widget)->handle, lua_gettop(L) > 1 ? lua_self(L, 2, Widget)->handle : HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	return 0;
 }
 
 LUA_METHOD(Widget, toback) {
-	SetWindowPos(lua_self(L, 1, Widget)->handle, lua_gettop(L) > 1 ? lua_self(L, 2, Widget)->handle : HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	Widget *w = lua_gettop(L) > 1 ? lua_self(L, 2, Widget) : NULL;
+	SetWindowPos(lua_self(L, 1, Widget)->handle,  w ? w->handle : HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	if (w)
+		InvalidateRect(w->handle, NULL, TRUE);
 	return 0;
 }
 
