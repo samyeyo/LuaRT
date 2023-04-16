@@ -1,6 +1,6 @@
 ----------------------------------------------------------
 LuaRT - comprehensive Windows framework to develop in Lua
-Copyright (c) 2022 Samir Tine. All rights reserved.
+Copyright (c) 2023 Samir Tine. All rights reserved.
 http://www.luart.org/
 ----------------------------------------------------------
 LuaRT is free software distributed under the terms of the MIT license reproduced below; 
@@ -17,10 +17,10 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTH
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ----------------------------------
-LuaRT includes code from Lua 5.4.4
+LuaRT includes code from Lua 5.4.5
 ----------------------------------
 
-Copyright © 1994–2022 Lua.org, PUC-Rio.
+Copyright © 1994–2023 Lua.org, PUC-Rio.
 Lua is free software distributed under the terms of the MIT license reproduced below; 
 it may be used for any purpose, including commercial purposes, at absolutely no cost without having to ask us.
 The only requirement is that if you do use Lua, then you should give us credit by including the appropriate copyright notice somewhere in your product or its documentation.
@@ -65,8 +65,6 @@ THE SOFTWARE.
 LuaRT includes code from zip
 --------------------------------
 
-ZIP reading/writing/appending, PNG writing by Rich Geldreich.
-
 zip - a portable (OSX/Linux/Windows), simple zip library written in C by kuba.
 
 This is free and unencumbered software released into the public domain.
@@ -106,10 +104,41 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
--------------------------------------
-LuaRT includes code from MemoryModule
--------------------------------------
-MPL 2.0 License
-https://www.mozilla.org/en-US/MPL/2.0/
+----------------------------------
+LuaRT includes code from miniaudio
+----------------------------------
+MIT License
+Copyright 2023 David Reid
 
-Copyright (c) 2004-2015 by Joachim Bauch, https://github.com/fancycode/MemoryModule
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+-----------------------------------
+LuaRT includes code from stb_vorbis
+-----------------------------------
+
+Public domain
+Original version written by Sean Barrett in 2007.
+Originally sponsored by RAD Game Tools. Seeking implementation
+sponsored by Phillip Bennefall, Marc Andersen, Aaron Baker,Elias Software, 
+Aras Pranckevicius, and Sean Barrett.
+
+-------------------------------
+LuaRT includes code from veblib
+-------------------------------
+
+Public domain
+Reverb library by Philip Bennefall
