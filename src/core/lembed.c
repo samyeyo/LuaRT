@@ -106,9 +106,9 @@ LUA_API int luaL_embedclose(lua_State *L) {
     lua_pushnil(L);
     while (lua_next(L, -2)) {
       path = lua_towstring(L, -2);
+      FreeLibrary(lua_touserdata(L, -1));
       DeleteFileW(path);
       free(path);
-      FreeLibrary(lua_touserdata(L, -1));
       lua_pop(L, 1);
     }
   }
