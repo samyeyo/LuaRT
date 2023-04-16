@@ -6,11 +6,11 @@
  | Image.cpp | LuaRT Canvas Image object
 */
 
-extern "C" {
-    #include <luart.h>
-    #include <File.h>
-    #include <Widget.h>
-}
+
+#include <luart.h>
+#include <File.h>
+#include <Widget.h>
+
 #include "d2d1.h"
 #include "Image.h"
 #include "Canvas.h"

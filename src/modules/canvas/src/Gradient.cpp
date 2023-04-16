@@ -6,10 +6,8 @@
  | Gradient.cpp | LuaRT Canvas Gradient objects implementation
 */
 
-extern "C" {
-    #include <luart.h>
-    #include <File.h>
-}
+#include <luart.h>
+#include <File.h>
 
 #include <vector>
 #include "d2d1.h"

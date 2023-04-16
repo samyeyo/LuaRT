@@ -9,12 +9,12 @@
 
 #include <stddef.h>
 #include <string.h>
-extern "C" {
-	#include <luart.h>
-	#include <Widget.h>
-	#include <File.h>
-	#include <Zip.h>	
-}
+
+#include <luart.h>
+#include <Widget.h>
+#include <File.h>
+#include <Zip.h>	
+
 #include <windows.h>
 #include "handler.h"
 

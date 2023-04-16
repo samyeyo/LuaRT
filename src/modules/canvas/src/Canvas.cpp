@@ -6,11 +6,9 @@
  | Canvas.cpp | LuaRT binary module
 */
 
-extern "C" {
 #include <luart.h>
 #include <Widget.h>
 #include <windows.h>
-}
 
 #include "Direct2D.h"
 #include "Canvas.h"
