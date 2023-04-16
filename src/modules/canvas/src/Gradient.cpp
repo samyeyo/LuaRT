@@ -18,25 +18,26 @@ extern "C" {
 #include "Direct2D.h"
 
 luart_type TLinearGradient, TRadialGradient;
+static std::vector<D2D1_GRADIENT_STOP> stops;
 
 
 static D2D1_GRADIENT_STOP *table_togradient(lua_State *L, int idx, UINT *count) {
-  std::vector<D2D1_GRADIENT_STOP> stops;
   D2D1_GRADIENT_STOP stop;
-  lua_Integer rgba;
+  UINT32 rgba;
 
-  lua_pushnil(L);
+    stops.clear();
+    lua_pushnil(L);
 	while (lua_next(L, idx)) {
 		if (lua_type(L, -2) != LUA_TNUMBER)
 			luaL_error(L, "invalid gradient table (number expected found %s)", luaL_typename(L, -1));
-        stop.position = static_cast<FLOAT>(lua_tonumber(L, -2));
-        rgba = lua_tointeger(L, -1);
+        stop.position = (float)(lua_tonumber(L, -2));
+        rgba = (UINT32) lua_tointeger(L, -1);
         stop.color = D2D1::ColorF(GetR(rgba)/255, GetG(rgba)/255, GetB(rgba)/255, GetA(rgba)/255);		
         stops.push_back(stop);
 		lua_pop(L, 1);
 	}
-  *count = stops.size();
-  return &stops[0];
+    *count = stops.size();
+    return &stops[0];
 }
 
 //-------------------------------------[ LinearGradient Constructor ]
