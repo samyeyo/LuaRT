@@ -105,7 +105,7 @@ default: toolchain
 
 infolua:
 	@cmd /c echo.
-	@echo|set /p dummy="▸  Building Lua 5.4.4 VM          "
+	@echo|set /p dummy="▸  Building Lua 5.4.5 VM          "
 
 infocore:
 	@cmd /c echo.
