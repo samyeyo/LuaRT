@@ -10,7 +10,6 @@
 # | Usage (default release build)			 : make
 # | Usage (debug build) 		  			 : make debug
 # | Usage (release with tools)		 		 : make all
-# | Usage (build only rtc) 				 	 : make rtc
 # | Usage (build setup executable)	  		 : make setup
 # | Usage (build tools)				  		 : make tools
 # | Usage (clean all)	 				 	 : make clean
@@ -28,8 +27,8 @@ PLATFORM ?= x64
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 3
-LUART_RELEASE= 2
+LUART_MINOR= 4
+LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 CLEAN=clean
 
@@ -220,7 +219,7 @@ $(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.e
 	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1 
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-tools: infotools rtc
+tools: infotools $(DEST)\rtc.exe $(DEST)\wrtc.exe
 	@$(CC) $(CFLAGS) -DAIO -c lrtapi.c -o lrtapi.o
 	@echo|set /p dummy="■"
 	@$(CC) $(CFLAGS) -DAIO -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT)
@@ -237,10 +236,17 @@ tools: infotools rtc
 	@windres $(DEFINES_RES) -D RTWIN -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
 	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe -mconsole luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)	
+	@echo|set /p dummy="■"
 	@-copy /Y luart.exe "..\..\tools\LuaRT-Studio\bin\luart.exe" >nul	
 	@-copy /Y ..\..\bin\wrtc.exe "..\..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
 	@-copy /Y lua54.dll "..\..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
+	@echo|set /p dummy="■"
 	@$(RM) lua54.dll
+	@rmdir  "..\..\tools\LuaRT-Studio\examples\" /s /q
+	@xcopy "..\..\examples"  "..\..\tools\LuaRT-Studio\examples\" /s /e /y >nul
+	@echo|set /p dummy="■"
+	@xcopy "..\..\modules"  "..\..\tools\LuaRT-Studio\modules\" /s /e /y >nul
+	@echo|set /p dummy="■"
 	@cmd /c echo.
 
 clean:	
