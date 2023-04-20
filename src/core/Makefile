@@ -158,8 +158,10 @@ x86: clean
 setup: toolchain tools infosetup
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
 	@echo|set /p dummy="■"
-	@$(CC) -mwindows $(CFLAGS) -DRTWIN $(LUA_O) $(UI_O) $(LIB_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LIBS) -lgdi32
+	@$(CC) -mwindows $(CFLAGS) -DRTC -DRTWIN $(LUA_O) $(UI_O) $(LIB_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LIBS) -lgdi32
+	@$(CC) $(CFLAGS) $(LDFLAGS) -DLUART_STATIC -DRTC -o luart-static.exe $(BASE_O) $(STATIC_O) -mconsole luart.c $(LDFLAGS) $(LIBS) $(LDSCRIPT)
 	@echo|set /p dummy="■"
+	@rmdir  "..\..\tools\LuaRT-Studio\modules\" /s /q
 	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
 	@cmd /c echo.

@@ -70,3 +70,5 @@ dist:removeall()
 
 file_add("../../setup/install.wlua", "local VERSION = '"..VERSION.."'")
 sys.cmd('luart-static.exe ../../tools/rtc/src/rtc.lua -s -w -o "LuaRT-'..VERSION..'-'..PLATFORM..'.exe" ../../setup/install.wlua ../../setup >nul', false)
+
+
