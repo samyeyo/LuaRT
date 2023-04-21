@@ -153,7 +153,7 @@ LUA_METHOD(sys, halt) {
 
 //-------------------------------------[ sys.lasterror ]
 int luaL_getlasterror(lua_State *L, DWORD err) {
-	char* msg = 0;
+	wchar_t* msg = 0;
 	HMODULE mod = NULL;
 	DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
     if (err) {
@@ -161,15 +161,15 @@ int luaL_getlasterror(lua_State *L, DWORD err) {
     		mod = GetModuleHandle("wininet.dll");
     		flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE;
     		if (err == ERROR_INTERNET_EXTENDED_ERROR) {
-    			char errmsg[MAX_PATH];
+    			wchar_t errmsg[MAX_PATH];
     			DWORD len = MAX_PATH;
-				InternetGetLastResponseInfoA( &err, errmsg, &len );
-				lua_pushlstring(L, errmsg, len);
+				InternetGetLastResponseInfoW( &err, errmsg, &len );
+				lua_pushlwstring(L, errmsg, len);
 				return 1;
     		}
     	}
-		size_t size = FormatMessageA(flags, mod, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&msg, 0, NULL);
-		lua_pushlstring(L, msg, size);
+		size_t size = FormatMessageW(flags, mod, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&msg, 0, NULL);
+		lua_pushlwstring(L, msg, size);
 		LocalFree(msg);
 	}
 	else
