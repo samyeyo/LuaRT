@@ -106,5 +106,5 @@ LuaRT is copyright (c) 2023 Samir Tine.
 LuaRT is open source, released under the MIT License.
 See full copyright notice in the LICENSE.txt file.
 
-[title]: examples/LuaRT.png
+[title]: examples/ui/LuaRT.png
 [banner]: https://luart.org/img/features.png
