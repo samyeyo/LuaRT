@@ -1,3 +1,76 @@
+## LuaRT v1.4.0 (Apr 21 2023)
+
+#### LuaRT codebase
+
+	- Rework of the LuaRT codebase
+	- Updated build system to build all or part of LuaRT
+	- Examples are now sorted by modules
+	- The source code is now separated between the core framework and the other modules
+	- The core framework includes the LuaRT runtime and the toolchain.
+	- The core framework source code is in the `src\core\` folder
+	- Complementary modules source code is in the `src\modules\` folder
+
+#### Lua VM
+
+	- Updated: LuaRT is now using Lua 5.4.5
+
+#### LuaRT C API
+
+	- New: Macros for easy registering modules/objects functions and properties
+	- New: `luaL_getlasterror()` to push last Windows error message on Lua stack
+	- Updated: `luaL_checkscinstance()` now returns a more explicit error message
+	- Fixed: Headers can now be included from C++
+
+#### LuaRT Studio v1.4.0
+
+	- Updated: LuaRT Studio now uses the LuaRT 1.4.0 toolchain
+
+#### rtc v1.4.0
+
+	- New: `-l` option to embed binary modules in the executable
+	- Updated : `wrtc` has a new field to embed modules
+
+### `embed` module
+	
+	- Fixed: New mechanism to embed files when compiling LuaRT scripts to executables, compatible with x86 and x64 (Fixes #66 and #67)
+
+### `sys` module
+	
+	- New: `sys.fsentry()` function that returns a `Directory` or `File` object by name
+	
+### `ui` module
+	
+	- New: Window have now an `onKey()` event, thrown when the user press a key
+	- New: Widgets have now an `onClick()` event (except Radiobutton and Checkbox)
+	- New: Window.fullscreen property, to switch the Window to full screen
+	- New: Widgets now have `tofront()` and `toback()` methods to control their Z position
+	- Updated: Window `"single"` style no longer allows the Window to be maximized
+	- Updated: Default `Entry.height` increased due to Segoe UI font
+	- Fixed: Closing Window with status bar don't make it showing again when closing (Fixes #68)
+	- Fixed: Custom widgets events don't crash anymore in case of Lua error (Fixes #65)
+	- Fixed: `Tab.selected` now really selects the specifed TabItem (Fixes #64)
+
+### `canvas` module
+
+	- New binary module `canvas` that provides a new `ui` widget as a drawing surface, using Direct2D
+	- You can now draw text, lines, circles, rectangles, images, with colors, gradients and transparency
+	- New documentation and examples for the `canvas` module
+
+### `audio` module
+
+	- New binary module `audio` for audio playback
+	- You can now play music and sounds encoded in WAV, MP3, FLAC, and OGG Vorbis
+	- New documentation and examples for the `audio` module
+
+### `Webview` module
+
+	- Webview module is now part of the LuaRT codebase
+
+#### Other
+
+	- Updated: Installer button now include platform version (x86/x64)
+
+
 ## LuaRT v1.3.2 Bugfix (Feb 19 2023)
 
 #### LuaRT Studio
