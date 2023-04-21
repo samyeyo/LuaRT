@@ -1,6 +1,5 @@
 local ui = require "ui"
 require "canvas"
-require "console"
 
 -- create a simple Canvas 
 local win = ui.Window("Canvas.point sample", 320, 240)
