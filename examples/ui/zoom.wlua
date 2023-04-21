@@ -16,7 +16,7 @@ function win:onResize()
     button.y = img.y+img.height+20
 end
 
-img:load("LuaRT.png")
+img:load(sys.File(arg[1]).path.."\\LuaRT.png")
 win:center()
 button:hide()
 

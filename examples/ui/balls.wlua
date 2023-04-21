@@ -38,7 +38,7 @@ end
 
 for i=1, balls do  
   alpha[i]= alpha_Random(0, 360)
-  picture[i]= ui.Picture(win, "ball.png", math.random(200, 850), math.random(100, 500))
+  picture[i]= ui.Picture(win, sys.File(arg[1]).path.."\\ball.png", math.random(200, 850), math.random(100, 500))
 end		
 
 win:center()

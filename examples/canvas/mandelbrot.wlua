@@ -37,7 +37,7 @@ function c:onPaint()
       end
 
       if iteration < max_iterations then
-        self:point(col, row, ((iteration*3 << 24) | (iteration*2 << 16) | (iteration << 8) | 255))--iteration % 255 + 1)
+        self:point(col, row, ((iteration*3 << 24) | (iteration*2 << 16) | (iteration << 8) | 255))
       else
         self:point(col, row, 0)
       end

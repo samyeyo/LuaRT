@@ -24,7 +24,6 @@ function c:onPaint()
 	end
 	c:fillrect(125, 100, 175, 150, 0xCDB4DBFF)
 	c:fillellipse(185, 125, 25, 25, 0xe640407F)
-	c:flip()
 end
 
 repeat

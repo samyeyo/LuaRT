@@ -4,7 +4,7 @@ local win = ui.Window("Picture conversion example", 512, 380)
 win:status("")
 
 local img = ui.Picture(win, "")
-img:load("LuaRT.png")
+img:load(sys.File(arg[1]).path.."\\LuaRT.png")
 img:center()
 
 local button = ui.Button(win, "Save picture to...")
