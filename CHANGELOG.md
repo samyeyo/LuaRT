@@ -37,6 +37,7 @@
 ### `sys` module
 	
 	- New: `sys.fsentry()` function that returns a `Directory` or `File` object by name
+	- Fixed: `sys.error` property no longer returns strange characters in certain locales
 	
 ### `ui` module
 	
