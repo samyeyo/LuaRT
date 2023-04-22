@@ -68,6 +68,7 @@ typedef struct Widget {
 	HBRUSH		brush;
 	COLORREF	color;
 	int			align;
+	WINDOWPLACEMENT	wp;
 	void		*user;
 } Widget;
 

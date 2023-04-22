@@ -365,6 +365,7 @@ LUA_CONSTRUCTOR(Window) {
 	w->brush = GetSysColorBrush(COLOR_BTNFACE);
 	w->wtype = UIWindow;
 	w->align = -1;
+	w->wp.length = sizeof(WINDOWPLACEMENT);
 	w->hcursor = (HCURSOR)LoadCursor(NULL, IDC_ARROW);
 	ncm.cbSize = sizeof(NONCLIENTMETRICS);
 	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
@@ -404,7 +405,6 @@ LUA_METHOD(Window, showmodal) {
 LUA_PROPERTY_GET(Window, fullscreen) {
 	Widget *w = lua_self(L, 1, Widget);
 	HWND h = w->handle;
-	// DWORD flag = w->index ? WS_CAPTION : (WS_CAPTION | WS_THICKFRAME);
 
   	lua_pushboolean(L, !(GetWindowLongPtr(h, GWL_STYLE) & w->style));
 	return 1;
@@ -414,17 +414,18 @@ LUA_PROPERTY_SET(Window, fullscreen) {
 	Widget *w = lua_self(L, 1, Widget);
 	HWND h = w->handle;
 	DWORD dwStyle = GetWindowLongPtr(h, GWL_STYLE);
-	// DWORD flag = w->index ? WS_CAPTION : (WS_CAPTION | WS_THICKFRAME);
 
 	if (lua_toboolean(L, 2)) {
 		MONITORINFO mi;
 		mi.cbSize = sizeof(mi);
+		GetWindowPlacement(h, &w->wp);
 		SetWindowLongPtr(h, GWL_STYLE, dwStyle & ~w->style);
 		if (GetMonitorInfo(MonitorFromWindow(h, MONITOR_DEFAULTTOPRIMARY), &mi))
 			SetWindowPos(h, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom-mi.rcMonitor.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 	} else {
+		SetWindowPlacement(h, &w->wp);
 		SetWindowLongPtr(h, GWL_STYLE, dwStyle | w->style);
-		SetWindowPos(h, HWND_TOP, 640, 480, 640, 480, SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		SetWindowPos(h, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 	}
 	return 0;
 }
