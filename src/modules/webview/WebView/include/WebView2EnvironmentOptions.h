@@ -9,7 +9,7 @@
 #include <wrl/implements.h>
 
 #include "webview2.h"
-#define CORE_WEBVIEW_TARGET_PRODUCT_VERSION L"110.0.1587.40"
+#define CORE_WEBVIEW_TARGET_PRODUCT_VERSION L"112.0.1722.45"
 
 #define COREWEBVIEW2ENVIRONMENTOPTIONS_STRING_PROPERTY(p)     \
  public:                                                      \
@@ -207,7 +207,8 @@ class CoreWebView2EnvironmentOptionsBase
           ICoreWebView2EnvironmentOptions,
           ICoreWebView2EnvironmentOptions2,
           ICoreWebView2EnvironmentOptions3,
-          ICoreWebView2EnvironmentOptions4> {
+          ICoreWebView2EnvironmentOptions4,
+          ICoreWebView2EnvironmentOptions5> {
  public:
   CoreWebView2EnvironmentOptionsBase() {
     // Initialize the target compatible browser version value to the version
@@ -298,6 +299,9 @@ class CoreWebView2EnvironmentOptionsBase
     m_customSchemeRegistrationsCount = count;
     return S_OK;
   }
+
+  // ICoreWebView2EnvironmentOptions5
+  COREWEBVIEW2ENVIRONMENTOPTIONS_BOOL_PROPERTY(EnableTrackingPrevention, true)
 };
 
 template <typename allocate_fn_t,

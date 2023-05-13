@@ -11,6 +11,7 @@
 #include <functional>
 #include <windows.h>
 #include "WebView2.h"
+#include <string>
 
 extern UINT onResult, onReady, onMessage, onLoaded;
 wchar_t *toUTF16(const char *s);
