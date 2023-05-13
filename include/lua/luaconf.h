@@ -276,13 +276,17 @@
 #define LUA_API __declspec(dllexport)
 #else						/* }{ */
 #define LUA_API __declspec(dllimport)
-#endif						/* } */
+#endif
 
 #else				/* }{ */
+#ifdef _MSC_VER
+#define LUA_API		 __declspec(dllimport)
+#else
+#define LUA_API		 extern
+#endif
+#endif						/* } */
 
-#define LUA_API		extern
 
-#endif				/* } */
 
 
 /*
