@@ -83,7 +83,7 @@ typedef int luart_type;
 //--------------------------------------------------| Object registration
 
 //--- Register object function
-int lua_registerobject(lua_State *L, luart_type *type, const char *_typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
+LUA_API int lua_registerobject(lua_State *L, luart_type *type, const char *_typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
 
 //--- Object registration macros
 #define lua_regobjectmt(L, _typename) lua_registerobject(L, &T##_typename, #_typename, _typename##_constructor, _typename##_methods, _typename##_metafields)
@@ -92,31 +92,34 @@ int lua_registerobject(lua_State *L, luart_type *type, const char *_typename, lu
 //--------------------------------------------------| Lua object manipulation
 
 //--- Push a new instance from a Lua object at index idx on stack
-int lua_createinstance(lua_State *L, int idx);
+LUA_API int lua_createinstance(lua_State *L, int idx);
 
 //--- Push a new Lua object instance of a 'objectname' object
-void lua_checkinstance(lua_State *L, int idx, const char *objectname);
+LUA_API void lua_checkinstance(lua_State *L, int idx, const char *objectname);
 
-//--- Check if value at index idx is a Lua object, setting its name to objectname
-int lua_isinstance(lua_State *L, int idx, const char **objectname);
+//--- Check if value at index idx is a Lua instance, setting its name to objectname
+LUA_API int lua_isinstance(lua_State *L, int idx, const char **objectname);
+
+//--- Check if value at index idx is a Lua object
+LUA_API int lua_isobject(lua_State *L, int idx);
 
 //--------------------------------------------------| C object manipulation
 
 //--- Initialize a new C object instance, to be called only in the constructor
-void lua_createcinstance(lua_State *L, void *t, luart_type type);
+LUA_API void lua_createcinstance(lua_State *L, void *t, luart_type type);
 #define lua_newinstance(L, t, _type) lua_createcinstance(L, t, T##_type)
 
 //--- Returns any instance at index position or error with type t expected
-void *lua_toself(lua_State *L, int idx, luart_type t);
+LUA_API void *lua_toself(lua_State *L, int idx, luart_type t);
 
 //--- Returns object at specified index, and gets its type
-void *lua_tocinstance(lua_State *L, int idx, luart_type *t);
+LUA_API void *lua_tocinstance(lua_State *L, int idx, luart_type *t);
 
 //--- Returns instance of specified type at index or NULL
-void *lua_iscinstance(lua_State *L, int idx, luart_type t);
+LUA_API void *lua_iscinstance(lua_State *L, int idx, luart_type t);
 
 //--- Returns object of specified type at index or throws an error
-void *lua_checkcinstance(lua_State *L, int idx, luart_type t);
+LUA_API void *lua_checkcinstance(lua_State *L, int idx, luart_type t);
 #define luaL_checkcinstance(L, idx, type) ((type *)lua_checkcinstance(L, idx, T##type))
 
 //--- Gets object at specified index without checking its type
@@ -172,13 +175,17 @@ LUA_API int luaL_embedclose(lua_State *L);
 //--- luaL_setfuncs() alternative with lua_rawset() and without upvalues
 LUA_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l);
 
-//--- luaL_require() alternative with luaL_requiref()
+//--- luaL_require() alternative to luaL_requiref()
 LUA_API void luaL_require(lua_State *L, const char *modname);
+
+//--- Push a task with the provided C function and starts it, with the number of arguments provided (arguments will be popped from the stack)
+//--- Always returns 1
+LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs);
 
 //--------------------------------------------------| LuaRT runtime errors
 
 //--- Pushes Windows system error string on stack
-int luaL_getlasterror(lua_State *L, DWORD err);
+LUA_API int luaL_getlasterror(lua_State *L, DWORD err);
 
 #ifdef __cplusplus
 }

@@ -22,7 +22,7 @@ typedef struct {
 	wchar_t		*name;
 } COM;
 
-extern luart_type TCOM;
+LUA_API luart_type TCOM;
 
 //---------------------------------------- COM type
 LUA_CONSTRUCTOR(COM);

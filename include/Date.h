@@ -29,7 +29,7 @@ typedef struct {
 	SYSTEMTIME	*st;
 } Datetime;
 
-extern luart_type TDatetime;
+LUA_API luart_type TDatetime;
 
 LUA_CONSTRUCTOR(Datetime);
 extern const luaL_Reg Datetime_methods[];

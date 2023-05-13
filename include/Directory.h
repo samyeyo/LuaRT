@@ -21,7 +21,7 @@ void init_fullpath(lua_State *L, File *f);
 //---------------------------------------- Directory object
 typedef File Directory;
 
-extern luart_type TDirectory;
+LUA_API luart_type TDirectory;
 
 LUA_CONSTRUCTOR(Directory);
 extern const luaL_Reg Directory_methods[];

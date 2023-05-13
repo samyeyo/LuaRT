@@ -26,7 +26,7 @@ typedef struct {
 	BOOL	echo;
 } Pipe;
 
-extern luart_type TPipe;
+LUA_API luart_type TPipe;
 
 LUA_CONSTRUCTOR(Pipe);
 extern const luaL_Reg Pipe_methods[];

@@ -68,16 +68,17 @@ typedef struct Widget {
 	HBRUSH		brush;
 	COLORREF	color;
 	int			align;
+	WINDOWPLACEMENT	wp;
 	void		*user;
 } Widget;
 
 //--- Register a widget type
-void lua_registerwidget(lua_State *L, int *type, const char *__typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip);
+LUA_API void lua_registerwidget(lua_State *L, int *type, const char *__typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip);
 #define lua_regwidget(L, __typename, methods, mt, has_text, has_font, has_cursor, has_icon, has_tooltip) lua_registerwidget(L, &T##__typename, #__typename, __typename##_constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_tooltip)
 #define lua_regwidgetmt(L, __typename, methods, has_text, has_font, has_cursor, has_icon, has_tooltip) lua_registerwidget(L, &T##__typename, #__typename, __typename##_constructor, methods, __typename##_metafields, has_text, has_font, has_cursor, has_icon, has_tooltip)
 
-lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction event) ;
-void *lua_getevent(lua_State *L, lua_Integer eventid, int *type);
+LUA_API lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction event) ;
+LUA_API void *lua_getevent(lua_State *L, lua_Integer eventid, int *type);
 
 #define WM_LUAEVENTRESULT 0
 
@@ -94,13 +95,13 @@ typedef Widget *(*WIDGET_CONSTRUCTOR)(lua_State *L, HWND h, WidgetType type, Wid
 typedef Widget *(*WIDGET_DESTRUCTOR)(lua_State *L);
 typedef int (*WIDGET_PROC)(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uIdSubclass);
 
-extern lua_Integer			WM_LUAMAX;
-extern WIDGET_INIT 			lua_widgetinitialize;
-extern WIDGET_CONSTRUCTOR	lua_widgetconstructor;
-extern WIDGET_DESTRUCTOR	lua_widgetdestructor;
-extern WIDGET_PROC			lua_widgetproc;
-extern luaL_Reg 			*WIDGET_METHODS;
-extern luart_type 			TWidget;
+LUA_API  lua_Integer			WM_LUAMAX;
+LUA_API  WIDGET_INIT 			lua_widgetinitialize;
+LUA_API  WIDGET_CONSTRUCTOR		lua_widgetconstructor;
+LUA_API  WIDGET_DESTRUCTOR		lua_widgetdestructor;
+LUA_API  WIDGET_PROC			lua_widgetproc;
+LUA_API  luaL_Reg 				*WIDGET_METHODS;
+LUA_API  luart_type 			TWidget;
 
 #ifdef __cplusplus
 }

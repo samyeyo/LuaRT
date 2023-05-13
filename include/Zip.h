@@ -17,7 +17,7 @@ extern "C" {
 
 //---------------------------------------- Zip type
 
-extern luart_type TZip;
+LUA_API luart_type TZip;
 
 struct zip_t;
 

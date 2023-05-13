@@ -30,7 +30,7 @@ typedef struct {
 	BOOL			active;
 } Http;
 
-extern luart_type THttp;
+LUA_API luart_type THttp;
 
 //---------------------------------------- Http object
 LUA_CONSTRUCTOR(Http);

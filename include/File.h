@@ -32,7 +32,7 @@ typedef struct {
 	int			mode;
 } File;
 
-extern luart_type TFile;
+LUA_API luart_type TFile;
 
 typedef enum { ASCII, UTF8, UNICODE } Encoding;
 
@@ -60,7 +60,7 @@ LUA_PROPERTY_SET(File, created);
 LUA_PROPERTY_SET(File, modified);
 LUA_PROPERTY_SET(File, accessed);
 
-LUALIB_API wchar_t *luaL_checkFilename(lua_State *L, int idx);
+LUA_API wchar_t *luaL_checkFilename(lua_State *L, int idx);
 
 //---------------------------------------- TemporaryFile type
 LUA_CONSTRUCTOR(TemporaryFile);

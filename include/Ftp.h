@@ -20,7 +20,7 @@ extern "C" {
 
 //---------------------------------------- Ftp type
 
-extern luart_type TFtp;
+LUA_API luart_type TFtp;
 
 LUA_CONSTRUCTOR(Ftp);
 extern const luaL_Reg Ftp_methods[];

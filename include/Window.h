@@ -13,10 +13,9 @@
 extern "C" {
 #endif
 
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 LUA_CONSTRUCTOR(Window);
 
-extern luart_type TWindow;
+LUA_API luart_type TWindow;
 
 extern luaL_Reg Window_methods[];
 extern luaL_Reg Window_metafields[];
