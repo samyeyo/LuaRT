@@ -461,6 +461,15 @@ int lua_createinstance(lua_State *L, int idx) {
 	return 1;
 }
 
+int lua_isobject(lua_State *L, int idx) {
+	int result = 0;
+	if (lua_istable(L, idx)) {
+		result = luaL_getmetafield(L, idx, "__typename") != LUA_TNIL;
+		lua_pop(L, 1);
+	}
+	return result;
+}
+
 int lua_isinstance(lua_State *L, int idx, const char **objectname) {
 	if (lua_istable(L, idx)) {
 		lua_getmetatable(L, idx);
@@ -609,15 +618,10 @@ void *lua_getevent(lua_State *L, lua_Integer eventid, int *type) {
 	return methodname;
 }
 
-//------- LuaRT Objects implemented in luart.exe/wluart.exe
-luart_type TZip;
-luart_type TFtp;
-luart_type THttp;
-luart_type TSocket;
-luart_type TCipher;
+// extern LUA_API  luart_type TZip;
 
  //------ Helpers for Widgets in LuaRT binary modules
-lua_Integer			WM_LUAMAX = WM_USER+1;
+lua_Integer			WM_LUAMAX;
 WIDGET_INIT 		lua_widgetinitialize = NULL;
 WIDGET_CONSTRUCTOR	lua_widgetconstructor = NULL;
 WIDGET_DESTRUCTOR	lua_widgetdestructor = NULL;
