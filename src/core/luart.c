@@ -19,8 +19,17 @@
 #include <stdlib.h>
 #include <shlwapi.h>
 
-extern int _CRT_glob;
-void __wgetmainargs(int*,wchar_t***,wchar_t***,int,int*);
+
+#ifndef _MSC_VER
+	#ifdef __cplusplus
+	extern "C" {
+	#endif
+		extern int _CRT_glob;
+		void __wgetmainargs(int*,wchar_t***,wchar_t***,int,int*);
+	#ifdef __cplusplus
+	}
+	#endif
+#endif
 
 extern struct zip_t *fs;
 extern BYTE *datafs;
@@ -173,7 +182,7 @@ static int update_exe_icon(lua_State *L) {
 	#endif
 #endif
 
-void lua_stop() {
+void lua_stop(void) {
 	if (L) {
 		if (lua_getfield(L, LUA_REGISTRYINDEX, "atexit") == LUA_TFUNCTION) {
 			if (lua_pcall(L, 0, 0, 0))
@@ -186,17 +195,24 @@ void lua_stop() {
 }
 
 #ifdef RTWIN
-__attribute__((used)) int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
 #else
-__attribute__((used)) int main() {
+int main() {
 #endif
 	INITCOMMONCONTROLSEX icex;
 	int i, result = EXIT_SUCCESS;
 	BOOL is_embeded = FALSE;
-	wchar_t **enpv, **wargv;
+	wchar_t **envp, **wargv;
 	int argc, si = 0, argfile = 1;
-
-	__wgetmainargs(&argc, &wargv, &enpv, _CRT_glob, &si);
+#ifdef _MSC_VER	
+    static int (*__wgetmainargs)(int *, wchar_t ***, wchar_t ***, int, int *);
+    HMODULE h = LoadLibraryA("msvcrt.dll");
+    __wgetmainargs = (void *)GetProcAddress(h, "__wgetmainargs");
+    (*__wgetmainargs)(&argc, &wargv, &envp, 1, &si);
+    FreeLibrary(h);
+#else	
+	__wgetmainargs(&argc, &wargv, &envp, _CRT_glob, &si);
+#endif
 	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
 	icex.dwICC = ICC_USEREX_CLASSES;
 	InitCommonControlsEx(&icex);
