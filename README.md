@@ -97,9 +97,9 @@ To get started with LuaRT and make your first steps, follow the [Getting started
 
 ## :small_blue_diamond:Supporting
 
-Many hours of hard work have gone into this project. Your support will be very appreciated!
+There have been many hours of hard work put into LuaRT. Your support will be greatly appreciated!
 
-<a href="https://www.buymeacoffee.com/samir.tine" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O2LKD6Q)
 
 ## :small_blue_diamond:Links
   
