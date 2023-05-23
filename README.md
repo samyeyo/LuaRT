@@ -15,6 +15,7 @@ Lua multipurpose programming framework to develop Windows applications
 [Features](#small_blue_diamondfeatures) |
 [Installation](#small_blue_diamondinstallation) |
 [Documentation](https://www.luart.org/doc/index.html) |
+[Supporting](#small_blue_diamondsupporting) |
 [Links](#small_blue_diamondlinks) |
 [License](#small_blue_diamondlicense)
 
@@ -93,7 +94,13 @@ filename [arg1 arg2...]
 Loads and executes the Lua script in "filename", with optional arguments (each will be available in the global table arg in Lua).
 ```
 To get started with LuaRT and make your first steps, follow the [Getting started tutorial](https://www.luart.org/doc/install.html)
-  
+
+## :small_blue_diamond:Supporting
+
+Many hours of hard work have gone into this project. Your support will be very appreciated!
+
+<a href="https://www.buymeacoffee.com/samir.tine" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
+
 ## :small_blue_diamond:Links
   
 - :house_with_garden: [LuaRT Homepage](https://www.luart.org/index.html)
