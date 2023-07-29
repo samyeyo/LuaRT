@@ -182,6 +182,9 @@ LUA_API void luaL_require(lua_State *L, const char *modname);
 //--- Always returns 1
 LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs);
 
+//--- Sleeps the current task or the current Lua state for the provided delay
+LUA_API void lua_sleep(lua_State *L, lua_Integer delay);
+
 //--------------------------------------------------| LuaRT runtime errors
 
 //--- Pushes Windows system error string on stack

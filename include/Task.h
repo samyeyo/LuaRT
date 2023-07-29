@@ -17,7 +17,7 @@ extern "C" {
 
 typedef struct _Task Task;
 
-typedef enum { TRunning, TCreated, TSleep, TWaiting, TTerminated } TaskStatus;
+typedef enum { TRunning, TCreated, TSleep, TTerminated } TaskStatus;
 
 typedef struct _Task {
 	luart_type	type;

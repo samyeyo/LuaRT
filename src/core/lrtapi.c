@@ -9,9 +9,12 @@
 #define LUA_LIB
 
 #include <luart.h>
+#include <Task.h>
 #include "lrtapi.h"
+#include "sys\async.h"
 #include <windows.h>
 
+lua_State *mainL;
 
 //-------------------------------------------------[UTF8 strings conversion functions]
 char *wchar_toutf8(const wchar_t *str, int *len) {
@@ -52,7 +55,7 @@ LUA_API void lua_pushlwstring(lua_State *L, const wchar_t *str, int len) {
 	else lua_pushlstring(L, "", 0);
 }
 
-int lua_optstring(lua_State *L, int idx, const char *options[], int def) {
+LUA_API int lua_optstring(lua_State *L, int idx, const char *options[], int def) {
 	if (lua_isstring(L, idx)) {
 		int i = -1;
 		const char *name = lua_tostring(L, idx);
@@ -62,6 +65,14 @@ int lua_optstring(lua_State *L, int idx, const char *options[], int def) {
 	}
 	return def;
 } 
+
+LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs) {
+	lua_pushcclosure(L, taskfunc, nargs);
+	lua_pushinstance(L, Task, 1);
+	lua_pushvalue(L, -1);
+	lua_call(L, 0, 0);
+	return 1;	
+}
 
 //-------------------------------------------------[LuaL_setfuncs alternative with lua_rawset]
 LUALIB_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l) {
@@ -81,7 +92,71 @@ LUALIB_API void luaL_require(lua_State *L, const char *modname) {
 	luaL_requiref(L, modname, module_error, 0);
 }
 
+//-------------------------------------------------[lua_sleep() function]
+void do_sleep(lua_State *L, lua_Integer delay, BOOL yielding) {
+	Task *t;
+
+	if ((L != mainL) && (t = search_task(L))) {
+		t->sleep =  GetTickCount64() + delay;
+		t->status = TSleep;
+		Sleep(1);
+		if (yielding)
+			lua_yield(L, 0);		
+	} else {
+		ULONGLONG start = GetTickCount64();
+		while (GetTickCount64() < start+delay)
+			update_tasks(L, NULL);
+	}
+}
+
+LUA_API void lua_sleep(lua_State *L, lua_Integer delay) {
+	do_sleep(L, delay, FALSE);
+}
+
 //-------------------------------------------------[LuaRT Extended base library]
+
+//----------------------------------[ await() function ]
+LUA_METHOD(luaB, await) {
+	Task *t;
+	int idx = lua_gettop(L)-1, nresults;
+	
+	if ( !(t = (Task *)lua_iscinstance(L, 1, TTask )) ) {		
+		luaL_checktype(L, 1, LUA_TFUNCTION);
+		lua_pushvalue(L, 1);
+		t = (Task *)lua_pushinstance(L, Task, 1);
+	}
+	t->waiting = search_task(L);
+	if (t->status == TCreated)
+		start_task(L, t, idx);
+	nresults = lua_gettop(L);
+	while(t->status != TTerminated)
+		update_tasks(L, !t->waiting ? NULL : t);
+	return lua_gettop(L)-nresults;
+}
+
+//----------------------------------[ sleep() ]
+LUA_METHOD(luaB, sleep) {	
+	do_sleep(L, luaL_optinteger(L, 1, 1), TRUE);
+	return 0;
+}
+
+//----------------------------------[ waitall() ]
+LUA_METHOD(luaB, waitall) {	
+	return waitall_tasks(L);
+}
+
+//----------------------------------[ async() function ]
+LUA_METHOD(luaB, async) {
+	int nargs = lua_gettop(L)-1;
+
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	lua_pushvalue(L, 1);
+	Task *t = (Task *)lua_pushinstance(L, Task, 1);
+	int nresults = start_task(L, t, nargs);			
+	if (t->status == TTerminated)
+		return nresults;
+	return 1;
+}
 
 //-------------------------------------------------[is() function]
 int luaB_is(lua_State *L) {
@@ -213,12 +288,14 @@ static const luaL_Reg baselib_ext[] = {
 	{"is",		luaB_is},
 	{"each",	luaB_each},
 	{"Object",	luaB_Object},
+	{"await", 	luaB_await},
+	{"async", 	luaB_async},
+	{"waitall",	luaB_waitall},
+	{"sleep", 	luaB_sleep},
+  	{"super",	luaB_super},
 #ifndef RTCOMPAT
   	{"rawget", luaB_rawget},
   	{"rawset", luaB_rawset},
-#endif
-  	{"super",	luaB_super},
-#ifndef RTCOMPAT	
 	{"type",	luaB_type},
 #endif
 	{NULL, NULL}
@@ -254,12 +331,12 @@ static const luaL_Reg def_libs[] = {
 
 LUALIB_API void luaL_openlibs(lua_State *L) {
 	const luaL_Reg *lib;
+	mainL = L;
 	for (lib = def_libs; lib->func; lib++) {
 		luaL_requiref(L, lib->name, lib->func, 1);
 		lua_pop(L, 1);
 	}
 	register_module(L, "console", luaopen_console);
-	// lua_pop(L, 1);
 	lua_pushglobaltable(L);
 	luaL_setfuncs(L, baselib_ext, 0);
 	/* set global _ARCH */
