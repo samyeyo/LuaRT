@@ -6,6 +6,8 @@
  | Pipe.c | LuaRT Pipe object implementation
 */
 
+#define LUA_LIB
+
 #include <Pipe.h>
 #include <Buffer.h>
 #include <luart.h>
@@ -70,28 +72,52 @@ static int pipe_read(lua_State *L, HANDLE h) {
 	DWORD read, done, avail = 1;
 	char *buff;
 
-	Sleep((DWORD)luaL_optinteger(L, 2, 0));
-	if (h) {
-		if (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) && avail) {			;
-			buff = calloc(1, avail);
-			done = 0;
-			while (!ReadFile(h, buff+done, avail-done, &read, NULL) || read == 0)
-				done += read;
-			lua_pushlstring(L, buff, avail);
-			free(buff);
-			return 1;
-		}
+	if (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) && avail) {	
+		buff = calloc(1, avail);
+		done = 0;
+		while (!ReadFile(h, buff+done, avail-done, &read, NULL) || read == 0)
+			done += read;
+		int size = MultiByteToWideChar(CP_OEMCP, 0, buff, avail, NULL, 0);
+		wchar_t *newbuff = (wchar_t *)malloc(size*sizeof(wchar_t));
+		MultiByteToWideChar(CP_OEMCP, 0, buff, avail, newbuff, size);
+		lua_pushwstring(L, newbuff);
+		free(newbuff);			
+		free(buff);
+		return 1;
 	}
 	return 0;
 }
 
+static int PipeReadTaskContinue(lua_State* L, int status, lua_KContext ctx) {	
+	HANDLE h = (HANDLE)ctx;
+
+	Sleep(1);
+	if (pipe_read(L, h))
+		return 1;
+    return lua_yieldk(L, 0, (lua_KContext)h, PipeReadTaskContinue);
+}
+
+static int PipeReadTask(lua_State *L) {	
+    return lua_yieldk(L, 0, (lua_KContext)lua_tointeger(L, lua_upvalueindex(1)), PipeReadTaskContinue);
+}
+
 LUA_METHOD(Pipe, read) {
-	return pipe_read(L, lua_self(L, 1, Pipe)->out_read);
+#if _WIN64 || __x86_64__
+	lua_pushinteger(L, (lua_Integer)lua_self(L, 1, Pipe)->out_read);
+#else
+	lua_pushinteger(L, (int)lua_self(L, 1, Pipe)->out_read);
+#endif
+	return lua_pushtask(L, PipeReadTask, 1);
 }
 
 //-------------------------------------[ Pipe.readerror ]
 LUA_METHOD(Pipe, readerror) {
-	return pipe_read(L, lua_self(L, 1, Pipe)->err_read);
+#if _WIN64 || __x86_64__	
+	lua_pushinteger(L, (lua_Integer)lua_self(L, 1, Pipe)->err_read);
+#else
+	lua_pushinteger(L, (int)lua_self(L, 1, Pipe)->err_read);
+#endif
+	return lua_pushtask(L, PipeReadTask, 1);
 }
 
 //-------------------------------------[ Pipe.close() ]
