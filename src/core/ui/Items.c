@@ -503,7 +503,7 @@ LUA_METHOD(Items, __newindex) {
 			HTREEITEM hti;
 			find_item_bytext(L, w, 2, &hti);
 			if (!hti)
-				hti = (HTREEITEM)(UINT_PTR)add_item(w, lua_towstring(L, 2));
+				hti = (HTREEITEM)add_item(w, lua_towstring(L, 2));
 			set_newitems(L, w, 3, hti);			
 	}
 	return 0;
@@ -519,7 +519,7 @@ static int Item_iter(lua_State *L) {
 #endif
 	if (w->wtype == UIItem) {
 		HTREEITEM hPrev = (HTREEITEM)idx;
-		hitem = (HTREEITEM)(idx ? idx : w->item.treeitem->hItem);
+		hitem = (HTREEITEM)(idx ? (HTREEITEM)idx : w->item.treeitem->hItem);
 		if ((hitem = treeview_iter(w->handle, hitem, &hPrev, FALSE))) 
 			goto push_treeitem;
 		return 0;
@@ -528,7 +528,7 @@ static int Item_iter(lua_State *L) {
 		if (hitem) {
 push_treeitem:
 			__push_item(L, w, 0, hitem);
-			lua_pushinteger(L, (UINT_PTR)hitem);
+			lua_pushinteger(L, (lua_Integer)hitem);
 			goto done;
 		}
 		return 0;
@@ -554,7 +554,7 @@ luaL_Reg Items_metafields[] = {
 	{"__len",		Items___len},
 	{"__index",		Items___index},
 	{"__newindex",	Items___newindex},
-	{"__iterate", Items___iterate},
+	// {"__iterate", Items___iterate},
 	{NULL, NULL}
 };
 
@@ -623,13 +623,17 @@ LUA_METHOD(Listbox, remove) {
 LUA_METHOD(Listbox, add) {
 	Widget *w = lua_self(L, 1, Widget);
 	HTREEITEM hti = w->item.itemtype == UITree ? w->item.treeitem->hItem : NULL;
-	int i = 1, last, count = lua_gettop(L);
-
+	int i = 1, count = lua_gettop(L);
+#if _WIN64 || __x86_64__	
+	lua_Integer last;
+#else
+	int last;
+#endif
 	if (w->wtype == UIList) 
 		ShowScrollBar(w->handle, SB_VERT, TRUE);
 	while(++i <= count)
 		last = __add_item(w, lua_towstring(L, i), hti);
-	__push_item(L, w, last, (w->wtype == UITree || w->item.itemtype == UITree) ? (HTREEITEM)(UINT_PTR)last : NULL);
+	__push_item(L, w, last, (w->wtype == UITree || w->item.itemtype == UITree) ? (HTREEITEM)last : NULL);
 	return 1;
 }
 
@@ -738,7 +742,7 @@ LUA_PROPERTY_GET(Listbox, selected) {
 LUA_PROPERTY_SET(Listbox, selected) {
 	Widget *w = lua_self(L, 1, Widget);
 	HANDLE h = GetParent(w->handle);
-	Widget *sel = lua_self(L, 2, Widget) ;
+	Widget *sel = lua_self(L, 2, Widget);
 	UINT_PTR id = GetDlgCtrlID(w->handle);
 	
 	if (w->wtype != sel->item.itemtype)
