@@ -11,7 +11,7 @@
 #include <Buffer.h>
 #include <stdlib.h>
 
-// __declspec(dllexport) luart_type TCipher;
+luart_type TCipher;
 
 typedef struct {
     BLOBHEADER hdr;

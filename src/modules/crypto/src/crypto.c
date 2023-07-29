@@ -6,6 +6,8 @@
  | crypto.c | LuaRT crypto module
 */
 
+#define LUA_LIB
+
 #include <Cipher.h>
 #include <Buffer.h>
 #include <stdlib.h>

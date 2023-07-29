@@ -9,7 +9,11 @@
 #pragma once
 
 #include <luart.h>
+#ifdef _MSC_VER
+#include <d2d1.h>
+#else
 #include "d2d1.h"
+#endif
 
 #include "Direct2D.h"
 
