@@ -6,11 +6,14 @@
  | sys.c | LuaRT sys module
 */
 
+#define LUA_LIB
+
 #include <luart.h>
 #include "lrtapi.h"
-#include <locale.h>
 
+#include <locale.h>
 #include <Buffer.h>
+#include <Task.h>
 #include <File.h>
 #include <Directory.h>
 #include <Pipe.h>
@@ -48,12 +51,6 @@ LUA_METHOD(sys, clock) {
 LUA_METHOD(sys, exit) {
 	int ret = (int)luaL_optinteger(L, 1, EXIT_SUCCESS);
 	exit(ret);
-	return 0;
-}
-
-//-------------------------------------[ sys.sleep() ]
-LUA_METHOD(sys, sleep) {
-	Sleep((int)luaL_optinteger(L, 1, 1));
 	return 0;
 }
 
@@ -151,25 +148,23 @@ LUA_METHOD(sys, halt) {
   return 1;
 }
 
-//-------------------------------------[ sys.lasterror ]
-int luaL_getlasterror(lua_State *L, DWORD err) {
-	wchar_t* msg = 0;
+//-------------------------------------[ sys.error ]
+LUA_API int luaL_getlasterror(lua_State *L, DWORD err) {
+	char* msg = 0;
 	HMODULE mod = NULL;
 	DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
+
     if (err) {
     	if (err >= 12000) {
     		mod = GetModuleHandle("wininet.dll");
-    		flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE;
-    		if (err == ERROR_INTERNET_EXTENDED_ERROR) {
-    			wchar_t errmsg[MAX_PATH];
-    			DWORD len = MAX_PATH;
-				InternetGetLastResponseInfoW( &err, errmsg, &len );
-				lua_pushlwstring(L, errmsg, len);
-				return 1;
-    		}
+    		flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_MAX_WIDTH_MASK;			
     	}
-		size_t size = FormatMessageW(flags, mod, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&msg, 0, NULL);
-		lua_pushlwstring(L, msg, size);
+		DWORD size = FormatMessageA(flags, mod, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&msg, 0, NULL);
+		int len = MultiByteToWideChar(CP_ACP, 0, msg, size, NULL, 0);
+		wchar_t *buff = (wchar_t*)malloc(len*sizeof(wchar_t*));
+		MultiByteToWideChar(CP_ACP, 0, msg, size, buff, size);
+		lua_pushlwstring(L, buff, len);		
+		free(buff);
 		LocalFree(msg);
 	}
 	else
@@ -177,7 +172,7 @@ int luaL_getlasterror(lua_State *L, DWORD err) {
 	return 1;
 }
 
-LUA_PROPERTY_GET(sys, lasterror) {
+LUA_PROPERTY_GET(sys, error) {
 	return luaL_getlasterror(L, GetLastError());
 }
 
@@ -421,31 +416,25 @@ LUA_PROPERTY_GET(sys, registry) {
 
 /* ------------------------------------------------------------------------ */
 
-static const luaL_Reg syslib[] = {
-	{"beep",		sys_beep},
-	{"clock",		sys_clock},
-	{"exit",		sys_exit},
-	{"sleep",		sys_sleep},
-	{"tempfile",	sys_tempfile},
-	{"tempdir",		sys_tempdir},
-	{"cmd",			sys_cmd},
-	{"halt",		sys_halt},
-	{"fsentry",		sys_fsentry},
-	{NULL, NULL}
-};
+MODULE_FUNCTIONS(sys)
+	METHOD(sys, beep)
+	METHOD(sys, clock)
+	METHOD(sys, exit)
+	METHOD(sys, tempfile)
+	METHOD(sys, tempdir)
+	METHOD(sys, cmd)
+	METHOD(sys, halt)
+	METHOD(sys, fsentry)
+END
 
-static const luaL_Reg sys_properties[] = {
-	{"get_env",			sys_getenv},
-	{"get_registry",	sys_getregistry},
-	{"get_error",		sys_getlasterror},
-	{"get_currentdir",	sys_getcurrentdir},
-	{"set_currentdir",	sys_setcurrentdir},
-	{"get_clipboard",	sys_getclipboard},
-	{"set_clipboard",	sys_setclipboard},
-	{"get_atexit",		sys_getatexit},
-	{"set_atexit",		sys_setatexit},
-	{NULL, NULL}
-};
+MODULE_PROPERTIES(sys)
+	READONLY_PROPERTY(sys, env)
+	READONLY_PROPERTY(sys, registry)
+	READONLY_PROPERTY(sys, error)
+	READWRITE_PROPERTY(sys, currentdir)
+	READWRITE_PROPERTY(sys, clipboard)
+	READWRITE_PROPERTY(sys, atexit)
+END
 
 LUAMOD_API int luaopen_sys(lua_State *L) {
 	perfc = QueryPerformanceFrequency(&freq);
@@ -454,6 +443,7 @@ LUAMOD_API int luaopen_sys(lua_State *L) {
 	setlocale(LC_ALL, ".UTF8");
 	setlocale(LC_TIME, "");
 	lua_regmodule(L, sys);
+	lua_regobjectmt(L, Task);
 	lua_regobjectmt(L, File);
 	lua_regobjectmt(L, Buffer);
 	lua_regobjectmt(L, Pipe);

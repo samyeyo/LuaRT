@@ -259,8 +259,11 @@ int main() {
 			if (*wargv[1] == L'-') {
 				if ((wargv[1][1] == L'e')) {
 					if (argc > 2) {
-						if (luaL_dostring(L, __argv[2]))
+						lua_pushwstring(L, wargv[2]);
+						if (luaL_dostring(L, lua_tostring(L, -1))) {
+							is_embeded = TRUE;
 							goto error;
+						}
 						else if (__argc > 3) {
 							argfile = 3;
 							goto execscript;
@@ -277,12 +280,25 @@ int main() {
 execscript:	if (luaL_loadfile(L, __argv[argfile]) || lua_pcall(L, 0, LUA_MULTRET, 0)) {
 error:			
 				{
-					const char *err = lua_tostring(L, -1);
-					const char *msg = luaL_gsub(L, err, "[string ", "[");
 #ifdef RTWIN
-					MessageBox(NULL, is_embeded ? msg : err, "Runtime error", MB_ICONERROR | MB_OK);
+					const wchar_t *err = lua_towstring(L, -1);
+
+					if (is_embeded) {
+						wchar_t *err_embed;
+						if ( (err_embed = wcsstr(err, L": ")) )
+							err = err_embed + 2;
+					}
+					MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK);
+					free(err);
 #else
-					fputs(is_embeded ? msg : err, stderr);
+					const char *err = lua_tostring(L, -1);
+
+					if (is_embeded) {
+						char *err_embed;
+						if ( (err_embed = strstr(err, ": ")) )
+							err = err_embed + 2;
+					}
+					fputs(err, stderr);
 					fputs("\n", stderr);
 #endif
 					result = EXIT_FAILURE;
