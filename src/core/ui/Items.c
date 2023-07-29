@@ -6,12 +6,14 @@
  | Items.c | LuaRT Tree, List, Combobox, Tab and associated items object implementation
 */
 
+
+
 #include <luart.h>
 #include <Widget.h>
 #include "ui.h"
-#include <Window.h>
 #include <windowsx.h>
 #include <uxtheme.h>
+#include <stdint.h>
 
 
 typedef struct sort_info {
@@ -99,7 +101,7 @@ size_t get_count(Widget *w) {
 		return w->item.treeitem ? (size_t)w->item.treeitem->cChildren : TreeView_GetCount(h);
 	if ((w->wtype == UIItem) && type == UITab)
 		h = GetParent(h);
-	return SendMessage(w->status ?: h, msg[type-UIList], 0, 0); 
+	return SendMessage(w->status ? w->status : h, msg[type-UIList], 0, 0); 
 }
 
 static wchar_t *get_text(HWND h, void *item, wchar_t **buff, int *len, UINT msg, int idx) { 
@@ -206,15 +208,21 @@ static int adjust_listvscroll(Widget *w, int start, int end) {
 }
 
 #define add_item(w, s) __add_item(w, s, NULL)
+#if _WIN64 || __x86_64__	
+static lua_Integer __add_item(Widget *w, wchar_t *str, HTREEITEM hti) {
+	lua_Integer result = 0;
+#else
 static int __add_item(Widget *w, wchar_t *str, HTREEITEM hti) {
+	int result = 0;
+#endif
 	HWND hh = 0, h = w->handle;
 	UINT msg = 0;
 	size_t count = get_count(w);
-	int idx = 0, result = 0;
+	int idx = 0;
 	void *item = NULL;
 	
 	if (w->wtype == UIItem) {
-		hti = hti ?: w->item.treeitem->hItem;
+		hti = hti ? hti : w->item.treeitem->hItem;
 		goto tree;
 	}
 	else if (w->wtype == UITree) {
@@ -223,9 +231,9 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 		((TVINSERTSTRUCTW*)item)->item.pszText = str;
 		((TVINSERTSTRUCTW*)item)->item.lParam =(LPARAM)h;
 		((TVINSERTSTRUCTW*)item)->hParent = hti;
-		((TVINSERTSTRUCTW*)item)->hInsertAfter = TVI_LAST;
-		((TVINSERTSTRUCTW*)item)->item.iImage = __INT16_MAX__;
-		((TVINSERTSTRUCTW*)item)->item.iSelectedImage = __INT16_MAX__;								
+		((TVINSERTSTRUCTW*)item)->hInsertAfter = TVI_LAST; 
+		((TVINSERTSTRUCTW*)item)->item.iImage = INT16_MAX;
+		((TVINSERTSTRUCTW*)item)->item.iSelectedImage = INT16_MAX;								
 		msg = TVM_INSERTITEMW;	
 	}
 	else if (w->wtype == UITab) {
@@ -440,7 +448,7 @@ static void set_newitems(lua_State *L, Widget *w, int idx, HTREEITEM subitem) {
                 find_item_bytext(L, w, -2, &hti);
                 if (hti)
                     __free_item(w, 0, hti);
-                new = (HTREEITEM)__add_item(w, lua_towstring(L, -2), (w->wtype == UIItem && subitem == NULL) ? w->item.treeitem->hItem : subitem);
+				new = (HTREEITEM)__add_item(w, lua_towstring(L, -2), (w->wtype == UIItem && subitem == NULL) ? w->item.treeitem->hItem : subitem);
                 set_newitems(L, w, -1, new);            
             } else if ((keytype == LUA_TNUMBER) && lua_isinteger(L, -2)) {
                 if (lua_isstring(L, -1))
@@ -495,7 +503,7 @@ LUA_METHOD(Items, __newindex) {
 			HTREEITEM hti;
 			find_item_bytext(L, w, 2, &hti);
 			if (!hti)
-				hti = (HTREEITEM)add_item(w, lua_towstring(L, 2));
+				hti = (HTREEITEM)(UINT_PTR)add_item(w, lua_towstring(L, 2));
 			set_newitems(L, w, 3, hti);			
 	}
 	return 0;
@@ -504,10 +512,14 @@ LUA_METHOD(Items, __newindex) {
 static int Item_iter(lua_State *L) {
 	Widget *w = lua_self(L, lua_upvalueindex(1), Widget);
 	HTREEITEM hitem; 
+#if _WIN64 || __x86_64__	
+	lua_Integer idx = (lua_Integer)lua_tointeger(L, lua_upvalueindex(2));
+#else
 	int idx = (int)lua_tointeger(L, lua_upvalueindex(2));
+#endif
 	if (w->wtype == UIItem) {
 		HTREEITEM hPrev = (HTREEITEM)idx;
-		hitem = (HTREEITEM)idx ?: w->item.treeitem->hItem;
+		hitem = (HTREEITEM)(idx ? idx : w->item.treeitem->hItem);
 		if ((hitem = treeview_iter(w->handle, hitem, &hPrev, FALSE))) 
 			goto push_treeitem;
 		return 0;
@@ -516,15 +528,17 @@ static int Item_iter(lua_State *L) {
 		if (hitem) {
 push_treeitem:
 			__push_item(L, w, 0, hitem);
-			lua_pushinteger(L, (int)hitem);
+			lua_pushinteger(L, (UINT_PTR)hitem);
 			goto done;
 		}
 		return 0;
-	} else if (idx < (int)get_count(w)) {
-		push_item(L, w, idx);
-		lua_pushinteger(L, ++idx);
+	} else {
+		if (idx < get_count(w)) {
+			push_item(L, w, idx);
+			lua_pushinteger(L, ++idx);
 done:		lua_replace(L, lua_upvalueindex(2));
-		return 1;
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -615,7 +629,7 @@ LUA_METHOD(Listbox, add) {
 		ShowScrollBar(w->handle, SB_VERT, TRUE);
 	while(++i <= count)
 		last = __add_item(w, lua_towstring(L, i), hti);
-	__push_item(L, w, last, (w->wtype == UITree || w->item.itemtype == UITree) ? (HTREEITEM)last : NULL);
+	__push_item(L, w, last, (w->wtype == UITree || w->item.itemtype == UITree) ? (HTREEITEM)(UINT_PTR)last : NULL);
 	return 1;
 }
 
@@ -739,7 +753,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		else if (w->wtype == UITab)
 			SendMessageW(w->handle, TCM_SETCURFOCUS, sel->index, 0);
 		else if (w->wtype == UICombo) {
-			SendMessageW(w->status ?: w->handle, CB_SETCURSEL, sel->index, 1);
+			SendMessageW(w->status ? w->status : w->handle, CB_SETCURSEL, sel->index, 1);
 			SetWindowTextW(w->handle, sel->item.cbitem->pszText);
 		}
 	}
@@ -790,7 +804,7 @@ LUA_METHOD(Item, loadicon) {
 			msg = TVM_SETITEMW;
 			item = w->item.treeitem;
 			w->item.treeitem->mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-			if (w->item.treeitem->iImage == __INT16_MAX__) {
+			if (w->item.treeitem->iImage == INT16_MAX) {
 				w->index = ((Widget*)GetWindowLongPtr(h, GWLP_USERDATA))->index++;
 				w->item.treeitem->iImage = w->index;
 			} else 

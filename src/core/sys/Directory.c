@@ -6,6 +6,8 @@
  | Directory.c | LuaRT Directory object implementation
 */
 
+#define LUA_LIB
+
 #include <Directory.h>
 #include <File.h>
 #include <Buffer.h>

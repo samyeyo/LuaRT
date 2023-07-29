@@ -17,8 +17,8 @@ LUA_CONSTRUCTOR(Window);
 
 LUA_API luart_type TWindow;
 
-extern luaL_Reg Window_methods[];
-extern luaL_Reg Window_metafields[];
+extern const luaL_Reg Window_methods[];
+extern const luaL_Reg Window_metafields[];
 
 #ifdef __cplusplus
 }

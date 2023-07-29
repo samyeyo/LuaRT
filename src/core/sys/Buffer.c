@@ -6,6 +6,8 @@
  | Buffer.c | LuaRT Buffer object implementation
 */
 
+#define LUA_LIB
+
 #include <Buffer.h>
 #include "lrtapi.h"
 #include <luart.h>
@@ -14,10 +16,10 @@
 #define _GNU_SOURCE
 #include <string.h>
 
-static const char* encodings[] = { "utf8", "unicode", "base64", "hex", NULL };
 luart_type TBuffer;
+static const char* encodings[] = { "utf8", "unicode", "base64", "hex", NULL };
 
-Buffer *luart_tobuffer(lua_State *L, int idx) {
+LUA_API Buffer *luart_tobuffer(lua_State *L, int idx) {
 	if (lua_isstring(L, idx)) {
 		size_t len;
 		const char *str = lua_tolstring(L, idx, &len);
@@ -27,7 +29,7 @@ Buffer *luart_tobuffer(lua_State *L, int idx) {
 	return luaL_checkcinstance(L, idx, Buffer);
 }
 
-void lua_toBuffer(lua_State *L, void *p, size_t len) {
+LUA_API void lua_toBuffer(lua_State *L, void *p, size_t len) {
 	Buffer b;
 	b.bytes = p;
 	b.size = len;

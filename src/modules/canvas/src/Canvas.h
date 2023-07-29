@@ -5,8 +5,12 @@
  |-------------------------------------------------
  | Canvas.h | LuaRT binary module 
 */
-
+#ifdef _MSC_VER
+#include <d2d1.h>
+#else
 #include "d2d1.h"
+#endif
+
 #include <dwrite.h>
 
 #define GetA(c)((float)((c) & 0xff))

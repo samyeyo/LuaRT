@@ -8,6 +8,7 @@
 
 #define LUA_LIB
 
+#include <lua\lua.h>
 #include <luart.h>
 #include <Widget.h>
 #include "lrtapi.h"
@@ -618,10 +619,8 @@ void *lua_getevent(lua_State *L, lua_Integer eventid, int *type) {
 	return methodname;
 }
 
-// extern LUA_API  luart_type TZip;
-
  //------ Helpers for Widgets in LuaRT binary modules
-lua_Integer			WM_LUAMAX;
+lua_Integer			WM_LUAMAX = WM_USER + 1;
 WIDGET_INIT 		lua_widgetinitialize = NULL;
 WIDGET_CONSTRUCTOR	lua_widgetconstructor = NULL;
 WIDGET_DESTRUCTOR	lua_widgetdestructor = NULL;

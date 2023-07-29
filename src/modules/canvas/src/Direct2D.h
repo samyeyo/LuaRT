@@ -1,7 +1,12 @@
 
 #pragma once
 
+#ifdef _MSC_VER
+#include <d2d1.h>
+#else
 #include "d2d1.h"
+#endif
+#include <d2d1helper.h>
 #include <dwrite.h>
 #include <wincodec.h>
 
@@ -14,6 +19,7 @@ public:
 	~Direct2D();
 
 	ID2D1Factory            *Factory{};
+    D2D1::Matrix3x2F        transform = D2D1::Matrix3x2F::Identity();
 	IWICImagingFactory      *WICFactory;
     IDWriteFactory          *DWriteFactory;
     ID2D1DCRenderTarget   	*DCRender;

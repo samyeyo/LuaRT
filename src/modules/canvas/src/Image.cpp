@@ -11,7 +11,11 @@
 #include <File.h>
 #include <Widget.h>
 
+#ifdef _MSC_VER
+#include <d2d1.h>
+#else
 #include "d2d1.h"
+#endif
 #include "Image.h"
 #include "Canvas.h"
 #include "Direct2D.h"

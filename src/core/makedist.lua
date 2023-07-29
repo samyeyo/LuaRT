@@ -45,7 +45,7 @@ copy(parent.."\\README.md", "README.md")
 copy(parent.."\\LICENSE", "LICENSE")
 copy(parent.."\\CHANGELOG.md")
 file_add("../../setup/uninstall.wlua", "local VERSION = '"..VERSION.."'")
-sys.cmd('luart-static.exe ../../tools/rtc/src/rtc.lua -s -w -o ..\\dist\\LuaRT-remove.exe ../../setup/uninstall.wlua ../../setup/img >nul', false)
+sys.cmd('..\\..\\bin\\rtc.exe -i "resources/box.ico" -s -w -o ..\\dist\\LuaRT-remove.exe ../../setup/uninstall.wlua ../../setup/img')
 console.write("■")
 
 z = compression.Zip(parent.."/setup/luaRT.zip", "write", 9)
@@ -69,6 +69,5 @@ z:close()
 dist:removeall()
 
 file_add("../../setup/install.wlua", "local VERSION = '"..VERSION.."'")
-sys.cmd('luart-static.exe ../../tools/rtc/src/rtc.lua -s -w -o "LuaRT-'..VERSION..'-'..PLATFORM..'.exe" ../../setup/install.wlua ../../setup >nul', false)
-
+sys.cmd('..\\..\\bin\\rtc.exe -i "resources/box.ico" -s -w -o "LuaRT-'..VERSION..'-'..PLATFORM..'.exe" ../../setup/install.wlua ../../setup')
 

@@ -10,7 +10,6 @@
 
 #include <luart.h>
 #include <Widget.h>
-#include <window.h>
 #include <windows.h>
 #include <commctrl.h>
 #include <richedit.h>
@@ -21,6 +20,7 @@ void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunctio
 void *Widget_init(lua_State *L, Widget **wp);
 Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc);
 Widget *Widget_destructor(lua_State *L);
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 
 #define lua_newtype_widget(L, typename) widget_type_new(L, #typename, typename##_constructor, Widget_methods, Widget_metafields, NULL)
 #define lua_newtype_extwidget(L, typename) widget_type_new(L, #typename, typename##_constructor, Widget_methods, Widget_metafields, typename##_methods)
@@ -34,7 +34,7 @@ static const PSTR cursors_values[] = {
 	IDC_ARROW, IDC_APPSTARTING, IDC_CROSS, IDC_HAND, IDC_HELP, IDC_IBEAM, IDC_NO, IDC_SIZEALL, IDC_SIZEWE, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZENESW, IDC_UPARROW, IDC_WAIT, NULL
 };
 
-extern luart_type TWidgetItem;
+LUA_API  luart_type TWidgetItem;
 
 void new_items_mt(lua_State *L, Widget *w);
 LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
@@ -53,8 +53,8 @@ void copy_menuitems(lua_State *L, HMENU from, HMENU to);
 void do_align(Widget *w);
 HBITMAP LoadImg(wchar_t *filename);
 BOOL SaveImg(wchar_t *fname, HBITMAP hBitmap);
-BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf);
-int fontsize_fromheight(int height);
+LUA_API BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf);
+LUA_API int fontsize_fromheight(int height);
 LOGFONTW *Font(Widget *w);
 void UpdateFont(Widget *w, LOGFONTW *l);
 void SetFontFromWidget(Widget *w, Widget *wp);
@@ -107,8 +107,8 @@ extern luaL_Reg Widget_textalign[];
 extern luaL_Reg Widget_tooltip[];
 extern luaL_Reg Widget_methods[];
 extern luaL_Reg Widget_metafields[];
-extern luaL_Reg Window_methods[];
-extern luaL_Reg Window_metafields[];
+extern const luaL_Reg Window_methods[];
+extern const luaL_Reg Window_metafields[];
 extern luaL_Reg WidgetText_methods[];
 extern luaL_Reg WidgetTextAlign_methods[];
 extern luaL_Reg WidgetTooltip_methods[];
@@ -135,6 +135,8 @@ extern luaL_Reg Progressbar_methods[];
 LUA_METHOD(Listbox, sort);
 LUA_METHOD(Item, sort);
 
+extern DWORD uiLayout;
+
 void Edit_update_scrollbar(HANDLE hwnd);
 extern int Widget_loadicon(lua_State *L);
 extern void pushDate(lua_State *L, HANDLE h);
@@ -145,7 +147,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
 HICON widget_loadicon(lua_State *L);
 void fontstyle_createtable(lua_State *L, LOGFONTW *l);
 void fontstyle_fromtable(lua_State *L, int idx, LOGFONTW *l);
-int fontsize_fromheight(int height);
+LUA_API int fontsize_fromheight(int height);
 Widget *format(lua_State *L, Widget *w, DWORD mask, CHARFORMAT2W *cf, int scf, BOOL isset);
 Widget *get_fontstyle(lua_State *L, Widget *w, LOGFONTW *lf);
 LOGFONTW *Font(Widget *w);
@@ -173,7 +175,7 @@ LUA_METHOD(Widget, __gc);
 #define WM_LUADBLCLICK		(WM_LUAMIN + 8)
 #define WM_LUACONTEXT 		(WM_LUAMIN + 9)
 #define WM_LUACREATE	 	(WM_LUAMIN + 10)
-#define WM_LUACARET 		(WM_LUAMIN + 12)
+#define WM_LUACARET 		(WM_LUAMIN + 11)
 #define WM_LUACHANGE 		(WM_LUAMIN + 12)
 #define WM_LUASELECT 		(WM_LUAMIN + 13)
 #define WM_LUATRAYCLICK 	(WM_LUAMIN + 14)

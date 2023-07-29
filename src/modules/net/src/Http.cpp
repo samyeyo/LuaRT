@@ -296,6 +296,8 @@ static int RequestTaskContinue(lua_State* L, int status, lua_KContext ctx) {
 
                 DWORD status = 0, length = sizeof(DWORD);
                 if (HttpQueryInfo(h->hRequest, HTTP_QUERY_STATUS_CODE | HTTP_QUERY_FLAG_NUMBER, &status, &length, NULL)) {
+                    if (h->file && status != 200)
+                        DeleteFileA(h->fname.c_str());
                     lua_pushinteger(L, status);
                     lua_setfield(L, -2, "status");
                     lua_pushboolean(L, status < 400);

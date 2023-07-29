@@ -154,7 +154,7 @@ LUA_METHOD(Canvas, point) {
   ID2D1Brush *brush = getBrush(L, d, 4);
   float x = static_cast<FLOAT>(luaL_checknumber(L, 2));
   float y = static_cast<FLOAT>(luaL_checknumber(L, 3));
-	d->Render->DrawRectangle(D2D1::RectF(x, y, x+0.5f, y+0.5f), brush ?: d->colorBrush, 0.5f, NULL);
+	d->Render->DrawRectangle(D2D1::RectF(x, y, x+0.5f, y+0.5f), brush ? brush : d->colorBrush, 0.5f, NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -163,7 +163,7 @@ LUA_METHOD(Canvas, point) {
 LUA_METHOD(Canvas, line) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   ID2D1Brush *brush = getBrush(L, d, 6);
-	d->Render->DrawLine(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ?: d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
+	d->Render->DrawLine(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -172,7 +172,7 @@ LUA_METHOD(Canvas, line) {
 LUA_METHOD(Canvas, rect) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   ID2D1Brush *brush = getBrush(L, d, 6);
-	d->Render->DrawRectangle(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ?: d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
+	d->Render->DrawRectangle(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -190,7 +190,7 @@ LUA_METHOD(Canvas, fillrect) {
 LUA_METHOD(Canvas, roundrect) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   ID2D1Brush *brush = getBrush(L, d, 8);
-	d->Render->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)),static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), static_cast<FLOAT>(luaL_checknumber(L, 6)), static_cast<FLOAT>(luaL_checknumber(L, 7))), brush ?: d->colorBrush, luaL_optnumber(L, 9, 1.0f), NULL);
+	d->Render->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)),static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), static_cast<FLOAT>(luaL_checknumber(L, 6)), static_cast<FLOAT>(luaL_checknumber(L, 7))), brush ? brush : d->colorBrush, luaL_optnumber(L, 9, 1.0f), NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -209,7 +209,7 @@ LUA_METHOD(Canvas, ellipse) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   ID2D1Brush *brush = getBrush(L, d, 6);
 
-	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ?: d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
+	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -219,7 +219,7 @@ LUA_METHOD(Canvas, fillellipse) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   ID2D1Brush *brush = getBrush(L, d, 6);
 
-	d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ?: d->colorBrush);
+	d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush);
   if (brush)
     brush->Release();
 	return 0;
@@ -230,7 +230,7 @@ LUA_METHOD(Canvas, circle) {
   lua_Number radius = luaL_checknumber(L, 4);
   ID2D1Brush *brush = getBrush(L, d, 5);
   
-	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(radius), static_cast<FLOAT>(radius)), brush ?: d->colorBrush, luaL_optnumber(L, 6, 1.0f), NULL);
+	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(radius), static_cast<FLOAT>(radius)), brush ? brush : d->colorBrush, luaL_optnumber(L, 6, 1.0f), NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -240,7 +240,7 @@ LUA_METHOD(Canvas, fillcircle) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   ID2D1Brush *brush = getBrush(L, d, 5);
 
-	d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 4))), brush ?: d->colorBrush);
+	d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 4))), brush ? brush : d->colorBrush);
   if (brush)
     brush->Release();
 	return 0;
@@ -269,7 +269,7 @@ LUA_METHOD(Canvas, print) {
 
 	if (layout) {
     ID2D1Brush *brush = getBrush(L, d, 5);
-		d->Render->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 3)), static_cast<FLOAT>(luaL_checknumber(L, 4))), layout, brush ?: d->colorBrush);
+		d->Render->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 3)), static_cast<FLOAT>(luaL_checknumber(L, 4))), layout, brush ? brush : d->colorBrush);
 		layout->Release();
     if (brush)
       brush->Release();    
@@ -298,7 +298,63 @@ LUA_METHOD(Canvas, flip) {
 	Direct2D *d = (Direct2D*)w->user;
   d->Render->EndDraw();
   InvalidateRect((HWND)w->handle, NULL, TRUE);
+  d->transform = D2D1::Matrix3x2F::Identity();
+  d->Render->SetTransform(d->transform);  
 	return 0;
+}
+
+LUA_METHOD(Canvas, rotate) {
+  Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
+  D2D1_POINT_2F center;
+
+  if (lua_gettop(L) == 2) {
+    const D2D1_SIZE_F& size = d->Render->GetSize();
+    center = D2D1::Point2F(size.width / 2.0f, size.height / 2.0f);
+  } else center = D2D1::Point2F(luaL_checknumber(L, 3), luaL_checknumber(L, 4));
+  d->transform = d->transform * D2D1::Matrix3x2F::Rotation(luaL_checknumber(L, 2), center);
+  d->Render->SetTransform(d->transform);
+	return 0;
+}
+
+LUA_METHOD(Canvas, scale) {
+  Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
+  D2D1_POINT_2F center;
+
+  if (lua_gettop(L) == 3) {
+    const D2D1_SIZE_F& size = d->Render->GetSize();
+    center = D2D1::Point2F(size.width / 2.0f, size.height / 2.0f);
+  } else center = D2D1::Point2F(luaL_checknumber(L, 4), luaL_checknumber(L, 5));
+  d->transform = d->transform * D2D1::Matrix3x2F::Scale(D2D1::SizeF(luaL_checknumber(L, 2), luaL_checknumber(L, 3)), center);
+  d->Render->SetTransform(d->transform);
+	return 0;
+}
+
+LUA_METHOD(Canvas, translate) {
+  Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
+
+  d->transform = d->transform * D2D1::Matrix3x2F::Translation(luaL_checknumber(L, 2), luaL_checknumber(L, 3));
+  d->Render->SetTransform(d->transform);
+	return 0;
+}
+
+LUA_METHOD(Canvas, skew) {
+  Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
+  D2D1_POINT_2F center;
+
+  if (lua_gettop(L) == 3) {
+    const D2D1_SIZE_F& size = d->Render->GetSize();
+    center = D2D1::Point2F(size.width / 2.0f, size.height / 2.0f);
+  } else center = D2D1::Point2F(luaL_checknumber(L, 4), luaL_checknumber(L, 5));
+  d->transform = d->transform * D2D1::Matrix3x2F::Skew(luaL_checknumber(L, 2), luaL_checknumber(L, 3));
+  d->Render->SetTransform(d->transform);
+	return 0;
+}
+
+LUA_METHOD(Canvas, identity) {
+  Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
+  d->transform = D2D1::Matrix3x2F::Identity();
+  d->Render->SetTransform(d->transform);
+	return 0;  
 }
 
 LUA_METHOD(Canvas, begin) {
@@ -419,7 +475,7 @@ static int setFont(lua_State *L, wchar_t *fontname, float size, DWRITE_FONT_WEIG
   d->textFormat->GetFontFamilyName(oldfontname, 256);
   d->textFormat->Release();
 
-  if (FAILED(d->DWriteFactory->CreateTextFormat(fontname ?: oldfontname, NULL, weight, style, stretch, size, L"en-us", &d->textFormat)))
+  if (FAILED(d->DWriteFactory->CreateTextFormat(fontname ? fontname : oldfontname, NULL, weight, style, stretch, size, L"en-us", &d->textFormat)))
     d->DWriteFactory->CreateTextFormat(oldfontname, NULL, weight, style, stretch, size, L"en-us", &d->textFormat);      
   free(fontname);    
   return 0;
@@ -474,6 +530,8 @@ int event_onPaint(lua_State *L) {
     lua_call(L, 1, 0);
     d->Render->EndDraw();
     InvalidateRect((HWND)w->handle, NULL, TRUE);
+    d->transform = D2D1::Matrix3x2F::Identity();
+    d->Render->SetTransform(d->transform);    
   }
   else lua_pop(L, 1);
   lua_pushnil(L);
@@ -502,6 +560,11 @@ OBJECT_MEMBERS(Canvas)
   METHOD(Canvas, fillcircle) 
   METHOD(Canvas, flip)
   METHOD(Canvas, begin)
+  METHOD(Canvas, rotate)
+  METHOD(Canvas, scale)
+  METHOD(Canvas, translate)
+  METHOD(Canvas, skew)
+  METHOD(Canvas, identity)
   METHOD(Canvas, Image)
   METHOD(Canvas, LinearGradient)
   METHOD(Canvas, RadialGradient)

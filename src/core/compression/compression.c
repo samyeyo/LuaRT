@@ -5,6 +5,7 @@
  |-------------------------------------------------
  | compression.c | LuaRT compression module implementation
 */
+#define LUA_LIB
 
 #include <luart.h>
 #include <File.h>

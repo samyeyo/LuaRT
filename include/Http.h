@@ -8,46 +8,69 @@
 
 #pragma once
 
+#ifdef _MSC_VER
+#pragma warning(disable : 5208)
+#endif
+
 #include <luart.h>
+#include <Task.h>
+#include <stdio.h>
 #include <windows.h>
 #include <wininet.h>
 #include <shlwapi.h>
+#include <string>
+#include <map>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define INTERNET_OPTION_HTTP_DECODING 65
 
-typedef struct {
+#define REQ_STATE_SEND_REQ             0
+#define REQ_STATE_SEND_REQ_WITH_BODY   1
+#define REQ_STATE_POST_SEND_HEADERS	   2
+#define REQ_STATE_POST_GET_DATA        3
+#define REQ_STATE_POST_SEND_DATA       4
+#define REQ_STATE_POST_COMPLETE        5
+#define REQ_STATE_RESPONSE_RECV_DATA   6
+#define REQ_STATE_COMPLETE             7
+
+typedef struct Http {
 	luart_type		type;
-	INTERNET_SCHEME	scheme;
-	HINTERNET		h;
-	HINTERNET		hcon;
-	HINTERNET		request;
-	wchar_t			*hostname;
-	wchar_t			*username;
-	wchar_t			*password;
+	HINTERNET 		handle;
+	HINTERNET 		hRequest;
+	HINTERNET 		hConnect;
+
+	int				state;
 	int 			port;
-	BOOL			active;
+	bool	 		ssl;
+	std::string		scheme;
+	std::string 	useragent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0";
+	std::string		received;
+	bool			download;
+	std::string		fname;
+	FILE			*file;
+	size_t			recvsize;
+	std::string 	method;
+	std::string 	host;
+	std::string 	url;
+	std::string		proxy;
+	bool 			failed = false;
+	bool 			done = false;
+	DWORD 			sended;
+	std::string		outbuffer;
+	char			inbuffer[65536];
+    CRITICAL_SECTION CriticalSection;
+    BOOL 			CritSecInitialized;
+    DWORD 			HandleUsageCount;
+    bool 			Closing;
+	DWORD			started;
+	std::map <std::string, std::string> cookies; 
+	std::map<std::string, std::string> header = { {"",""} };
 } Http;
 
-LUA_API luart_type THttp;
+static char *get_header(Http *h, const char *field);
+
+extern luart_type THttp;
 
 //---------------------------------------- Http object
 LUA_CONSTRUCTOR(Http);
 extern const luaL_Reg Http_methods[];
 extern const luaL_Reg Http_metafields[];
-
-//---------------------------------------- Functions prototypes for Ftp object
-LUA_METHOD(Http, open);
-LUA_METHOD(Http, __gc);
-LUA_METHOD(Http, close);
-LUA_PROPERTY_GET(Http, hostname);
-LUA_PROPERTY_GET(Http, port);
-
-URL_COMPONENTSW *get_url(lua_State *L, int idx, wchar_t **url_str);
-int get_response(lua_State *L, Http *http);
-int constructor(lua_State *L, BOOL isFTP);
-
-#ifdef __cplusplus
-}
-#endif

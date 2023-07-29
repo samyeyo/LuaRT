@@ -6,11 +6,12 @@
  | Menu.c | LuaRT Menu object implementation
 */
 
+
+
 #include "lrtapi.h"
 #include <luart.h>
 #include <Widget.h>
 #include "ui.h"
-#include <Window.h>
 
 #include <windowsx.h>
 #include <commctrl.h>
@@ -63,7 +64,7 @@ static MENUITEMINFOW *GetMenuItemMask(HMENU menu, int idx, UINT mask) {
 	MENUITEMINFOW *mi = calloc(1, sizeof(MENUITEMINFOW));
 	
 	mi->cbSize = sizeof(MENUITEMINFOW);
-	mi->fMask = mask ?: MIIM_FTYPE | MIIM_SUBMENU | MIIM_DATA | MIIM_BITMAP;
+	mi->fMask = mask ? mask : MIIM_FTYPE | MIIM_SUBMENU | MIIM_DATA | MIIM_BITMAP;
 	GetMenuItemInfoW(menu, idx, TRUE, mi);
 	if (!mask) {
 		if (mi->dwTypeData == MFT_STRING) {
@@ -432,7 +433,7 @@ LUA_METHOD(MenuItem, loadicon) {
 	} else
 		w->item.mi->hbmpItem = NULL;
 	SetMenuItemBMP(L, w->handle, w->index, w->item.mi->hbmpItem);
-	lua_pushboolean(L, (int)w->icon);
+	lua_pushboolean(L, w->icon != NULL);
 	return 1;
 }
 

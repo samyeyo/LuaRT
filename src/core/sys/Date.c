@@ -6,6 +6,8 @@
  | Date.c | LuaRT Date object implementation
 */
 
+#define LUA_LIB
+
 #include <Date.h>
 #include "lrtapi.h"
 #include <luart.h>
@@ -38,7 +40,7 @@ LUA_CONSTRUCTOR(Datetime) {
 		d->st = calloc(1, sizeof(SYSTEMTIME));
 		if (lua_gettop(L) == 1)
 			GetLocalTime(d->st);
-		else if (lua_gettop(L) == 2)
+		else if (lua_isuserdata(L, 2))
 			*d->st = *(SYSTEMTIME*)lua_touserdata(L, 2);
 		else {
 			wchar_t *str = lua_towstring(L, 2);
@@ -54,7 +56,11 @@ LUA_CONSTRUCTOR(Datetime) {
 }
 
 //-------------------------------------[ Date.format() ]
+#ifndef _MSC_VER
 typedef int (__attribute__((stdcall)) *formatfunc)(LCID,  DWORD,  const SYSTEMTIME *, const WCHAR *, WCHAR *, int);
+#else
+typedef int (__stdcall *formatfunc)(LCID,  DWORD,  const SYSTEMTIME *, const WCHAR *, WCHAR *, int);
+#endif
 
 static void Datetimeformat(lua_State *L, wchar_t *format, formatfunc ffunc) {
 	wchar_t * buffer;

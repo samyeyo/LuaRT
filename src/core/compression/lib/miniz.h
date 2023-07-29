@@ -484,7 +484,7 @@ MINIZ_EXPORT int mz_deflateReset(mz_streamp pStream);
 #define CHMOD(f, m) _wchmod(f, m)
 #endif
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
 #include <windows.h>
 #ifndef MINIZ_NO_TIME
 #include <sys/utime.h>

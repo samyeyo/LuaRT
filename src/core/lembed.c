@@ -6,6 +6,8 @@
  | lembed.c | LuaRT embed module implementation
 */
 
+#define LUA_LIB
+
 #include "lrtapi.h"
 #include <luart.h>
 
@@ -36,12 +38,12 @@ struct zip_t *open_fs(void *ptr, size_t size) {
 
 //-------------------------------------------------[luaRT embeded package loader]
 static void *fsload(lua_State *L, const char *fname) {
-	 void *buff = NULL; 
+	 char *buff = NULL; 
 	 int idx = 0;
 	 size_t size;
 
 	 if (zip_entry_open(fs, fname) == 0) {
-        zip_entry_read(fs, &buff, &size);
+        zip_entry_read(fs, (void**)&buff, &size);
 		if (memcmp(buff, "\xEF\xBB\xBF", 3)==0)
 			idx = 3;
 		if (luaL_loadbuffer(L, (const char*)(buff+idx), size-idx, fname))
