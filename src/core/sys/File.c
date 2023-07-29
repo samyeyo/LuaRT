@@ -6,6 +6,9 @@
  | File.c | LuaRT File object implementation
 */
 
+
+#define LUA_LIB
+
 #include <File.h>
 #include <Directory.h>
 #include <Buffer.h>
@@ -20,6 +23,7 @@
 #include <shlwapi.h>
 
 luart_type TFile;
+
 const char *file_modes[] = { "read", "append", "write", "readwrite", NULL };
 const wchar_t *file_values[] = { L"rb", L"ab+", L"wb" , L"rb+" };
 const char* encodings[] = { "binary", "utf8", "unicode", NULL };
@@ -77,16 +81,31 @@ LUA_CONSTRUCTOR(File) {
 	return 1;
 }
 
-wchar_t *luaL_checkFilename(lua_State *L, int idx) {
-	return (wchar_t*)(lua_type(L, idx) == LUA_TSTRING ? lua_towstring(L, idx) : wcsdup(lua_self(L, idx, File)->fullpath)); 
+LUA_API wchar_t *luaL_checkFilename(lua_State *L, int idx) {
+	return (wchar_t*)(lua_type(L, idx) == LUA_TSTRING ? lua_towstring(L, idx) : wcsdup(((File*)lua_checkcinstance(L, idx, TFile))->fullpath)); 
+}
+
+LUA_API Encoding detectBOM(FILE *f) {
+	static unsigned char b[2] = {0};
+	
+	_fseeki64(f, 0, SEEK_SET);
+	fread(b, 1, 2, f);
+	if( b[0] == 0xFF && b[1] == 0xFE)
+		return UNICODE;
+	if (b[0] == 0xEF && b[1] == 0xBB) {
+		fread(b, 1, 1, f);
+		if (b[0] == 0xBF)
+			return UTF8;
+	}
+	_fseeki64(f, 0, SEEK_SET);
+	return ASCII;;
 }
 
 //-------------------------------------[ File.open() ]
-LUA_METHOD(File, open) {
+LUA_API LUA_METHOD(File, open) {
 	File *f;
 	int mode = luaL_checkoption(L, 2, "read", file_modes);
 	int narg = lua_gettop(L);
-	unsigned char b[2] = {0};
 
 	f = lua_self(L, 1, File);
 	if (!f->std) {
@@ -97,21 +116,7 @@ LUA_METHOD(File, open) {
 			luaL_error(L, "File open failed '%s'", strerror(errno));
 		f->mode = mode;
 		if (mode < 2) {
-			f->encoding = ASCII;
-			_fseeki64(f->stream, 0, SEEK_SET);
-			fread(b,1,2, f->stream);
-			if( b[0] == 0xFF && b[1] == 0xFE)
-				f->encoding = UNICODE;
-			else if (b[0] == 0xEF && b[1] == 0xBB) {
-				fread(b, 1, 1, f->stream);
-				if (b[0] == 0xBF)
-					f->encoding = UTF8;
-				else
-					goto def;
-			}
-			else
-			def:
-				_fseeki64(f->stream, 0, SEEK_SET);
+			f->encoding = detectBOM(f->stream);
 			if (narg == 1 && f->encoding == ASCII)
 				f->encoding = UTF8;
 			if (narg == 3)
@@ -240,7 +245,9 @@ readstd:	save = _setmode(_fileno(fout), _O_U16TEXT);
 			int save = _setmode(_fileno(f->stream), _O_U16TEXT);
 			if (fgetws(buffer, 4096, f->stream)) {
 				luaL_addlstring(&b, (char*)buffer, sizeof(wchar_t)*wcslen(buffer)-2);
+				#ifndef _MSC_VER				 
 				fgetwc(f->stream);
+				#endif
 				_setmode(_fileno(f->stream), save);
 			}
 			else {
@@ -314,7 +321,7 @@ LUA_METHOD(File, flush) {
 }
 
 //-------------------------------------[ File.close() ]
-LUA_METHOD(File, close) {
+LUA_API LUA_METHOD(File, close) {
 	File *f = lua_self(L, 1, File);
 	if (!f->std && f->stream) {
 		fflush(f->stream);
@@ -569,17 +576,6 @@ LUA_METHOD(File, geteof) {
 	else
 		lua_pushnil(L);
 	return 1;
-}
-
-//-------------------------------------[ File.buffered ]
-LUA_PROPERTY_SET(File, buffered) {
-	setvbuf(lua_self(L, 1, File)->stream, NULL, luaL_checkinteger(L, 2) ? _IOFBF : _IONBF, LUAL_BUFFERSIZE);
-	return 0;
-}
-
-//-------------------------------------[ File.buffered ]
-LUA_PROPERTY_GET(File, buffered) {
-	return lua_self(L, 1, File)->stream->_flag & 0x100 ? _IOFBF : _IONBF;
 }
 
 //-------------------------------------[ File.encoding ]
