@@ -1,4 +1,4 @@
-﻿local VERSION = '1.4.0'
+﻿local VERSION = '1.5.0'
 
 --[[
  | LuaRT - A Windows programming framework for Lua
@@ -22,6 +22,7 @@ win.installation = false
 local x = ui.Label(win, "\xc3\x97", 378, -4)
 x.fontsize = 16
 x.fgcolor = 0x808080
+x.bgcolor = 0xFFFFFF
 x.cursor = "hand"
 
 function x:onHover()
@@ -44,7 +45,7 @@ local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Wind
 if update then
     local p = sys.Pipe('luart -e "print(_VERSION)"') or false
     if p then
-        local current = (p:read(200) or VERSION):match("%d%.%d%.%d")
+        local current = (await(p:read()) or VERSION):match("%d%.%d%.%d")
         local numver = VERSION:gsub("%.", "")
         local numcurr = current:gsub("%.", "")
         if current == VERSION then
