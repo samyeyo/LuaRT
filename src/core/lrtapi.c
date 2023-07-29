@@ -210,11 +210,7 @@ static int luaB_each (lua_State *L) {
 	if (type == LUA_TFUNCTION)
 		lua_pushvalue(L, 1);
 	else {
-			if (lua_getfield(L, 1, "iterator") == LUA_TFUNCTION) {
-					lua_pushvalue(L, 1);
-					lua_pushnil(L);
-					lua_pushcclosure(L, obj_each_iter, 2);
-			} else if (luaL_getmetafield(L, 1, "__iterate") == LUA_TFUNCTION ) {
+			 if (luaL_getmetafield(L, 1, "__iterate") == LUA_TFUNCTION ) {
 				lua_pushvalue(L, 1);
 				lua_call(L, 1, 1);
 			} else if (!luaL_getmetafield(L, 1, "__name")) {
@@ -222,6 +218,10 @@ static int luaB_each (lua_State *L) {
 					lua_pushvalue(L, 1);
 					lua_pushnil(L);
 					lua_pushcclosure(L, each_iter, 2);
+			} else if (lua_getfield(L, 1, "iterator") == LUA_TFUNCTION) {
+					lua_pushvalue(L, 1);
+					lua_pushnil(L);
+					lua_pushcclosure(L, obj_each_iter, 2);
 			} else luaL_error(L, "cannot iterate over %s", lua_tostring(L, -1));
 	}
 	return 1;
