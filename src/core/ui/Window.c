@@ -6,6 +6,8 @@
  | Window.c | LuaRT Window object implementation
 */
 
+#define LUA_LIB
+
 #include <luart.h>
 #include <Widget.h>
 #include "ui.h"
@@ -201,21 +203,18 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 	    							return 0;
 								 }
 			case WM_WINDOWPOSCHANGING:
-				if (!(((WINDOWPOS*)lParam)->flags & SWP_NOSIZE)) {
-					
+				if (!(((WINDOWPOS*)lParam)->flags & SWP_NOMOVE))
+					lua_callevent(w, onMove);
+				if (!(((WINDOWPOS*)lParam)->flags & SWP_NOSIZE))					
 					lua_callevent(w, onResize);
-					return 0;
-				}
 				break;
-			case WM_WINDOWPOSCHANGED:	
+			case WM_WINDOWPOSCHANGED:
 				if (w->status) {
 					RECT r;
 					GetClientRect(hWnd, &r);
 					SendMessage(w->status, WM_SIZE, 0, MAKELPARAM(r.right, r.bottom));
 				}
 				flags = ((WINDOWPOS*)lParam)->flags;
-				if (!(flags & SWP_NOMOVE))
-					lua_callevent(w, onMove);
 				if (flags & SWP_HIDEWINDOW)
 					lua_callevent(w, onHide);
 				else if (flags & SWP_SHOWWINDOW)
@@ -226,8 +225,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 					EnumChildWindows(hWnd, ResizeChilds, (LPARAM)hWnd);
 					lua_callevent(w, onResize);
 				}
-				return 0;
-			case WM_MOUSEMOVE:		
+				break;
+			case WM_MOUSEMOVE:	
 				if (hwndPrevious != hWnd) {
 					if (hwndPrevious)
 						PostMessage(hwndPrevious, WM_MOUSELEAVE,0,0);
@@ -316,8 +315,8 @@ static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_
 
 extern int size(Widget *w, lua_State *L, int offset_from, int offset_to, BOOL set, LONG value, BOOL iswidth);
 
+#ifndef _MSC_VER
 //---------- dwmapi.h from Mingw-w64 compiler are not uptodate
-
 #define DWMWA_WINDOW_CORNER_PREFERENCE  33
 
 typedef enum {
@@ -327,8 +326,7 @@ typedef enum {
     DWMWCP_ROUNDSMALL                              = 3
 
 } DWM_WINDOW_CORNER_PREFERENCE;
-
-//-----------
+#endif
 
 LUA_CONSTRUCTOR(Window) {
 	Widget *w = (Widget*)calloc(1, sizeof(Widget));
@@ -345,7 +343,7 @@ LUA_CONSTRUCTOR(Window) {
 	style = i == 4 ? luaL_checkoption(L, 3, "dialog", styles) : 0;
 	r.bottom = luaL_optinteger(L, i+1, 480);
 	r.right = luaL_optinteger(L, i, 640);
-	w->handle = CreateWindowExW(0, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, HWND_DESKTOP, NULL, hInstance, NULL);
+	w->handle = CreateWindowExW(uiLayout, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, HWND_DESKTOP, NULL, hInstance, NULL);
 	switch(style) {
 		case 3: 	{
 						DWM_WINDOW_CORNER_PREFERENCE d = DWMWCP_ROUND;
@@ -365,6 +363,7 @@ LUA_CONSTRUCTOR(Window) {
 	w->brush = GetSysColorBrush(COLOR_BTNFACE);
 	w->wtype = UIWindow;
 	w->align = -1;
+	w->wp.length = sizeof(WINDOWPLACEMENT);
 	w->hcursor = (HCURSOR)LoadCursor(NULL, IDC_ARROW);
 	ncm.cbSize = sizeof(NONCLIENTMETRICS);
 	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
@@ -404,7 +403,6 @@ LUA_METHOD(Window, showmodal) {
 LUA_PROPERTY_GET(Window, fullscreen) {
 	Widget *w = lua_self(L, 1, Widget);
 	HWND h = w->handle;
-	// DWORD flag = w->index ? WS_CAPTION : (WS_CAPTION | WS_THICKFRAME);
 
   	lua_pushboolean(L, !(GetWindowLongPtr(h, GWL_STYLE) & w->style));
 	return 1;
@@ -414,17 +412,18 @@ LUA_PROPERTY_SET(Window, fullscreen) {
 	Widget *w = lua_self(L, 1, Widget);
 	HWND h = w->handle;
 	DWORD dwStyle = GetWindowLongPtr(h, GWL_STYLE);
-	// DWORD flag = w->index ? WS_CAPTION : (WS_CAPTION | WS_THICKFRAME);
 
 	if (lua_toboolean(L, 2)) {
 		MONITORINFO mi;
 		mi.cbSize = sizeof(mi);
+		GetWindowPlacement(h, &w->wp);
 		SetWindowLongPtr(h, GWL_STYLE, dwStyle & ~w->style);
 		if (GetMonitorInfo(MonitorFromWindow(h, MONITOR_DEFAULTTOPRIMARY), &mi))
 			SetWindowPos(h, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom-mi.rcMonitor.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 	} else {
+		SetWindowPlacement(h, &w->wp);
 		SetWindowLongPtr(h, GWL_STYLE, dwStyle | w->style);
-		SetWindowPos(h, HWND_TOP, 640, 480, 640, 480, SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		SetWindowPos(h, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 	}
 	return 0;
 }
@@ -520,7 +519,7 @@ LUA_METHOD(Window, popup) {
 	}
 	GetCursorPos(&p);
 	SetForegroundWindow(hwin);
-	TrackPopupMenu(h ?: w->handle, TPM_RIGHTBUTTON, p.x, p.y, 0, hwin,  NULL);
+	TrackPopupMenu(h ? h : w->handle, TPM_RIGHTBUTTON, p.x, p.y, 0, hwin,  NULL);
 	DestroyMenu(h);
 	return 0;
 
@@ -597,31 +596,25 @@ LUA_METHOD(Window, __gc) {
 	return Widget___gc(L);
 }
 
-luaL_Reg Window_metafields[] = {
-	{"__gc", Window___gc},
-	{NULL, NULL}
-};
+OBJECT_METAFIELDS(Window)
+	METHOD(Window, __gc)
+END
 
-luaL_Reg Window_methods[] = {
-	{"onClose",			Window_onClose},
-	{"showmodal",		Window_showmodal},
-	{"minimize",		Window_minimize},
-	{"maximize",		Window_maximize},
-	{"status",			Window_status},
-	{"loadtrayicon",	Window_loadtrayicon},
-	{"get_traytooltip", Window_gettraytooltip},
-	{"set_traytooltip", Window_settraytooltip},
-	{"loadicon",		Widget_loadicon},
-	{"shortcut",		Window_shortcut},
-	{"set_fullscreen",	Window_setfullscreen},
-	{"get_fullscreen",	Window_getfullscreen},
-	{"popup",			Window_popup},
-	{"set_title",		Widget_settext},
-	{"get_title",		Widget_gettext},
-	{"get_menu",		Window_getmenu},
-	{"set_menu",		Window_setmenu},
-	{"center",			Widget_center},
-	{"get_bgcolor",		Widget_getbgcolor},
-	{"set_bgcolor",		Widget_setbgcolor},
-	{NULL, NULL}
-};
+OBJECT_MEMBERS(Window)
+	METHOD(Window, onClose)
+	METHOD(Window, showmodal)
+	METHOD(Window, minimize)
+	METHOD(Window, maximize)
+	METHOD(Window, status)
+	METHOD(Window, loadtrayicon)
+	METHOD(Widget, loadicon)
+	METHOD(Window, shortcut)
+	METHOD(Window, popup)
+	METHOD(Widget, center)
+	READWRITE_PROPERTY(Window, traytooltip)
+	READWRITE_PROPERTY(Window, fullscreen)
+	READWRITE_PROPERTY(Window, menu)
+	READWRITE_PROPERTY(Widget, bgcolor)
+ 	{"set_title",		Widget_settext},
+ 	{"get_title",		Widget_gettext},
+END

@@ -6,11 +6,12 @@
  | ui.c | LuaRT ui module
 */
 
+
 #include <luart.h>
 #include <Widget.h>
 #include "ui.h"
-#include <Window.h>
 #include <File.h>
+#include "..\sys\async.h"
 #include <Directory.h>
 
 #include <windows.h>
@@ -47,6 +48,8 @@ int UITree;
 int UIEdit;
 int UIItem;
 int UIProgressbar;
+
+DWORD uiLayout = 0;
 
 BOOL SaveImg(wchar_t *fname, HBITMAP hBitmap) {
 	BITMAP Bitmap;
@@ -185,7 +188,7 @@ static int MsgBox(lua_State *L, UINT options, wchar_t *def) {
 	static const char *values[] = {NULL, "ok", "cancel", NULL, NULL, NULL, "yes", "no"};
 	MsgParam mp;
 	hMsgIcon =  (HICON)SendMessage(GetMainWindow(), WM_GETICON, 0, 0);
-	hMsgIcon = hMsgIcon ?: LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(101));
+	hMsgIcon = hMsgIcon ? hMsgIcon : LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(101));
 	mp.title = lua_gettop(L) > 1 ? lua_towstring(L, 2) : def;
 	luaL_tolstring(L, 1, NULL);
 	mp.msg = lua_towstring(L, -1);
@@ -342,10 +345,9 @@ LUA_METHOD(ui, remove) {
 	return 0;
 }
 
-LUA_METHOD(ui, update) {
+static int do_update(lua_State *L, ULONGLONG delay) {
 	int type;
 	MSG msg;
-	ULONGLONG delay = (ULONGLONG)luaL_optinteger(L, 1, 10);
 	ULONGLONG start = GetTickCount64();
 
 	while (GetTickCount64()-start < delay) {
@@ -384,10 +386,9 @@ LUA_METHOD(ui, update) {
 								case WM_LUACONTEXT:	if (((w->wtype >= UIList) && (w->wtype <= UITab)) && (msg.wParam > 0))
 														__push_item(L, w, msg.wParam-1, w->wtype == UITree ? (HTREEITEM)msg.wParam : NULL);
 													break;							
-								case WM_LUACLICK:	//if (w->wtype == UIWindow || w->wtype == UIMenuItem) {
+								case WM_LUACLICK:	
 		push_params:									lua_pushinteger(L, msg.wParam);
 														lua_pushinteger(L, msg.lParam);	
-													//} 
 													break;
 								case WM_LUAHOVER:	goto push_params;
 								case WM_LUACHANGE:	if (w->wtype == UICombo)
@@ -442,6 +443,10 @@ LUA_METHOD(ui, update) {
 								SetActiveWindow(w->tooltip);
 								w->tooltip = NULL;
 							}
+							if (w->ismain) {
+								DestroyWindow(w->handle);
+								w->handle = NULL;
+							}
 						}
 						lua_pop(L, result);
 				 	}
@@ -470,6 +475,40 @@ dispatch:		DispatchMessage(&msg);
 		}	
 	}
 	Sleep(1);
+	return 0;
+}
+
+LUA_METHOD(ui, update) {
+	return do_update(L, (ULONGLONG)luaL_optinteger(L, 1, 10));
+}
+
+static int UiTaskContinue(lua_State* L, int status, lua_KContext ctx) {
+    Widget *w = (Widget*)ctx;
+    
+	do_update(L, 10);
+    if ( !w->handle )
+		return 0;
+    return lua_yieldk(L, 0, ctx, UiTaskContinue);
+}
+
+static int WaitTask(lua_State *L) {	
+    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), UiTaskContinue);
+}
+
+LUA_METHOD(ui, run) {
+	Widget *w = check_widget(L, 1, UIWindow);
+	Task *t;
+
+	w->ismain = TRUE;
+	Widget_show(L);
+	lua_pushlightuserdata(L, w);
+    lua_pushcclosure(L, WaitTask, 1);
+    t = lua_pushinstance(L, Task, 1);
+	start_task(L, t, 0);
+	do {
+		update_tasks(L, t);	
+		lua_sleep(L, 1);
+	} while (t->status != TTerminated);		
 	return 0;
 }
 
@@ -584,7 +623,7 @@ LUA_CONSTRUCTOR(Entry) {
 }
 
 LUA_CONSTRUCTOR(Checkbox) {
-	Widget_create(L, UICheck, 0, WC_BUTTONW, WS_VISIBLE | WS_TABSTOP | ES_LEFT | BS_AUTOCHECKBOX | BS_FLAT, TRUE, TRUE);
+	Widget_create(L, UICheck, 0, WC_BUTTONW, WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP | ES_LEFT | BS_FLAT, TRUE, TRUE);
 	return 1;
 }
 
@@ -595,7 +634,8 @@ LUA_CONSTRUCTOR(Radiobutton) {
 
 LUA_CONSTRUCTOR(Groupbox) {
 	Widget *w = Widget_create(L, UIGroup, 0, WC_BUTTONW, WS_VISIBLE | ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE);
-	w->brush = ((Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA))->brush ?: GetSysColorBrush(COLOR_BTNFACE);
+	Widget *wp = ((Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA));
+	w->brush = wp->brush ? wp->brush : GetSysColorBrush(COLOR_BTNFACE);
 	return 1;
 }
 
@@ -666,39 +706,51 @@ LUA_CONSTRUCTOR(Edit) {
 
 IWICImagingFactory *ui_factory;
 
-LUALIB_API int ui_finalize(lua_State *L) {
+int ui_finalize(lua_State *L) {
 	ui_factory->lpVtbl->Release(ui_factory);
 	FreeLibrary(richeditlib);
 	return 0;
 }
 
-static const luaL_Reg ui_properties[] = {
-	{NULL, NULL}
-};
+LUA_PROPERTY_GET(ui, rtl) {
+	lua_pushboolean(L, uiLayout);
+	return 1;
+}
 
-static const luaL_Reg uilib[] = {
-	{"msg",				ui_msg},
-	{"info",			ui_info},
-	{"warn",			ui_warn},
-	{"confirm",			ui_confirm},
-	{"opendialog",		ui_opendialog},
-	{"dirdialog",		ui_dirdialog},
-	{"savedialog",		ui_savedialog},
-	{"fontdialog",		ui_fontdialog},
-	{"colordialog",		ui_colordialog},
-	{"mousepos",		ui_mousepos},
-	{"error",			ui_error},
-	{"update",			ui_update},
-	{"remove",			ui_remove},
-	{NULL, NULL}
-};
+LUA_PROPERTY_SET(ui, rtl) {
+	uiLayout = lua_toboolean(L, 1) ? WS_EX_LAYOUTRTL : 0;
+	return 0;
+}
+
+MODULE_PROPERTIES(ui)
+	READWRITE_PROPERTY(ui, rtl)
+END
+
+MODULE_FUNCTIONS(ui)
+	METHOD(ui, msg)
+	METHOD(ui, info)
+	METHOD(ui, warn)
+	METHOD(ui, confirm)
+	METHOD(ui, opendialog)
+	METHOD(ui, dirdialog)
+	METHOD(ui, savedialog)
+	METHOD(ui, fontdialog)
+	METHOD(ui, colordialog)
+	METHOD(ui, mousepos)
+	METHOD(ui, error)
+	METHOD(ui, update)
+	METHOD(ui, remove)
+	METHOD(ui, run)
+END
 
 /* ------------------------------------------------------------------------ */
 
-LUAMOD_API int luaopen_ui(lua_State *L)
+int luaopen_ui(lua_State *L)
 {
 	WNDCLASSEX wcex = {0};
+	DWORD dwLayout;
 	int i = -1;
+	
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = 0;
 	wcex.lpfnWndProc = WindowProc;
@@ -711,6 +763,10 @@ LUAMOD_API int luaopen_ui(lua_State *L)
 	wcex.lpszClassName = "Window";
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(WINICON));
 	RegisterClassEx(&wcex);
+
+    if (GetProcessDefaultLayout(&dwLayout))
+       uiLayout = dwLayout == LAYOUT_RTL ? WS_EX_LAYOUTRTL : 0;
+	
 	while (events[++i])
 		lua_registerevent(L, events[i], NULL);
 	lua_regmodulefinalize(L, ui); 
