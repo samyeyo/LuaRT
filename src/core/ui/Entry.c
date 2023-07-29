@@ -6,12 +6,13 @@
  | Entry.c | LuaRT Entry and Edit object implementation
 */
 
+
 #include <luart.h>
 #include <Widget.h>
 #include "ui.h"
 #include <File.h>
-#include <Window.h>
 
+#include <share.h>
 #include <windowsx.h>
 #include <commctrl.h>
 #include <richedit.h>
@@ -88,64 +89,47 @@ LUA_PROPERTY_GET(Edit, wordwrap) {
 
 LUA_PROPERTY_SET(Edit, wordwrap) {
 	Widget *w = lua_self(L, 1, Widget);
-	w->status = (HANDLE)(lua_toboolean(L, 2) ? 0 : 1);
+	w->status = (HANDLE)(UINT_PTR)(lua_toboolean(L, 2) ? 0 : 1);
 	SendMessage(w->handle, EM_SETTARGETDEVICE, 0, (LPARAM)w->status);
 	return 0;
 }
 
 DWORD CALLBACK ReadStreamCB(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
 {	
-	return (*pcb = (DWORD)fread(lpBuff, 1, cb, (FILE *)dwCookie)) == 0;
+	BOOL done = (*pcb = (LONG)fread(lpBuff, 1, cb, (FILE *)dwCookie)) == 0;
+	if (done)
+		fclose((FILE *)dwCookie);
+	return done;
 }
 
 DWORD CALLBACK WriteStreamCB(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
 {	
-	return (*pcb = (DWORD)fwrite(lpBuff, 1, cb, (FILE *)dwCookie)) == 0;;
+	return (*pcb = (LONG)fwrite(lpBuff, 1, cb, (FILE *)dwCookie)) == 0;
 }
+
+extern Encoding detectBOM(FILE *f);
 
 static int do_file_operation(lua_State *L, const char *action) {
 	HANDLE handle = lua_self(L, 1, Widget)->handle;
 	BOOL result = FALSE;
-	File *f;
+	FILE *f;
   	EDITSTREAM es = { 0 };
 	DWORD type;
 	BOOL iswrite = (*action == 'w');
-	int nargs = lua_gettop(L);
+	wchar_t *fname = luaL_checkFilename(L, 2);
 
-	extern int File_open(lua_State *L);
-	extern int File_close(lua_State *L);
+	f = _wfopen(fname, iswrite ? L"wb" : L"rb");
+	free(fname);
+
+	if (!f)
+		luaL_error(L, "error while accessing '%s'", lua_tostring(L, 2));
 	
-	lua_pushcfunction(L, File_close);
-	lua_pushcfunction(L, File_open);
-	if (lua_isstring(L, 2)) {
-		lua_pushvalue(L, 2);
-		f = lua_pushinstance(L, File, 1);
-		lua_remove(L, -2);
-	}
-	else {
-		f = luaL_checkcinstance(L, 2, File);
-		lua_pushvalue(L, 2);
-	}
-	lua_pushvalue(L, -1);
-	lua_insert(L, -3);
-	if (iswrite) {
-		int count = 2;
-		lua_pushstring(L, "write");
-		if (nargs == 4 || lua_isstring(L, 3)) {
-			lua_pushvalue(L, nargs);
-			count = 3;
-		}
-		lua_call(L, count, 0);
-		es.pfnCallback = WriteStreamCB;
-	} else {
-		lua_call(L, 1, 0);
-		es.pfnCallback = ReadStreamCB;
-	}
-	es.dwCookie = (DWORD_PTR)f->stream;
-	if (lua_isboolean(L, 3) && lua_toboolean(L, 3))
+	es.dwCookie = (DWORD_PTR)f;
+	es.pfnCallback = iswrite ? WriteStreamCB : ReadStreamCB;
+	if (lua_toboolean(L, 3))
 		type = SF_RTF;
 	else 
-		type = SF_TEXT | (f->encoding == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16)));
+		type = SF_TEXT | (detectBOM(f) == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16)));
 	if ( (result = SendMessageW(handle, iswrite ? EM_STREAMOUT : EM_STREAMIN, type, (LPARAM)&es)) && es.dwError == 0) 
 		SendMessage(handle, EM_SETMODIFY, !iswrite, 0);
  	SetFocus(handle);
@@ -280,7 +264,11 @@ LUA_METHOD(Lines, __newindex) {
 }
 
 static int lines_iter(lua_State *L) {
-	HWND h = (HWND)(long)lua_tointeger(L, lua_upvalueindex(1));
+#if _WIN64 || __x86_64__	
+	HWND h = (HWND)lua_tointeger(L, lua_upvalueindex(1));
+#else
+	HWND h = (HWND)(int)lua_tointeger(L, lua_upvalueindex(1));
+#endif
 	lua_Integer line = lua_tointeger(L, lua_upvalueindex(2));
 	if (line < SendMessage(h, EM_GETLINECOUNT, 0, 0)) {
 		lua_pushinteger(L, line+1);
@@ -293,7 +281,11 @@ static int lines_iter(lua_State *L) {
 
 LUA_METHOD(Lines, __iterate) {
 	luaL_getmetafield(L, 1, "__widget");
+#if _WIN64 || __x86_64__	
+	lua_pushinteger(L, (lua_Integer)(lua_self(L, -1, Widget)->handle));
+#else
 	lua_pushinteger(L, (int)(lua_self(L, -1, Widget)->handle));
+#endif
 	lua_pushinteger(L, 0);
 	lua_pushcclosure(L, lines_iter, 2);
 	return 1;	
@@ -384,7 +376,7 @@ LUA_PROPERTY_SET(Entry, masked) {
 }
 
 LUA_PROPERTY_GET(Edit, readonly) {
-	lua_pushboolean(L, (int)lua_self(L, 1, Widget)->status);
+	lua_pushboolean(L, (UINT_PTR)lua_self(L, 1, Widget)->status);
 	return 1;
 }
 
@@ -439,7 +431,7 @@ LUA_PROPERTY_GET(Edit, text) {
 //----------------------------- Edit.selection property
 
 Widget *format(lua_State *L, Widget *w, DWORD mask, CHARFORMAT2W *cf, int scf, BOOL isset) {
-	w = w ?: lua_self(L, lua_gettop(L), Widget);
+	w = w ? w : lua_self(L, lua_gettop(L), Widget);
 	cf->cbSize = sizeof(CHARFORMAT2W);
 	cf->dwMask = mask;
 	SendMessageW(w->handle, isset ? EM_SETCHARFORMAT: EM_GETCHARFORMAT, scf, (LPARAM)cf);
@@ -454,6 +446,10 @@ LUA_PROPERTY_GET(Selection, visible) {
 LUA_PROPERTY_SET(Selection, visible) {
 	Widget *w = lua_self(L, lua_gettop(L), Widget);
 	SetFocus(lua_toboolean(L, 3) ? w->handle :GetParent(w->handle));
+	if (lua_toboolean(L, 3))
+		SendMessage(w->handle, EM_SETOPTIONS , ECOOP_OR, ECO_NOHIDESEL);
+	else
+		SendMessage(w->handle, EM_SETOPTIONS , ECOOP_XOR, ECO_NOHIDESEL);
 	return 0;
 }
 

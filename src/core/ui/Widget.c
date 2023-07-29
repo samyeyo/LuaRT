@@ -6,13 +6,13 @@
  | Widget.c | LuaRT Widget object implementation
 */
 
+
 #include <luart.h>
 #include <Widget.h>
 #include "ui.h"
-#include <Window.h>
-#include <File.h>
 #include <Buffer.h>
 #include <Date.h>
+#include <File.h>
 
 #include <math.h>
 #include <richedit.h>
@@ -26,7 +26,7 @@ const char *luart_wtypes[] = {
 };
 
 const char *events[] = {
-	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick", "onKey" };
+	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick", "onKey", NULL };
 
 const char *cursors[] = {
 	"arrow", "working", "cross", "hand", "help", "ibeam", "forbidden", "cardinal", "horizontal", "vertical", "leftdiagonal", "rightdiagonal", "up", "wait", "none"
@@ -44,12 +44,12 @@ int getStyle(Widget *w, const int *values, const char *names[]) {
 static const char *align[] = {"left", "right", "center", NULL};
 static const int align_values[] = {SS_LEFT, SS_RIGHT, SS_CENTER};
 
-LUA_API void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
+void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
 	lua_registerobject(L, type, typename, constructor, methods, mt);
 }
 
-LUA_API void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip) {
-	lua_registerobject(L, type, typename, constructor, Widget_methods, mt ?: Widget_metafields);
+void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip) {
+	lua_registerobject(L, type, typename, constructor, Widget_methods, mt ? mt : Widget_metafields);
 	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 	if (methods)
 		luaL_setrawfuncs(L, methods);	
@@ -88,12 +88,12 @@ static void page_resize(Widget *w, BOOL isfocused) {
 	free(item);	
 }
 
-static HANDLE HitTest(TCHITTESTINFO *hti, HWND h, DWORD msg, UINT flags, LPARAM lParam) {
+static HWND HitTest(TCHITTESTINFO *hti, HWND h, DWORD msg, UINT flags, LPARAM lParam) {
 	hti->pt.x =  GET_X_LPARAM(lParam);
 	hti->pt.y =  GET_Y_LPARAM(lParam);
 	ScreenToClient(h, &hti->pt);
 	hti->flags = flags;
-	return (HANDLE)SendMessage(h, msg, 0, (LPARAM)hti);
+	return (HWND)SendMessage(h, msg, 0, (LPARAM)hti);
 }
 
 INT_PTR widget_setcolors(Widget *w, HDC dc, HWND h)
@@ -198,7 +198,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 					return TRUE;
 				} else if (lpNmHdr->code == NM_RCLICK) {
 					TCHITTESTINFO hti;
-					lua_indexevent(w, onContext, HitTest(&hti, w->handle, TCM_HITTEST, TCHT_ONITEM | TCHT_ONITEMICON, GetMessagePos())+1);
+					lua_indexevent(w, onContext, HitTest(&hti, (HWND)w->handle, TCM_HITTEST, TCHT_ONITEM | TCHT_ONITEMICON, GetMessagePos())+1);
 				}
 			}
 			else if (w->wtype == UIList) {
@@ -294,7 +294,6 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				return 0;
 			break;
 		case WM_NCDESTROY:
-			// if (uIdSubclass)
 			RemoveWindowSubclass(w->handle, WidgetProc, uIdSubclass);
 			break;
 		case WM_SIZE:
@@ -308,7 +307,8 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			if (w->wtype == UITab) { //----- Tab control transparency hack
 				RECT r, rr;
 				int count = TabCtrl_GetItemCount(w->handle);
-				HBRUSH pbrush = ((Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA))->brush ?: w->brush;
+				Widget *wp = (Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA);
+				HBRUSH pbrush = wp->brush ? wp->brush : w->brush;
 				HDC hdc = GetDC(w->handle);
 				DefSubclassProc(w->handle, uMsg, wParam, lParam);
 				GetClientRect(w->handle, &r);
@@ -332,6 +332,30 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 				ReleaseDC(w->handle, hdc);
 				return 0;
 			} break;
+		case WM_ERASEBKGND: if (w->wtype == UIGroup) {
+			HBRUSH  hOldBrush;
+			HPEN    hPen, hOldPen;
+			RECT    rect;
+			HDC     hDC = GetDC(w->handle);
+			LOGBRUSH lbr;
+			COLORREF col;
+			
+			hOldBrush = SelectObject(hDC, w->brush);			
+			if(GetObject(w->brush, sizeof(lbr), &lbr))
+				col = lbr.lbColor;
+			else col = GetSysColor(COLOR_WINDOW);
+			hPen = CreatePen(PS_SOLID, 1, col);
+			hOldPen = SelectObject(hDC, hPen);
+			GetClientRect(w->handle, &rect);
+			Rectangle(hDC, rect.left, rect.top, rect.right, rect.bottom);
+			SelectObject(hDC, hOldPen);
+			SelectObject(hDC, hOldBrush);
+			DeleteObject(hPen);
+			ReleaseDC(w->handle, hDC);
+			InvalidateRect(w->handle, NULL, FALSE);
+			RedrawWindow(w->handle, NULL, NULL, RDW_UPDATENOW | RDW_ALLCHILDREN);
+			return TRUE;
+		} break;			
 		case WM_CTLCOLORBTN:
 		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
 	}			
@@ -394,11 +418,6 @@ Widget *check_widget(lua_State *L, int idx, WidgetType t) {
 	if (w->wtype != t) 
 		luaL_typeerror(L, idx, luart_wtypes[t]);
 	return w;	
-	// if (w->wtype != t) {
-	// 	luaL_getmetafield(L, idx, "__type");
-	// 	lua_getfield(L, -1, "__name");
-	// 	luaL_typeerror(L, idx, lua_tostring(L, -1));
-	// }
 }
 
 LUA_METHOD(Widget, autosize) {
@@ -441,7 +460,7 @@ void *Widget_init(lua_State *L, Widget **wp) {
 
 Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc) {
 	Widget *w = calloc(1, sizeof(Widget));
-	w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
+	w->hcursor = wp->hcursor ? wp->hcursor : LoadCursor(NULL, IDC_ARROW);
     w->wtype = type;
 	w->align = -1;
     lua_newinstance(L, w, Widget);
@@ -451,7 +470,7 @@ Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, S
 		w->handle = h;
     	SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
     	SetFontFromWidget(w, wp);
-    	SetWindowSubclass(h, proc ?: WidgetProc, 0, 0);
+    	SetWindowSubclass(h, proc ? proc : WidgetProc, 0, 0);
     	lua_callevent(w, onCreate);
 	}
     return w;
@@ -467,13 +486,14 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     HANDLE h;
     wchar_t *text;
     HMENU id = 0;
+	LOGBRUSH lbr;
             
     hParent = Widget_init(L, &wp);
     text = caption && (((type < UIList) || (type > UITab)) && (type < UIPicture)) ? lua_towstring(L, idx-1) : NULL;
     if (!hInstance)
         hInstance = GetModuleHandle(NULL);
     if (wp->wtype == UIGroup)
-        id = ++wp->status;
+        id = (HMENU)(((UINT_PTR)wp->status)+1);
     h = CreateWindowExW(exstyle, classname, text, WS_CHILD | WS_CLIPSIBLINGS | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type-UIWindow]), (int)luaL_optinteger(L, idx+3, height[type-UIWindow]), hParent, id, hInstance, NULL);
     free(text);
     w = calloc(1, sizeof(Widget));
@@ -481,7 +501,9 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
     SetFontFromWidget(w, wp);
     if (type != UIEdit)
-        w->hcursor = wp->hcursor ?: LoadCursor(NULL, IDC_ARROW);
+        w->hcursor = wp->hcursor ? wp->hcursor : LoadCursor(NULL, IDC_ARROW);
+	GetObject(wp->brush, sizeof(lbr), &lbr);
+	w->brush = CreateSolidBrush(lbr.lbColor);
     w->wtype = type;
 	w->align = -1;	
 	if ((w->autosize = autosize) && (lua_gettop(L) < 6))
@@ -672,7 +694,7 @@ LUA_PROPERTY_SET(Widget, text) {
 }
 
 int size(Widget *widget, lua_State *L, int offset_from, int offset_to, BOOL set, LONG value, BOOL iswidth) {
-	Widget *w = widget ?: lua_self(L, 1, Widget);
+	Widget *w = widget ? widget : lua_self(L, 1, Widget);
 	HWND h = w->handle;
 	RECT r;
 	LONG len;
@@ -777,7 +799,7 @@ LUA_PROPERTY_SET(Widget, bgcolor) {
 		DWORD32 color = luaL_checkinteger(L, 2);
 		w->brush = CreateSolidBrush(RGB(GetBValue(color), GetGValue(color), GetRValue(color)));
 		if (w->wtype == UIWindow)
-			SetClassLongPtr(w->handle, GCLP_HBRBACKGROUND, (LONG)w->brush);
+			SetClassLongPtr(w->handle, GCLP_HBRBACKGROUND, (LONG_PTR)w->brush);
 	}
 	InvalidateRect(w->handle, NULL, TRUE);
 	return 0;	
@@ -1142,7 +1164,7 @@ LUA_METHOD(Picture, load) {
 		SetWindowPos(w->handle, NULL, 0, 0, bm.bmWidth, bm.bmHeight,SWP_NOZORDER | SWP_NOMOVE);
 		SendMessage(w->handle, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
 	}
-	lua_pushboolean(L, (int)h);
+	lua_pushboolean(L, !h);
 	return 1;
 }
 

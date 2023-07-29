@@ -1,3 +1,5 @@
+#define LUA_LIB
+
 #include <luart.h>
 #include <commctrl.h>
 #include <windows.h>
@@ -70,6 +72,7 @@ typedef struct Widget {
 	int			align;
 	WINDOWPLACEMENT	wp;
 	void		*user;
+	BOOL		ismain;
 } Widget;
 
 //--- Register a widget type
