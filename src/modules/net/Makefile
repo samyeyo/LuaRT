@@ -1,4 +1,4 @@
-﻿# | async module for LuaRT
+﻿# | net module for LuaRT
 # | Luart.org, Copyright (c) Tine Samir 2023.
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
@@ -15,18 +15,18 @@
 LUART_PATH=..\..\..
 
 MODULE=		net
-VERSION=	1.2
-SRC= 		src\Ftp.obj src\Http.obj src\Socket.obj src\net.obj
+VERSION=	1.5
+SRC= 		src\Http.obj src\net.obj src\Socket.obj src\Ftp.obj
 
 !if "$(BUILD)" == "debug"
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /Z7
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I".\lib" /Z7 
 LDFLAGS= /nologo /DEBUG
 !else
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /MD /Gy /GR- /GL /GS- /Oi /O1
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I".\lib" /MD /Gy /GR- /GL /GS- /Oi /O1
 LDFLAGS= /nologo /OPT:REF /OPT:ICF /LTCG
 !endif
 
-LIBS= "$(LUART_PATH)\lib\lua54.lib" ws2_32.lib Secur32.lib dnsapi.lib iphlpapi.lib urlmon.lib wininet.lib crypt32.lib shlwapi.lib  ole32.lib sensapi.lib
+LIBS= "$(LUART_PATH)\lib\lua54.lib" ws2_32.lib Secur32.lib dnsapi.lib iphlpapi.lib urlmon.lib wininet.lib crypt32.lib shlwapi.lib ole32.lib sensapi.lib advapi32.lib
 RM= del /Q
 CP= copy /Y
 LD= link.exe
@@ -34,7 +34,7 @@ LD= link.exe
 all: install
 
 debug:
-	$(MAKE) /nologo "BUILD=debug"
+	@$(MAKE) /nologo "BUILD=debug"
 
 infomodule: 
 	@chcp 65001 >nul 2>&1
@@ -42,11 +42,15 @@ infomodule:
 	@echo|set /p dummy="▸  Building module $(MODULE) $(VERSION)	  "
 
 .c.obj: 
-	@$(CC) $(CFLAGS) /c /Fo$@ $< 2>&1 >nul 
+	@$(CC) $(CFLAGS) /c /Fo$@ $< >nul 2>&1
+	@echo|set /p dummy="■"
+
+.cpp.obj: 
+	@$(CC) $(CFLAGS) /EHsc /c /Fo$@ $< >nul 2>&1
 	@echo|set /p dummy="■"
 
 $(MODULE).dll: infomodule $(SRC)
-	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@  2>&1 >nul 
+	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ >nul 2>&1
 	
 install: $(MODULE).dll
 !if !exists("$(LUART_PATH)\modules\$(MODULE)")

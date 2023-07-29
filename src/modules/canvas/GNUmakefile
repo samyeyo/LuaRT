@@ -1,4 +1,4 @@
-# | Canvas module for LuaRT
+# | canvas module for LuaRT
 # | Luart.org, Copyright (c) Tine Samir 2023.
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
@@ -19,7 +19,7 @@ ifneq ("$(wildcard $(PATH_TO_FILE))","")
 endif
 
 MODULE=canvas
-VERSION=0.3
+VERSION=0.5
 
 SRC= src\Canvas.o src\Direct2D.o src\Image.o src\Gradient.o
 
@@ -38,7 +38,7 @@ SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x86-dll.ldscript
 endif
 
 ifeq ($(PLATFORM),x64)
-ARCH = -m64 -mavx2 -mfma
+ARCH = -m64  
 SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x64-dll.ldscript
 endif
 

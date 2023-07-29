@@ -37,7 +37,7 @@ SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x86-dll.ldscript
 endif
 
 ifeq ($(PLATFORM),x64)
-ARCH = -m64 -mavx2 -mfma
+ARCH = -m64  
 SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x64-dll.ldscript
 endif
 

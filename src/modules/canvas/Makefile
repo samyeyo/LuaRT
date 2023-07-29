@@ -15,7 +15,7 @@
 LUART_PATH=..\..\..
 
 MODULE=		canvas
-VERSION=	0.3
+VERSION=	0.5
 SRC= 		src\Canvas.obj src\Direct2D.obj src\Image.obj src\Gradient.obj
 
 !if "$(BUILD)" == "debug"
@@ -42,12 +42,11 @@ infomodule:
 	@echo|set /p dummy="▸  Building module $(MODULE) $(VERSION)	  "
 
 .cpp.obj: 
-	@$(CC) $(CFLAGS) /c /Fo$@ $<
-#2>&1 >nul
+	@$(CC) $(CFLAGS) /c /Fo$@ $< 2>&1 >nul
 	@echo|set /p dummy="■"
 
 $(MODULE).dll: infomodule $(SRC)
-	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ 
+	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ 2>&1 >nul
 	
 install: $(MODULE).dll
 !if !exists("$(LUART_PATH)\modules\$(MODULE)")

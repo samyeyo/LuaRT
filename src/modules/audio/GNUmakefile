@@ -19,7 +19,7 @@ ifneq ("$(wildcard $(PATH_TO_FILE))","")
 endif
 
 MODULE=audio
-VERSION=0.2
+VERSION=0.3
 
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
 ifeq ($(LUART_PATH),)
@@ -36,7 +36,7 @@ SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x86-dll.ldscript
 endif
 
 ifeq ($(PLATFORM),x64)
-ARCH = -m64 -mavx2 -mfma
+ARCH = -m64   -DMA_NO_AVX2
 SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x64-dll.ldscript
 endif
 
@@ -55,7 +55,7 @@ LUART_LIB = -L$(LUART_PATH)\lib
 
 BUILD := release
 
-cflags.release = $(ARCH) -shared -s -Os -mfpmath=sse -mieee-fp -DLUART_TYPE=__decl(dllimport) -D__MINGW64__ -D_WIN32_WINNT=0x600 $(LUART_INCLUDE) -static-libgcc -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -DMA_ENABLE_ONLY_SPECIFIC_BACKENDS -DMA_ENABLE_WASAPI
+cflags.release = $(ARCH) -shared -s -Os -mfpmath=sse -mieee-fp -DLUART_TYPE=__decl(dllimport) -D__MINGW64__ -D_WIN32_WINNT=0x600 $(LUART_INCLUDE) -static-libgcc -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -DMA_ENABLE_ONLY_SPECIFIC_BACKENDS -DMA_ENABLE_WASAPI -DMA_ENABLE_DSOUND
 ldflags.release= -Wl,--no-insert-timestamp $(LUART_LIB) $(SCRIPT)
 cflags.debug = $(ARCH) -shared -g -O0 -mfpmath=sse -mieee-fp -DDEBUG -D__MINGW64__ -D_WIN32_WINNT=0x0600 $(LUART_INCLUDE) 
 ldflags.debug= $(LUART_LIB)

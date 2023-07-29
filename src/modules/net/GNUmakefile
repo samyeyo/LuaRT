@@ -19,8 +19,8 @@ ifneq ("$(wildcard $(PATH_TO_FILE))","")
 endif
 
 MODULE=net
-VERSION=1.2
-SRC= src\Ftp.o src\Http.o src\Socket.o src\net.o
+VERSION=1.5
+SRC= src\Http.o src\Ftp.o src\net.o src\Socket.o
 
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
 ifeq ($(LUART_PATH),)
@@ -32,12 +32,12 @@ PLATFORM=$(shell $(LUART_PATH)\bin\luart.exe -e "print(_ARCH) " 2>nul)
 endif
 
 ifeq ($(PLATFORM),x86)
-ARCH = -m32 -march=pentium4 -msse -msse2 -mmmx -fno-unwind-tables -fno-asynchronous-unwind-tables
+ARCH = -m32 -march=pentium4 -msse -msse2 -mmmx
 SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x86-dll.ldscript
 endif
 
 ifeq ($(PLATFORM),x64)
-ARCH = -m64 -mavx2 -mfma -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+ARCH = -m64   -Wno-int-to-pointer-cast
 SCRIPT=-Wl,-T$(LUART_PATH)\src\core\x64-dll.ldscript
 endif
 
@@ -54,11 +54,12 @@ LUART_INCLUDE = -I$(LUART_PATH)\include
 LUART_LIB = -L$(LUART_PATH)\lib 
 BUILD := release
 
-cflags.release = $(ARCH) -shared -s -Os -mfpmath=sse -mieee-fp -DLUART_TYPE=__decl(dllimport) -D__MINGW64__ -D_WIN32_WINNT=0x600 $(LUART_INCLUDE) -static-libgcc -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh
+cflags.release = $(ARCH) -s -Os -mfpmath=sse -mieee-fp -DLUART_TYPE=__decl(dllimport) -D__MINGW64__ -D_WIN32_WINNT=0x600 $(LUART_INCLUDE) -static-libgcc -static-libstdc++ -fno-exceptions  -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh
 ldflags.release= -Wl,--no-insert-timestamp $(LUART_LIB) $(SCRIPT)
 cflags.debug = $(ARCH) -shared -g -O0 -mfpmath=sse -mieee-fp -DDEBUG -D__MINGW64__ -D_WIN32_WINNT=0x0600 $(LUART_INCLUDE) 
 ldflags.debug= $(LUART_LIB)
 
+CXX= g++
 CC= gcc
 CFLAGS := ${cflags.${BUILD}}
 LDFLAGS := ${ldflags.${BUILD}}
@@ -75,12 +76,16 @@ infomodule:
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building module $(MODULE) $(VERSION)	  "
 
+%.o : %.cpp
+	@$(CXX) $(CFLAGS) -fno-rtti -c $< -o $@
+	@echo|set /p dummy="■"
+
 %.o : %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo|set /p dummy="■"
 
 $(MODULE).dll: infomodule $(SRC)
-	@$(CC) $(CFLAGS)  $(LDFLAGS) $(SRC) -o $@ $(LIBS)
+	@$(CXX) -shared $(CFLAGS) $(LDFLAGS) $(SRC) -o $@ $(LIBS)
 	
 
 debug:

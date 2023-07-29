@@ -48,14 +48,14 @@ _ARCH = x86
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 4
+LUART_MINOR= 5
 LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 DEFINES_RES= /d LUART_MINOR="$(LUART_MINOR)" /d LUART_MAJOR="$(LUART_MAJOR)" /d LUART_RELEASE="$(LUART_RELEASE)"
 
 !if "$(BUILD)" == "debug"
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /Z7
-LDFLAGS= /nologo /DEBUG
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." $(UIDLL) /Z7
+LDFLAGS= /nologo /DEBUG /NODEFAULTLIB:msvcrt
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." $(UIDLL) /MD /Gy /GF /Oi /O1 /GA
 LDFLAGS= /nologo /OPT:REF /OPT:ICF
@@ -82,7 +82,7 @@ LUART_T=	luart.exe
 LUAWRT_T=	wluart.exe
 ALL_T= 		$(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe $(DEST)\rtc.exe $(DEST)\wrtc.exe
 
-!if "$(STATIC)" == "" && "$(BUILD)" != "debug"
+!if "$(STATIC)" == "" && "$(BUILD)" == ""
 !message ━━━━━━━━━━━━━━━━━━━━  Building LuaRT $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE) for $(PLATFORM)  ━━━━━━━━━━━━━━━━━━━━
 !endif
 
@@ -98,7 +98,7 @@ default: toolchain
 
 infolua: utf8
 	@cmd /c echo.
-	@echo|set /p dummy="▸  Building Lua 5.4.5 VM          "
+	@echo|set /p dummy="▸  Building Lua 5.4.6 VM          "
 
 infocore:
 	@cmd /c echo.
@@ -117,11 +117,13 @@ infosetup: utf8
 	@echo|set /p dummy="▸  Building LuaRT installer       "
 
 .cpp.obj:
-	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< 
+	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< >nul 2>&1
+#>nul 2>&1
 	@echo|set /p dummy="■"
 
 .c.obj: 
-	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< 
+	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< >nul 2>&1
+#>nul 2>&1
 	@echo|set /p dummy="■"
 
 lua: infolua $(LUA_O) 
@@ -152,7 +154,7 @@ tools: infotools
 	@$(MAKE) /nologo buildtools "UIDLL=/DUIDLL"
 
 $(LUA_A): $(BASE_O)
-	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(BASE_O) /OUT:$@ 
+	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(BASE_O) /OUT:$@ >nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 	@-copy /Y lua54.lib "..\..\lib\lua54.lib" >nul
@@ -168,7 +170,7 @@ $(LUAWRT_T): $(BASE_O) $(UI_O)
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(CC) /c /DRTWIN $(CFLAGS) luart.c /Fowluart.obj >nul 2>&1
-	@$(LD) $(LDFLAGS) resource.res wluart.obj $(UI_O) $(LIBS) $(UI_LIBS) /OUT:$@ /SUBSYSTEM:windows >nul 2>&1
+	@$(LD) $(LDFLAGS) resource.res wluart.obj sys\async.obj $(UI_O) $(LIBS) $(UI_LIBS) /OUT:$@ /SUBSYSTEM:windows >nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
@@ -211,7 +213,7 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static ..\..\tools\rtc\src\rtc.lua
 
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-buildtools: lua54.dll $(UI_O)
+buildtools: lua54.dll $(UI_O) infotools
 	@$(CC) /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll >nul 2>&1
@@ -239,6 +241,19 @@ buildtools: lua54.dll $(UI_O)
 	@echo|set /p dummy="■"
 	@xcopy "..\..\modules"  "..\..\tools\LuaRT-Studio\modules\" /s /e /y >nul
 	@echo|set /p dummy="■"
+	@cmd /c echo.
+
+setup: toolchain tools infosetup
+#	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources\resource_install.rc >nul
+# @echo|set /p dummy="■"
+# @$(CC) /c /DRTWIN /DRTWIN $(CFLAGS) luart.c /Fowluart-static.obj >nul 2>&1
+# @$(LD) $(LDFLAGS) resource.res wluart-static.obj $(BASE_O) $(STATIC_O) $(UI_O) $(UI_LIBS) $(STATIC_LIBS) /OUT:wluart-static.exe /SUBSYSTEM:windows >nul 2>&1
+# @echo|set /p dummy="■"
+# @$(CC) /c /DRTC $(CFLAGS) luart.c /Foluart-static.obj  >nul 2>&1
+# @$(LD) $(LDFLAGS) luart-static.obj $(BASE_O) $(STATIC_O) $(STATIC_LIBS) /OUT:luart-static.exe >nul 2>&1
+	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
+	@echo|set /p dummy="■"
+	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
 	@cmd /c echo.
 
 clean: utf8
