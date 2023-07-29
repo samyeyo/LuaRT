@@ -6,6 +6,8 @@
  | console.c | LuaRT console module
 */
 
+#define LUA_LIB
+
 #include <File.h>
 #include <luart.h>
 #include <locale.h>
@@ -375,22 +377,18 @@ LUA_PROPERTY_SET(console, fullscreen) {
 
 	if (value != isfullscreen) {
 		COORD c;
-		if (getenv("WT_SESSION")) {        //---- if run from Windows Terminal
-			keybd_event(VK_MENU, 0, 0, 0); 
-			keybd_event(VK_RETURN, 0, 0, 0);
-			Sleep(200);
-			keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
-			keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
-		}			
-		SetConsoleDisplayMode(std, value ? 1 : 2, &c);
-		SetConsoleScreenBufferSize(std, c);
+		keybd_event(VK_MENU,0x38,0,0);
+		keybd_event(VK_RETURN,0x1c,0,0);
+		keybd_event(VK_RETURN,0x1c,KEYEVENTF_KEYUP,0);
+		keybd_event(VK_MENU,0x38,KEYEVENTF_KEYUP,0);
+		Sleep(50);
 		isfullscreen = value;
+		ShowScrollBar(GetConsoleWindow(), SB_VERT, !value);
 	}
-	ShowScrollBar(GetConsoleWindow(), SB_VERT, !value);
 	return 0;
 }
 
-int fontsize_fromheight(int height) {
+LUA_API int fontsize_fromheight(int height) {
 	return height < 0 ? MulDiv(-height, 72, GetDeviceCaps(GetDC(0), LOGPIXELSY)) : height;
 }
 
@@ -427,7 +425,7 @@ int CALLBACK EnumSystemFonts(const LOGFONTW *lf, const TEXTMETRICW *tm, DWORD ft
 	return 0;
 }
 
-BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf) {
+LUA_API BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf) {
 	typedef BOOL(WINAPI *PGetFontResourceInfo)(LPCWSTR, LPDWORD, LPVOID, DWORD);
 	HDC dc = GetDC(NULL);
 	BOOL result;
@@ -553,16 +551,25 @@ LUAMOD_API int luaopen_console(lua_State *L) {
 	CONSOLE_SCREEN_BUFFER_INFO info = {0};
 	DWORD mode = 0;
 	if ((GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode) == FALSE) && AllocConsole()) {
+    	FILE* fDummy;
 		DeleteMenu(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_BYCOMMAND);
-		freopen("CON", "r", stdin);
-		freopen("CON", "w", stdout);
-		freopen("CON", "w", stderr);
+		freopen_s(&fDummy, "CONOUT$", "w", stdout);
+		freopen_s(&fDummy, "CONOUT$", "w", stderr);
+		freopen_s(&fDummy, "CONIN$", "r", stdin);
+ 		HANDLE hConOut = CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE hConIn = CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		SetStdHandle(STD_OUTPUT_HANDLE, hConOut);
+		SetStdHandle(STD_ERROR_HANDLE, hConOut);
+		SetStdHandle(STD_INPUT_HANDLE, hConIn);		
 		SetConsoleOutputCP(65001);
 		setlocale(LC_ALL, ".UTF8");
 	}
-	if (GetConsoleDisplayMode(&mode))
-		isfullscreen = mode == 1;
 	std = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    RECT a, b;
+    GetWindowRect(GetConsoleWindow(), &a);
+    GetWindowRect(GetDesktopWindow(), &b);
+    isfullscreen = memcmp(&a, &b, sizeof(RECT)) == 0;
 	GetConsoleScreenBufferInfo(std, &info);
 	reset = info.wAttributes;
 	refin = create_stdfile(L, stdin, L"stdin", 0);
