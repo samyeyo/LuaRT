@@ -7,17 +7,67 @@
 */
 
 #include <Socket.h>
-// #include "lrtapi.h"
 #include <luart.h>
 #include <Buffer.h>
 
 #include <io.h>
 #include <windns.h>
 
-// __declspec(dllexport) luart_type TSocket;
+luart_type TSocket;
 static const char *socket_mode [] = {"ipv4", "ipv6"};
 
-extern int dns(lua_State *L, const char *str, WORD type);
+typedef struct {
+	Socket 	*socket;
+	char	*buffer;
+	int		size;
+	int 	pos;
+} SocketBuffer;
+
+static int SocketBuffer__gc(lua_State *L) {
+	free(((SocketBuffer *)lua_touserdata(L, 1))->buffer);
+	return 0;
+}
+
+static void *push_SocketBuffer(lua_State *L, Socket *s, int size) {
+	SocketBuffer *sb = lua_newuserdata(L, sizeof(SocketBuffer));
+	sb->socket = s;
+	sb->size = size;
+	sb->pos = 0;
+	sb->buffer = calloc(1, size+1);
+	lua_createtable(L, 0, 1);
+	lua_pushcfunction(L, SocketBuffer__gc);
+	lua_setfield(L, -2, "__gc");
+	lua_setmetatable(L, -2);
+	return sb;
+}
+
+int dns(lua_State *L, const char *str, WORD type) {
+	PDNS_RECORD result;
+	DNS_STATUS s = DnsQuery_A(str, type, 0, NULL, &result, NULL);
+
+	if (s == 0) {
+		if (type == DNS_TYPE_A) {
+			IN_ADDR ip;
+			ip.S_un.S_addr = result->Data.A.IpAddress;
+			lua_pushstring(L, inet_ntoa(ip));			
+		}
+		else if (type == DNS_TYPE_AAAA) {
+			IN6_ADDR ipv6;
+			char ipAddress[128] = {0};
+			CopyMemory(ipv6.u.Byte, result->Data.AAAA.Ip6Address.IP6Byte, sizeof(ipv6.u.Byte));
+			InetNtopA(AF_INET6, (PVOID)&ipv6, ipAddress, 128);			
+			lua_pushstring(L, ipAddress);
+		} else lua_pushstring(L, result->Data.PTR.pNameHost);
+		DnsRecordListFree(result, DnsFreeRecordListDeep);
+	} else if (s == DNS_INFO_NO_RECORDS || DNS_ERROR_RECORD_DOES_NOT_EXIST == s || DNS_ERROR_RCODE_NAME_ERROR == s)
+		lua_pushnil(L);
+	else {
+		lua_pushboolean(L, FALSE);
+		WSASetLastError(s);
+	}
+	return 1;
+} 
+
 
 LUA_CONSTRUCTOR(Socket) {
 	Socket *s;
@@ -56,18 +106,6 @@ addr:	if (inet_pton(AF_INET, str, &(s->addr.sin_addr)) != 0 ) {
 			lua_error(L);
 		}
 	}
-
-	// ------------------------------------------------- For debugging only
-	// hints.ai_family = AF_INET;
-    // hints.ai_socktype = SOCK_STREAM;
-    // hints.ai_protocol = IPPROTO_TCP;
-    // hints.ai_flags = AI_PASSIVE;
-	// getaddrinfo(str, NULL, &hints, &servinfo);
-	// s->addr = *(SOCKADDR_IN*)servinfo->ai_addr;
-	// s->addr.sin_port = port;
-	// s->sizeaddr = sizeof(SOCKADDR_IN);
-	// s->sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	// }
 	lua_newinstance(L, s, Socket);
 	return 1;
 }
@@ -327,32 +365,56 @@ static int DecryptRecv(Socket *s, char *buffer, ULONG bufLen) {
 	return Amount;
 }
 
+static int RecvTaskContinue(lua_State* L, int status, lua_KContext ctx) {	
+	SocketBuffer *sb = (SocketBuffer *)ctx;
+	int done = 0;
+
+	Sleep(1);
+	if ( sb->socket->tls ) {
+		if ( (done = DecryptRecv(sb->socket, sb->buffer, sb->size)) == SOCKET_ERROR  )
+			goto error;
+		else goto done;
+	}
+	else {
+		if ( (done = recv(sb->socket->sock, sb->buffer, sb->size, 0)) == SOCKET_ERROR ) {
+error:		if ( WSAGetLastError() != WSAEWOULDBLOCK )
+				lua_pushboolean(L, FALSE);
+			else
+				return lua_yieldk(L, 0, (lua_KContext)sb, RecvTaskContinue);				
+		} else 
+done:	if (done == 0)
+			lua_pushboolean(L, FALSE);
+		else lua_pushlstring(L, sb->buffer, done);		
+	}
+    return 1;
+}
+
+static int RecvTask(lua_State *L) {	
+    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), RecvTaskContinue);
+}
+
 LUA_METHOD(Socket, recv) {
 	Socket *s = lua_self(L, 1, Socket);
 	int size = (size_t)luaL_optinteger(L, 2, 1024), done = 0;
-	char *buff = malloc(size);
+	char *buff;
 	
 	s->read = FALSE;
+	if ( !s->blocking ) {
+		push_SocketBuffer(L, s, size);
+		return lua_pushtask(L, RecvTask, 1);	
+	}
+	buff = malloc(size);
 	if ( s->tls ) {
 		if ( (done = DecryptRecv(s, buff+done, size)) == SOCKET_ERROR  )
 			goto error;
-	}
-	else { 
-		if ( (done = recv(s->sock, buff, size, 0)) == SOCKET_ERROR ) {
-error:		if ( !s->blocking && WSAGetLastError() == WSAEWOULDBLOCK )
-				lua_pushnil(L);
-			else
-				lua_pushboolean(L, FALSE);
-			free(buff);
-			return 1;
-		}
-	}
+	} 
+	else if ( ((done = recv(s->sock, buff, size, 0)) == SOCKET_ERROR) )
+		done = 0;
 	if (done == 0)
-		lua_pushboolean(L, FALSE);
-	else {
+error:	lua_pushboolean(L, FALSE);
+	else
 		lua_pushlstring(L, buff, done);
-		lua_pushinstance(L, Buffer, 1);
-	}
+	
 	free(buff);
 	return 1;
 }
@@ -361,7 +423,6 @@ static int EncryptSend(lua_State *L, Socket *s, const char *message, ULONG msgLe
 	PSecPkgContext_StreamSizes sizes = &(s->tls->sizes);
 	int messageSize = 0;
 	int sentBytes = 0;
-	//int maxMessageBlobSize = sizes->cbHeader + sizes->cbMaximumMessage + sizes->cbTrailer;
 	ULONG i;
 	PBYTE sendBuf;
 	int sent, sendBytes = 0;
@@ -403,14 +464,47 @@ static int EncryptSend(lua_State *L, Socket *s, const char *message, ULONG msgLe
 	return sentBytes;
 }
 
-LUA_METHOD(Socket, sendall) {
+static int SendTaskContinue(lua_State* L, int status, lua_KContext ctx) {	
+	SocketBuffer *sb = (SocketBuffer *)ctx;
+	int sent;
+	
+	Sleep(1);
+	if(sb->size) {
+		if ( (sent = sb->socket->tls ? EncryptSend(L, sb->socket, sb->buffer + sb->pos, sb->size) : send(sb->socket->sock, sb->buffer + sb->pos, sb->size, 0)) < 0 ) {
+			if ( (sent == -2)|| (WSAGetLastError() != WSAEWOULDBLOCK) ) {
+				if (sent == -2)
+					SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+				lua_pushboolean(L, FALSE);
+				return 1;
+			}
+yield:		return lua_yieldk(L, 0, (lua_KContext)sb, SendTaskContinue);
+		} 
+		if (sent < sb->size) {
+			sb->pos += sent;
+			sb->size -= sent;
+			goto yield;
+		} 
+	}
+	lua_pushboolean(L, TRUE);
+	return 1;
+}
+
+static int SendTask(lua_State *L) {	
+    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), SendTaskContinue);
+}
+
+LUA_METHOD(Socket, send) {
 	size_t len, total = 0;
 	Socket *s = lua_self(L, 1, Socket);
-	const char *str;
+	const char *str = luaL_tolstring(L, 2, &len);
 	size_t i;
 
-	str = luaL_tolstring(L, 2, &len);
 	s->write = FALSE;
+	if (!s->blocking) {
+		SocketBuffer *sb = push_SocketBuffer(L, s, len);
+		strncpy(sb->buffer, str, len);
+		return lua_pushtask(L, SendTask, 1);
+	}	
 	while(len) {
 		str += total;
 		switch((i = s->tls ? EncryptSend(L, s, str, len) : send(s->sock, str, len, 0))) {
@@ -427,26 +521,6 @@ LUA_METHOD(Socket, sendall) {
 	}
 done:
 	lua_pushboolean(L, TRUE);
-	return 1;
-}
-
-
-LUA_METHOD(Socket, send) {
-	size_t len;
-	Socket *s = lua_self(L, 1, Socket);
-	const char *str;
-	int i;
-
-	str = luaL_tolstring(L, 2, &len);
-	s->write = FALSE;
-	if (len)
-		switch((i = s->tls ? EncryptSend(L, s, str, len) : send(s->sock, str, len, 0))) {
-			case SOCKET_ERROR : if (WSAGetLastError() == WSAEWOULDBLOCK) lua_pushnil(L); else lua_pushboolean(L, FALSE); break;
-			case -2 : SetLastError(ERROR_NOT_ENOUGH_MEMORY); lua_pushboolean(L, FALSE); break;
-			default : lua_pushinteger(L, i);
-		}
-	else
-		lua_pushinteger(L, 0);
 	return 1;
 }
 
@@ -562,11 +636,31 @@ error:
 	return 1;
 }
 
+static int ConnectTaskContinue(lua_State* L, int status, lua_KContext ctx) {	
+	Socket *s = (Socket *)ctx;
+	
+	Sleep(1);
+	if (!connect(s->sock, (SOCKADDR*)&s->addr, s->sizeaddr)) {
+		if ( WSAGetLastError() != WSAEWOULDBLOCK )
+			lua_pushboolean(L, FALSE);
+		else
+			return lua_yieldk(L, 0, (lua_KContext)s, ConnectTaskContinue);				
+	} else
+		lua_pushboolean(L, TRUE);
+	return 1;
+}
+
+static int ConnectTask(lua_State *L) {	
+    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), ConnectTaskContinue);
+}
+
 LUA_METHOD(Socket, connect) {
 	Socket *s = lua_self(L, 1, Socket);
-	int result = connect(s->sock, (SOCKADDR*)&s->addr, s->sizeaddr);
-	result = (result != SOCKET_ERROR) || ((result == SOCKET_ERROR) && (GetLastError() == WSAEWOULDBLOCK)) ? TRUE : FALSE;
-	lua_pushboolean(L, result);
+	if (!s->blocking) {
+		lua_pushlightuserdata(L, s);
+		return lua_pushtask(L, ConnectTask, 1);	
+	}
+	lua_pushboolean(L, connect(s->sock, (SOCKADDR*)&s->addr, s->sizeaddr) == 0);
 	return 1;	
 }
 
@@ -581,37 +675,66 @@ LUA_METHOD(Socket, listen) {
 	return 1;
 }
 
-LUA_METHOD(Socket, accept) {
+static void accept_socket(lua_State *L, SOCKET accepted, SOCKADDR_STORAGE *paddr, BOOL blocking) {
+	DWORD size = sizeof(SOCKADDR_STORAGE);
+	Socket *s = (Socket *)calloc(1, sizeof(Socket));
+	s->sock = accepted;
+	s->isServerContext = TRUE;
+	if (paddr->ss_family == AF_INET) {
+		s->addr = *(SOCKADDR_IN*)paddr;
+		s->sizeaddr = sizeof(SOCKADDR_IN);
+	}
+	else {
+		s->addr6 = *(SOCKADDR_IN6*)paddr;
+		s->sizeaddr = sizeof(SOCKADDR_IN6);
+	}
+	WSAAddressToStringA((LPSOCKADDR)&s->addr, s->sizeaddr, NULL, s->ip, &size);
+	s->blocking = blocking;
+	lua_pushlightuserdata(L, s);
+	lua_pushinstance(L, Socket, 1);
+}
+
+static int AcceptTaskContinue(lua_State* L, int status, lua_KContext ctx) {	
+	Socket *s = (Socket *)ctx;
 	SOCKADDR_STORAGE addr;
 	SOCKADDR_STORAGE *paddr = &addr;
 	int len = sizeof(SOCKADDR_STORAGE);
-	Socket *server = lua_self(L, 1, Socket);
-	SOCKET accepted = accept(server->sock, (LPSOCKADDR)paddr, &len);
+	SOCKET accepted;
+
+	Sleep(1);
+	accepted = accept(s->sock, (LPSOCKADDR)paddr, &len);
 	
-	server->read = FALSE;
 	if ((int)accepted == SOCKET_ERROR ) {
 		if (WSAGetLastError() == WSAEWOULDBLOCK)
-			lua_pushnil(L);
+			return lua_yieldk(L, 0, (lua_KContext)s, AcceptTaskContinue);
 		else
 			lua_pushboolean(L, FALSE);
 	}
-	else {
-		DWORD size = len;
-		Socket *s = (Socket *)calloc(1, sizeof(Socket));
-		s->sock = accepted;
-		s->isServerContext = TRUE;
-		if (addr.ss_family == AF_INET) {
-			s->addr = *(SOCKADDR_IN*)paddr;
-			s->sizeaddr = sizeof(SOCKADDR_IN);
-		}
-		else {
-			s->addr6 = *(SOCKADDR_IN6*)paddr;
-			s->sizeaddr = sizeof(SOCKADDR_IN6);
-		}
-		WSAAddressToStringA((LPSOCKADDR)&s->addr, s->sizeaddr, NULL, s->ip, &size);
-		s->blocking = TRUE;
+	else accept_socket(L, accepted, paddr, s->blocking);
+	return 1;
+}
+
+static int AcceptTask(lua_State *L) {	
+    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), AcceptTaskContinue);
+}
+
+LUA_METHOD(Socket, accept) {
+	Socket *s = lua_self(L, 1, Socket);
+
+	s->read = FALSE;
+	if (!s->blocking) {
 		lua_pushlightuserdata(L, s);
-		lua_pushinstance(L, Socket, 1);
+		return lua_pushtask(L, AcceptTask, 1);	
+	} else {
+		SOCKADDR_STORAGE addr;
+		SOCKADDR_STORAGE *paddr = &addr;
+		int len = sizeof(SOCKADDR_STORAGE);
+		SOCKET accepted = accept(s->sock, (LPSOCKADDR)paddr, &len);
+	
+		if ((int)accepted == SOCKET_ERROR )
+			lua_pushboolean(L, FALSE);
+		else
+			accept_socket(L, accepted, paddr, s->blocking);		
 	}
 	return 1;
 }
@@ -632,7 +755,7 @@ LUA_PROPERTY_SET(Socket, blocking) {
 	Socket *s = lua_self(L, 1, Socket);
 	unsigned long mode = !lua_toboolean(L, 2);
 	ioctlsocket(s->sock, FIONBIO, &mode);
-	s->blocking = mode;
+	s->blocking = !mode;
 	return 0;
 }
 
@@ -715,7 +838,6 @@ const luaL_Reg Socket_methods[] = {
 	{"peek",			Socket_peek},
 	{"recv",			Socket_recv},
 	{"send",			Socket_send},
-	{"sendall",			Socket_sendall},
 	{"shutdown",		Socket_shutdown},
 	{"starttls",		Socket_start_tls},
 	{"get_blocking",	Socket_getblocking},

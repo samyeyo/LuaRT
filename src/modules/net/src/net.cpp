@@ -6,53 +6,30 @@
  | net.c | LuaRT net module
 */
 
+#define LUART_LIB
+
 #include <Socket.h>
-// #include "lrtapi.h"
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <luart.h>
-#include "../include/Http.h"
-#include <Ftp.h>
 #include <File.h>
+#include "Http.h"
+#include "Ftp.h"
 
 #include <windns.h>
 #include <Ws2ipdef.h>
 #include <wininet.h>
 #include <stdio.h>
-#include <stdio.h>
 #include <sensapi.h>
 #include <time.h>
-#include <winsock2.h>
 #include <iphlpapi.h>
 
 static WSADATA wsadata;
 static const char *ip_type[] = {"ipv4", "ipv6"};
 
-
-int dns(lua_State *L, char *str, WORD type) {
-	PDNS_RECORD result;
-	DNS_STATUS s = DnsQuery_A(str, type, 0, NULL, &result, NULL);
-
-	if (s == 0) {
-		if (type == DNS_TYPE_A) {
-			IN_ADDR ip;
-			ip.S_un.S_addr = result->Data.A.IpAddress;
-			lua_pushstring(L, inet_ntoa(ip));			
-		}
-		else if (type == DNS_TYPE_AAAA) {
-			IN6_ADDR ipv6;
-			char ipAddress[128] = {0};
-			CopyMemory(ipv6.u.Byte, result->Data.AAAA.Ip6Address.IP6Byte, sizeof(ipv6.u.Byte));
-			InetNtopA(AF_INET6, (PVOID)&ipv6, ipAddress, 128);			
-			lua_pushstring(L, ipAddress);
-		} else lua_pushstring(L, result->Data.PTR.pNameHost);
-		DnsRecordListFree(result, DnsFreeRecordListDeep);
-	} else if (s == DNS_INFO_NO_RECORDS || DNS_ERROR_RECORD_DOES_NOT_EXIST == s || DNS_ERROR_RCODE_NAME_ERROR == s)
-		lua_pushnil(L);
-	else {
-		lua_pushboolean(L, FALSE);
-		WSASetLastError(s);
-	}
-	return 1;
-} 
+extern "C" {
+	extern int dns(lua_State *L, const char *str, WORD type);
+}
 
 LUA_METHOD(net, resolve) {
 	return dns(L, (char *)luaL_checkstring(L,1), lua_optstring(L, 2, ip_type, 0) ? DNS_TYPE_AAAA : DNS_TYPE_A);
@@ -80,7 +57,7 @@ LUA_METHOD(net, reverse) {
 	struct sockaddr_in6 sa6;
 	char *ip = (char*)luaL_checkstring(L, 1);
 	char final_ip[100];
-	char *type = NULL;
+	const char *type = NULL;
 	char ip2[29];
     
 	if ( inet_pton(AF_INET, ip, &(sa.sin_addr)) != 0 ) {
@@ -104,16 +81,17 @@ LUA_METHOD(net, reverse) {
 
 LUA_METHOD(net, select) {
 	fd_set read, write, err;
-	TIMEVAL timeout = {0};
+	TIMEVAL timeout = {};
 	int result, i, idx = 0;
 	Socket **list;
 
+	ZeroMemory(&timeout, sizeof(TIMEVAL));
 	luaL_checktype(L, 1, LUA_TTABLE);
 	FD_ZERO(&read);
 	FD_ZERO(&write);
 	FD_ZERO(&err);
 	timeout.tv_usec = luaL_optinteger(L, 2, 0);
-	list = malloc(sizeof(Socket)*(size_t)luaL_len(L, 1));
+	list = (Socket**)malloc(sizeof(Socket)*(size_t)luaL_len(L, 1));
 	lua_pushvalue(L, 1);
 	lua_pushnil(L);
 	while (lua_next(L, -2)) {
@@ -141,7 +119,24 @@ LUA_METHOD(net, select) {
 	return 1;
 }
 
-extern URL_COMPONENTSW *get_url(lua_State *L, int idx, wchar_t **url_str);
+URL_COMPONENTSW *get_url(lua_State *L, int idx, wchar_t **url_str) {
+	int len;
+	URL_COMPONENTSW *url = (URL_COMPONENTSW *)calloc(1, sizeof(URL_COMPONENTSW));
+	
+	*url_str = lua_tolwstring(L, idx, &len);
+	url->dwStructSize 	 = sizeof(URL_COMPONENTSW);
+	url->dwHostNameLength = 1;
+    url->dwUserNameLength = 1;
+    url->dwPasswordLength = 1;
+    url->dwUrlPathLength  = 1;
+    url->dwSchemeLength	  = 1;
+	if (InternetCrackUrlW(*url_str, (size_t)len, 0, url))
+		return url;
+	SetLastError(ERROR_INTERNET_INVALID_URL);
+	free(url);
+	free(*url_str);
+	return NULL;
+}
 
 LUA_METHOD(net, urlparse) {
 	wchar_t *urlstr;
@@ -212,7 +207,7 @@ LUA_PROPERTY_GET(net, ip) {
 }
 
 static int adapters_iter(lua_State *L) {
-	PIP_ADAPTER_ADDRESSES addritem = lua_touserdata(L, lua_upvalueindex(1));
+	PIP_ADAPTER_ADDRESSES addritem = (PIP_ADAPTER_ADDRESSES)lua_touserdata(L, lua_upvalueindex(1));
 	do {
 		if (addritem && addritem->IfType != IF_TYPE_SOFTWARE_LOOPBACK && addritem->OperStatus == IfOperStatusUp) {
 			char buffer[128];
@@ -242,7 +237,7 @@ LUA_METHOD(net, adapters) {
 	DWORD size;
 
 	if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, NULL, NULL, &size) == ERROR_BUFFER_OVERFLOW) {
-		PIP_ADAPTER_ADDRESSES addrlist = malloc(size);
+		PIP_ADAPTER_ADDRESSES addrlist = (PIP_ADAPTER_ADDRESSES)malloc(size);
 		if (GetAdaptersAddresses(lua_optstring(L, 2, ip_type, 0) ? AF_INET6 : AF_INET, GAA_FLAG_INCLUDE_PREFIX | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, NULL, addrlist, &size) == ERROR_SUCCESS) {
 			lua_pushlightuserdata(L, addrlist);
 			lua_pushlightuserdata(L, addrlist);
@@ -257,12 +252,12 @@ LUA_PROPERTY_GET(net, ipv6) {
 	return dns(L, "localhost", DNS_TYPE_AAAA);
 }
 
-LUA_PROPERTY_GET(net, lasterror) {
+LUA_PROPERTY_GET(net, error) {
 	return luaL_getlasterror(L, WSAGetLastError());
 }
 
 static const luaL_Reg net_properties[] = {
-	{"get_error",	net_getlasterror},
+	{"get_error",	net_geterror},
 	{"get_isalive",	net_getisalive},
 	{"get_ip",		net_getip},
 	{"get_publicip",net_getpublicip},
@@ -279,18 +274,20 @@ static const luaL_Reg netlib[] = {
 	{NULL, NULL}
 };
 
-LUALIB_API int net_finalize(lua_State *L) {
+int net_finalize(lua_State *L) {
 	WSACleanup();
 	return 0;
 }
 
 //------------------------------- net module entry
 
-int __declspec(dllexport) luaopen_net(lua_State *L) {
-	WSAStartup(MAKEWORD(2, 2), &wsadata); 
-	lua_regmodulefinalize(L, net);
-	lua_regobjectmt(L, Socket);
-	lua_regobjectmt(L, Http);
-	lua_regobjectmt(L, Ftp);
-	return 1;
+extern "C" {
+	int __declspec(dllexport) luaopen_net(lua_State *L) {
+		WSAStartup(MAKEWORD(2, 2), &wsadata); 
+		lua_regmodulefinalize(L, net);
+		lua_regobjectmt(L, Socket);
+		lua_regobjectmt(L, Http);
+		lua_regobjectmt(L, Ftp);
+		return 1;
+	}
 }
