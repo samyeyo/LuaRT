@@ -128,6 +128,7 @@ LUA_METHOD(json, encode)
 
 LUA_METHOD(json, finalize) {
     ReleaseAllocator(A);
+    return 0;
 }
 
 //--- luaL_Reg array for module properties, postfixed by "_properties"          
