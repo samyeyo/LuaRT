@@ -17,6 +17,7 @@ extern "C" {
 //---------------------------------------- COM object
 typedef struct {
 	luart_type	type;
+	IUnknown 	*getobject;
 	IDispatch 	*this;
 	ITypeInfo	*typeinfo;
 	wchar_t		*name;

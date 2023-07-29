@@ -8,10 +8,13 @@
 
 #define CINTERFACE
 #define COBJMACROS
+#define LUA_LIB
+
 #include <com.h>
 #include <luart.h>
 
 #include <ole2.h>
+#include <oleauto.h>
 #include <shobjidl.h>
 #include <objbase.h>
 #include <objidl.h>
@@ -27,17 +30,25 @@ LUA_CONSTRUCTOR(COM) {
 	COM *obj = (COM *)calloc(1, sizeof(COM));
 	UINT count;
 	CLSID clsid;
+	char *err;
+
 
 	if (lua_islightuserdata(L, 2))
 		obj->this = lua_touserdata(L, 2);
 	else {
 		wchar_t *name = lua_towstring(L, 2);
 		if ( FAILED(CLSIDFromProgID(name, &clsid)) && FAILED(CLSIDFromString(name, &clsid)) ) {
-			lua_pushfstring(L, "COM object '%s' not registered", lua_tostring(L, 2));
+notfound:	err = "COM object '%s' not registered";
 			goto error;
+		} else if ( lua_toboolean(L, 3) ) {
+			if (FAILED(GetActiveObject(&clsid, NULL, &obj->getobject)))
+				goto notfound;
+			if (FAILED(IUnknown_QueryInterface(obj->getobject, &IID_IDispatch, (LPVOID*)&obj->this)))
+				goto notfound;
 		} else if ( FAILED(CoCreateInstance(&clsid, 0, CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER, &IID_IDispatch, (LPVOID*)&obj->this))) {
-			lua_pushfstring(L, "IDispatch interface not implemented by COM object '%s'", lua_tostring(L, 2));		
-error:		free(name);
+			err = "IDispatch interface not implemented by COM object '%s'";
+error:		lua_pushfstring(L, err, lua_tostring(L, 2));		
+			free(name);
 			free(obj);
 			lua_error(L);
 		}					
@@ -58,6 +69,7 @@ static int COM_method_call(lua_State *L) {
 	COM				*obj;
 	wchar_t 		*field = lua_towstring(L, lua_upvalueindex(1));
 	int 			method = lua_tointeger(L, lua_upvalueindex(2));
+	HREFTYPE 		hreftype = lua_tointeger(L, lua_upvalueindex(4));
 	int 			n = lua_gettop(L);
 	int				idx, i;
 	DISPPARAMS 		params = {NULL, NULL, 0, 0};
@@ -68,6 +80,9 @@ static int COM_method_call(lua_State *L) {
 	VARIANT			result = {0};
 	HRESULT 		hr = S_OK;
 	VARIANT			*args = NULL;
+	ITypeInfo 		*t = NULL;
+	int restype = -1;
+	TYPEATTR *attr = NULL;	
 	
 	if (method & DISPATCH_METHOD) {
 		obj = lua_self(L, 1, COM);
@@ -82,6 +97,10 @@ static int COM_method_call(lua_State *L) {
 		obj = lua_self(L, lua_upvalueindex(3), COM);
 		idx = 1;
 	}
+
+	if (SUCCEEDED(ITypeInfo_GetRefTypeInfo(obj->typeinfo, hreftype, &t)))
+		if (SUCCEEDED(ITypeInfo_GetTypeAttr(t, &attr)))
+			restype = attr->typekind;
 	params.cArgs = n;
 	args = calloc(n+1, sizeof(VARIANT));
 	for (i = (n - 1); i >= 0; i--) {
@@ -100,8 +119,25 @@ static int COM_method_call(lua_State *L) {
 								}
 								break;
 			case LUA_TSTRING:	str = lua_towstring(L, idx);
-								V_BSTR(var) = SysAllocString(str);
-								V_VT(var) = VT_BSTR;
+								if ((method & DISPATCH_PROPERTYPUT) && restype == TKIND_ENUM) {
+									wchar_t *name;
+									BOOL done = FALSE;
+									VARDESC *vardesc;
+									for (UINT i = 0; !done && (i < attr-> cVars); i++) {
+										ITypeInfo_GetVarDesc(t, i, &vardesc);
+										ITypeInfo_GetDocumentation(t, vardesc->memid, &name, NULL, NULL, NULL);
+										if (wcscmp(str, name) == 0) {
+											var->vt = VT_I4;
+											V_I4(var) = vardesc->lpvarValue->intVal;
+											done = TRUE;
+										}
+										SysFreeString(name);
+										ITypeInfo_ReleaseVarDesc(t, vardesc);									
+									}
+								} else {
+									V_BSTR(var) = SysAllocString(str);
+									V_VT(var) = VT_BSTR;
+								}
 								free(str);
 								break;
 			case LUA_TTABLE:	{
@@ -153,7 +189,22 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 			case VT_I4:
 			case VT_I8:
 			case VT_INT:		VariantChangeType(&result, &result, 0, VT_I8);
-								lua_pushinteger(L, V_I8(&result)); break;
+								if (restype == TKIND_ENUM) {
+									wchar_t *name;
+									VARDESC *vardesc;
+									BOOL done = FALSE;
+
+									for (UINT i = 0; !done && (i < attr->cVars); i++) {
+										ITypeInfo_GetVarDesc(t, i, &vardesc);
+										if (V_I8(&result) == vardesc->lpvarValue->intVal) {
+											ITypeInfo_GetDocumentation(t, vardesc->memid, &name, NULL, NULL, NULL);
+											lua_pushwstring(L, name);
+											done = TRUE;
+										}
+										SysFreeString(name);
+										ITypeInfo_ReleaseVarDesc(t, vardesc);									
+									}									
+								} else lua_pushinteger(L, V_I8(&result)); break;
 			case VT_R4:
 			case VT_R8:
 			case VT_DECIMAL:	VariantChangeType(&result, &result, 0, VT_R8);
@@ -170,28 +221,64 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 									lua_pushinstance(L, Datetime, 1);
 									goto cleanup;
 								}
-			default: 			luaL_error(L, "COM error : unsupported result type"); 
+			default: 			luaL_error(L, "COM error : unsupported result type %d", result.vt); 
 		}
 	} else
 		lua_pushfstring(L, "COM error : no member '%s' found", lua_tostring(L, lua_upvalueindex(1)));
 	VariantClear(&result);
 cleanup:
+	if (attr)
+		ITypeInfo_ReleaseTypeAttr(t, attr);
+	if (t)
+		ITypeInfo_Release(t);
 	free(field);
 	while (n--)
 		VariantClear(&params.rgvarg[n]);
 	free(params.rgvarg);
 	if (FAILED(hr))
-		luaL_error(L, "%s", lua_tostring(L, -1));
+		luaL_error(L, "COM error: %s", lua_tostring(L, -1));
 	return 1;
 }
 
+static BOOL GetResultType(COM *obj, wchar_t *field, HREFTYPE *restype) {
+	BOOL found = FALSE;
+	TYPEATTR	*attr;
+	FUNCDESC	*funcdesc = NULL;
+	BSTR name;
+	
+	if ( obj->typeinfo && SUCCEEDED(ITypeInfo_GetTypeAttr(obj->typeinfo, &attr))) {
+		UINT count;
+		for (WORD i = 0; i < attr->cFuncs; i++)
+			if ( SUCCEEDED(ITypeInfo_GetFuncDesc(obj->typeinfo, i, &funcdesc)) && SUCCEEDED(ITypeInfo_GetNames(obj->typeinfo, funcdesc->memid, &name, 1, &count)) ) {
+				if (lstrcmpiW(name, field) == 0) {
+					if (funcdesc->elemdescFunc.tdesc.vt == 29)
+						*restype = funcdesc->elemdescFunc.tdesc.hreftype;
+					if ((funcdesc->invkind == INVOKE_FUNC) && (lstrcmpiW(name, field) == 0)) {
+						ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
+						found = TRUE;
+						break;
+					}
+				}
+				ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
+			}
+	}
+	ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);			
+	return found;	
+}
+
 LUA_METHOD(COM, __newindex) {
+	wchar_t		*field = lua_towstring(L, 2);
+	HREFTYPE restype;
+
 	lua_pushvalue(L, 2);
 	lua_pushinteger(L, INVOKE_PROPERTYPUT);
 	lua_pushvalue(L, 1);
-	lua_pushcclosure(L, COM_method_call, 3);
+	GetResultType(lua_self(L, 1, COM), field, &restype);
+	free(field);					
+	lua_pushinteger(L, restype);
+	lua_pushcclosure(L, COM_method_call, 4);
 	lua_pushvalue(L, 3);
-	lua_call(L, 1, 0);						
+	lua_call(L, 1, 0);	
 	return 0;
 }
 
@@ -203,44 +290,31 @@ LUA_METHOD(COM, __index) {
 	EXCEPINFO	execpInfo = {0};
 	UINT		puArgErr = 0;
 	VARIANT		result = {0};
-	TYPEATTR	*attr;
-	FUNCDESC	*funcdesc = NULL;
-	BSTR name;
+	HREFTYPE	restype = (HREFTYPE)0;
 
 	if (SUCCEEDED(IDispatch_GetIDsOfNames(obj->this, &IID_NULL, &field, 1, 0, &id))) {
-		BOOL found = FALSE;
-		if ( obj->typeinfo && SUCCEEDED(ITypeInfo_GetTypeAttr(obj->typeinfo, &attr))) {
-		UINT count;
-		for (WORD i = 0; i < attr->cFuncs; i++)
-			if ( SUCCEEDED(ITypeInfo_GetFuncDesc(obj->typeinfo, i, &funcdesc)) && SUCCEEDED(ITypeInfo_GetNames(obj->typeinfo, funcdesc->memid, &name, 1, &count)) ) {
-				if ((funcdesc->invkind == INVOKE_FUNC) && (lstrcmpiW(name, field) == 0)) {
-					ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
-					found = TRUE;
-					break;
-				}
-				ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
-			}
-		}
-		ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);			
-		if (found)
+		if (GetResultType(obj, field, &restype))
 			goto method;			
 		LONG value = IDispatch_Invoke(obj->this, id, &IID_NULL, 0, DISPATCH_PROPERTYGET, &params, &result, &execpInfo, &puArgErr);
 		if (value == DISP_E_BADPARAMCOUNT) {
 			lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_PROPERTYGET | DISPATCH_METHOD);
 			lua_pushvalue(L, 1);
-			lua_pushcclosure(L, COM_method_call, 3);
+			lua_pushinteger(L, restype);			
+			lua_pushcclosure(L, COM_method_call, 4);
 		} else if (value == 0) {		
 			VariantInit(&result);	
 			lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_PROPERTYGET);
 			lua_pushvalue(L, 1);
-			lua_pushcclosure(L, COM_method_call, 3);
+			lua_pushinteger(L, restype);			
+			lua_pushcclosure(L, COM_method_call, 4);
 			lua_call(L, 0, 1);
 		} else {
 method:		lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_METHOD);
-			lua_pushcclosure(L, COM_method_call, 2);
+			lua_pushinteger(L, restype);
+			lua_pushcclosure(L, COM_method_call, 3);
 		}
 	} else lua_pushnil(L);
 	free(field);
@@ -302,6 +376,8 @@ LUA_METHOD(COM, __gc) {
 		IDispatch_Release(obj->this);
 	if (obj->typeinfo)
 		ITypeInfo_Release(obj->typeinfo);
+	if (obj->getobject)
+		IUnknown_Release(obj->getobject);
 	free(obj->name);
 	free(obj);
 	return 0;
