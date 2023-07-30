@@ -108,7 +108,7 @@ int crypto_finalize(lua_State *L)
 	return 0;
 }
 
-LUAMOD_API int luaopen_crypto(lua_State *L)
+int __declspec(dllexport) luaopen_crypto(lua_State *L)
 {
 	dll = LoadLibrary("AdvAPI32");
 	uncrypt = (void*)GetProcAddress(dll, "CryptDecrypt");
