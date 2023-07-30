@@ -18,6 +18,8 @@ MODULE=		net
 VERSION=	1.5
 SRC= 		src\Http.obj src\net.obj src\Socket.obj src\Ftp.obj
 
+
+
 !if "$(BUILD)" == "debug"
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I".\lib" /Z7 
 LDFLAGS= /nologo /DEBUG

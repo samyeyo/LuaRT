@@ -36,7 +36,7 @@ LD= link.exe
 all: install
 
 debug:
-	$(MAKE) /nologo "BUILD=debug"
+	@$(MAKE) /nologo "BUILD=debug"
 
 infomodule: 
 	@chcp 65001 >nul 2>&1

@@ -1,4 +1,4 @@
-﻿# | async module for LuaRT
+﻿# | webview module for LuaRT
 # | Luart.org, Copyright (c) Tine Samir 2023.
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
@@ -34,7 +34,7 @@ LD= link.exe
 all: install
 
 debug:
-	$(MAKE) /nologo "BUILD=debug"
+	@$(MAKE) /nologo "BUILD=debug"
 
 infomodule: 
 	@chcp 65001 >nul 2>&1

@@ -36,7 +36,7 @@ LD= link.exe
 all: install
 
 debug:
-	$(MAKE) /nologo "BUILD=debug"
+	@$(MAKE) /nologo "BUILD=debug"
 
 infomodule: 
 	@chcp 65001 >nul 2>&1
@@ -44,11 +44,11 @@ infomodule:
 	@echo|set /p dummy="▸  Building module $(MODULE) $(VERSION)	  "
 
 .c.obj: 
-	@$(CC) $(CFLAGS) /c /Fo$@ $< 2>&1 >nul
+	@$(CC) $(CFLAGS) /c /Fo$@ $< >nul 2>&1
 	@echo|set /p dummy="■"
 
 $(MODULE).dll: infomodule $(SRC)
-	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ 2>&1 >nul 
+	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ >nul 2>&1
 	
 install: $(MODULE).dll
 !if !exists("$(LUART_PATH)\modules\$(MODULE)")
