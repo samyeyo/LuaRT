@@ -149,7 +149,6 @@ x86: clean
 	@$(MAKE) "PLATFORM=x86"
 
 setup: toolchain tools infosetup
-	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource_install.rc -o resource.o
 	@echo|set /p dummy="■"
 # @$(CXX) -mwindows $(CFLAGS) -DRTC -DRTWIN $(LUA_O) $(UI_O) $(LIB_O) -Wl,--no-insert-timestamp -Wl,--no-seh resource.o -L"." -o wluart-static.exe luart.c $(LIBS) -lgdi32
 # @$(CXX) $(CFLAGS) $(LDFLAGS) -DLUART_STATIC -DRTC -o luart-static.exe $(BASE_O) $(STATIC_O) -mconsole luart.c $(LDFLAGS) $(LIBS) $(LDSCRIPT)

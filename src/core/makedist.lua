@@ -45,7 +45,7 @@ copy(parent.."\\README.md", "README.md")
 copy(parent.."\\LICENSE", "LICENSE")
 copy(parent.."\\CHANGELOG.md")
 file_add("../../setup/uninstall.wlua", "local VERSION = '"..VERSION.."'")
-sys.cmd('..\\..\\bin\\rtc.exe -i "resources/box.ico" -s -w -o ..\\dist\\LuaRT-remove.exe ../../setup/uninstall.wlua ../../setup/img')
+sys.cmd('..\\..\\bin\\rtc.exe -i "../../setup/img/logo.ico" -s -w -o ..\\dist\\LuaRT-remove.exe ../../setup/uninstall.wlua ../../setup/img')
 console.write("■")
 
 z = compression.Zip(parent.."/setup/luaRT.zip", "write", 9)

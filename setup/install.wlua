@@ -123,7 +123,7 @@ function button:onClick()
         user_path = user_path:gsub(dir.fullpath.."\\bin;", "")
         sys.registry.write("HKEY_CURRENT_USER", "Environment", "Path", user_path..";"..dir.fullpath.."\\bin", true)
         reg.InstallLocation = dir.fullpath;
-        reg.DisplayIcon = dir.fullpath.."\\LuaRT-remove.exe,-103"
+        reg.DisplayIcon = dir.fullpath.."\\LuaRT-remove.exe,-101"
         reg.UninstallString = dir.fullpath.."\\LuaRT-remove.exe"
         for key, value in pairs(reg) do
             sys.registry.write("HKEY_CURRENT_USER", "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LuaRT", key, value);

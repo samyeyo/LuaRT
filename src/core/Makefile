@@ -54,10 +54,10 @@ VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 DEFINES_RES= /d LUART_MINOR="$(LUART_MINOR)" /d LUART_MAJOR="$(LUART_MAJOR)" /d LUART_RELEASE="$(LUART_RELEASE)"
 
 !if "$(BUILD)" == "debug"
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." $(UIDLL) /Z7
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG /NODEFAULTLIB:msvcrt
 !else
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." $(UIDLL) /MD /Gy /GF /Oi /O1 /GA
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /MD /Gy /GF /Oi /O1 /GA
 LDFLAGS= /nologo /OPT:REF /OPT:ICF
 !endif
 
@@ -118,12 +118,10 @@ infosetup: utf8
 
 .cpp.obj:
 	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< >nul 2>&1
-#>nul 2>&1
 	@echo|set /p dummy="■"
 
 .c.obj: 
 	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< >nul 2>&1
-#>nul 2>&1
 	@echo|set /p dummy="■"
 
 lua: infolua $(LUA_O) 
@@ -148,10 +146,8 @@ static:
 	@echo|set /p dummy="▸  Building static executables    "
 	@$(MAKE) /nologo luart-static "STATIC=TRUE"
 
-tools: infotools
-	@$(RM) $(BASE_O) >nul 2>&1
-	@$(RM) $(UI_O) >nul 2>&1
-	@$(MAKE) /nologo buildtools "UIDLL=/DUIDLL"
+tools: infotoolchain toolchain
+	@echo|set /p dummy=" "
 
 $(LUA_A): $(BASE_O)
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(BASE_O) /OUT:$@ >nul 2>&1
@@ -213,7 +209,7 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static ..\..\tools\rtc\src\rtc.lua
 
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-buildtools: lua54.dll $(UI_O) infotools
+buildtools: infotools rtc
 	@$(CC) /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll >nul 2>&1
@@ -229,9 +225,9 @@ buildtools: lua54.dll $(UI_O) infotools
 	@echo|set /p dummy="■"
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1
 	@echo|set /p dummy="■"
-	@$(CC) $(CFLAGS) luart.c /link $(LDFLAGS) resource.res $(LIBS) /OUT:$@ >nul 2>&1
+	@$(CC) $(CFLAGS) luart.c /link $(LDFLAGS) resource.res $(LIBS) /OUT:luart.exe >nul 2>&1
 	@echo|set /p dummy="■"
-	@-copy /Y luart.exe "..\..\tools\LuaRT-Studio\bin\luart.exe" >nul	
+	@copy /Y luart.exe "..\..\tools\LuaRT-Studio\bin\luart.exe" >nul	
 	@-copy /Y ..\..\bin\wrtc.exe "..\..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
 	@-copy /Y lua54.dll "..\..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
 	@echo|set /p dummy="■"
@@ -243,15 +239,8 @@ buildtools: lua54.dll $(UI_O) infotools
 	@echo|set /p dummy="■"
 	@cmd /c echo.
 
-setup: toolchain tools infosetup
-#	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources\resource_install.rc >nul
-# @echo|set /p dummy="■"
-# @$(CC) /c /DRTWIN /DRTWIN $(CFLAGS) luart.c /Fowluart-static.obj >nul 2>&1
-# @$(LD) $(LDFLAGS) resource.res wluart-static.obj $(BASE_O) $(STATIC_O) $(UI_O) $(UI_LIBS) $(STATIC_LIBS) /OUT:wluart-static.exe /SUBSYSTEM:windows >nul 2>&1
-# @echo|set /p dummy="■"
-# @$(CC) /c /DRTC $(CFLAGS) luart.c /Foluart-static.obj  >nul 2>&1
-# @$(LD) $(LDFLAGS) luart-static.obj $(BASE_O) $(STATIC_O) $(STATIC_LIBS) /OUT:luart-static.exe >nul 2>&1
-	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
+setup: toolchain tools buildtools infosetup
+	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM) >nul
 	@echo|set /p dummy="■"
 	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
 	@cmd /c echo.
@@ -262,6 +251,9 @@ clean: utf8
 	@echo ✓
 	@echo|set /p dummy="▸  Cleaning LuaRT Core framework... "
 	@$(RM) *.obj >nul 2>&1
+	@$(RM) *.pdb >nul 2>&1
+	@$(RM) *.exp >nul 2>&1
+	@$(RM) *.lib >nul 2>&1
 	@$(RM) lua54.* >nul 2>&1
 	@$(RM) resource.res >nul 2>&1
 	@$(RM) ..\..\lib\lua54.lib >nul 2>&1
