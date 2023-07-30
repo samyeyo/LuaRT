@@ -73,9 +73,8 @@ while not console.keyhit do
     for i = 1, rocs do
         r[i]:draw(i)
     end
-    sys.sleep(1)
+   sleep(1)
 end
 
 console.clear()
-
 console.cursor = true

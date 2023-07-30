@@ -9,8 +9,4 @@ function button:onClick()
     audio.play(sys.env.WINDIR.."\\Media\\Windows Logon.wav")
 end
 
-win:show()
-
-repeat
-    ui.update()
-until not win.visible
+ui.run(win)

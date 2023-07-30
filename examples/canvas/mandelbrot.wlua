@@ -7,7 +7,6 @@ c.align = "all"
 c.bgcolor = 0x000000FF
 
 win:center()
-win:show()
 
 local max_iterations = 64
 
@@ -47,6 +46,4 @@ function c:onPaint()
   end
 end
 
-repeat
-	ui.update()
-until win.visible == false
+ui.run(win)

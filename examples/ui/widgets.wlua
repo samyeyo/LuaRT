@@ -9,12 +9,11 @@ local demo_win = ui.Window("Widget", "fixed", 480, 360)
 demo_win.x = win.x + win.width + 6;
 demo_win.y = win.y
 
-
 function combobox:onSelect(item)
     if ui[item.text] ~= nil then
         ui.remove(demo_win.widget)
         if item.text == "Picture" then
-            demo_win.widget = ui[item.text](demo_win, sys.File(arg[0]).directory.parent.fullpath.."/examples/LuaRT.png")
+            demo_win.widget = ui[item.text](demo_win, sys.File(arg[1]).path.."LuaRT.png")
         elseif item.text == "Progressbar" then
             demo_win.widget = ui[item.text](demo_win)
             demo_win.widget.position = 75
@@ -28,13 +27,10 @@ function combobox:onSelect(item)
     end
 end
 
-win:show()
 demo_win:show()
 
 function demo_win:onClose()
     return not win.visible
 end
 
-while win.visible do
-	ui.update()
-end
+ui.run(win)

@@ -27,9 +27,5 @@ function canvas:onPaint()
   pos = pos + dir
 end
 
-win:show()
-
 -- update user interface
-repeat
-  ui.update()
-until not win.visible
+ui.run(win)

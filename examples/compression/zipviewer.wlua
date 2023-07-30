@@ -27,11 +27,8 @@ function list:onDoubleClick(item)
     toremove[#toremove+1] = file.fullpath
 end
 
-win:show()
 
-repeat
-    ui.update()
-until win.visible == false
+ui.run(win)
 
 for fname in each(toremove) do
     sys.File(fname):remove()

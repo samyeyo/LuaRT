@@ -2,7 +2,6 @@ local ui = require "ui"
 require "canvas"
 
 local win = ui.Window("Canvas - Hello world example", "fixed", 320, 240)
-win:show()
 
 local c = ui.Canvas(win)
 c.align = "all"
@@ -26,7 +25,5 @@ function c:onPaint()
 	c:fillellipse(185, 125, 25, 25, 0xe640407F)
 end
 
-repeat
-	ui.update()
-until win.visible == false
+ui.run(win)
 

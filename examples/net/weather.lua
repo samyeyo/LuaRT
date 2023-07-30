@@ -5,11 +5,9 @@
 local net = require "net"
 local console = require "console"
 
-local http = net.Http("https://wttr.in")
-local town = ""
 
-if #arg > 1 then
-	town = "~"..arg[2]
+net.Http("https://wttr.in"):get("/Paris?format=3").after = function (client, response)
+	console.write(response.content)
 end
 
-console.write(http:get("/"..town.."?format=3"))
+waitall()

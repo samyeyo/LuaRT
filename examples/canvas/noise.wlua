@@ -7,8 +7,7 @@ local Canvas = ui.Canvas(win)
 Canvas.align = "all"
 Canvas.bgcolor = 0x000000FF
 
-win:show()
-  
+ 
 function Canvas:onPaint()
   local width = Canvas.width
   local height = Canvas.height
@@ -22,6 +21,4 @@ function Canvas:onPaint()
   Canvas:map(table.concat(pixels))
 end
 
-while win.visible do
-  ui.update()
-end
+ui.run(win)
