@@ -185,6 +185,9 @@ LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs);
 //--- Sleeps the current task or the current Lua state for the provided delay
 LUA_API void lua_sleep(lua_State *L, lua_Integer delay);
 
+//--- Schedule all current tasks and return the number of results is a Task is terminated
+LUA_API int lua_schedule(lua_State *L);
+
 //--------------------------------------------------| LuaRT runtime errors
 
 //--- Pushes Windows system error string on stack

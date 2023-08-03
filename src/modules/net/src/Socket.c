@@ -23,21 +23,12 @@ typedef struct {
 	int 	pos;
 } SocketBuffer;
 
-static int SocketBuffer__gc(lua_State *L) {
-	free(((SocketBuffer *)lua_touserdata(L, 1))->buffer);
-	return 0;
-}
-
 static void *push_SocketBuffer(lua_State *L, Socket *s, int size) {
 	SocketBuffer *sb = lua_newuserdata(L, sizeof(SocketBuffer));
 	sb->socket = s;
 	sb->size = size;
 	sb->pos = 0;
 	sb->buffer = calloc(1, size+1);
-	lua_createtable(L, 0, 1);
-	lua_pushcfunction(L, SocketBuffer__gc);
-	lua_setfield(L, -2, "__gc");
-	lua_setmetatable(L, -2);
 	return sb;
 }
 
@@ -384,7 +375,10 @@ error:		if ( WSAGetLastError() != WSAEWOULDBLOCK )
 		} else 
 done:	if (done == 0)
 			lua_pushboolean(L, FALSE);
-		else lua_pushlstring(L, sb->buffer, done);		
+		else {
+			lua_pushlstring(L, sb->buffer, done);		
+			free(sb->buffer);
+		}
 	}
     return 1;
 }
@@ -486,6 +480,7 @@ yield:		return lua_yieldk(L, 0, (lua_KContext)sb, SendTaskContinue);
 		} 
 	}
 	lua_pushboolean(L, TRUE);
+	free(sb->buffer);
 	return 1;
 }
 

@@ -15,6 +15,10 @@
 #include <richedit.h>
 #include <wincodec.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
 void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip);
 void *Widget_init(lua_State *L, Widget **wp);
@@ -212,3 +216,7 @@ typedef enum {
 #define lua_closeevent(w, e) PostMessage(w->handle, WM_LUACLOSE, 0, 0)
 //--- call menu event references in LUA_REGISTRYINDEX with i 
 #define lua_menuevent(i, idx) PostMessage(NULL, WM_LUAMENU, (WPARAM)i, (LPARAM)idx) 
+
+#ifdef __cplusplus
+}
+#endif

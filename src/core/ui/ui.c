@@ -11,7 +11,7 @@
 #include <Widget.h>
 #include "ui.h"
 #include <File.h>
-#include "..\sys\async.h"
+#include "lrtapi.h"
 #include <Directory.h>
 
 #include <windows.h>
@@ -28,6 +28,8 @@
 #include <wincodec.h>
 
 #include "..\resources\resource.h"
+
+__declspec(dllimport) lua_CFunction 		update;
 
 static HMODULE richeditlib;
 int UIWindow;
@@ -345,170 +347,148 @@ LUA_METHOD(ui, remove) {
 	return 0;
 }
 
-static int do_update(lua_State *L, ULONGLONG delay) {
+int do_update(lua_State *L) {
 	int type;
 	MSG msg;
-	ULONGLONG start = GetTickCount64();
 
-	while (GetTickCount64()-start < delay) {
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {	
-	    	if ((msg.message >= WM_LUAMIN) && (msg.message <= WM_LUAMAX)) {
-				Widget *w = NULL;
-				int n = lua_gettop(L), nargs;
-				if (msg.hwnd) {
-					if (!(w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA)))
-						goto do_msg; //--- private control msg
-					if (lua_rawgeti(L, LUA_REGISTRYINDEX, w->ref) != LUA_TTABLE) 
-						continue;						
-					else {
-						int count = lua_gettop(L);
-						const char *methodname = lua_getevent(L, msg.message, &type);
-						if (type == LUA_TFUNCTION) {
-							lua_pushvalue(L, -2);
-							lua_pushlightuserdata(L, &msg);
-							if (lua_pcall(L, 2, LUA_MULTRET, 0))
-								lua_error(L);
-							count = lua_gettop(L)-count;
-							if (count == 1) {
-								if (lua_isnil(L, -1))
-									lua_pop(L, 1);
-								else lua_insert(L, -2);
-							}
-							else if (count > 1) {
-								lua_pushvalue(L, -count-1);
-								lua_remove(L, -count-2);
-								lua_insert(L, -count);
-							} 
-						} else if (lua_getfield(L, -1, methodname)) {
-							lua_insert(L, -2);							
-							switch (msg.message) {
-								case WM_LUADBLCLICK:
-								case WM_LUACONTEXT:	if (((w->wtype >= UIList) && (w->wtype <= UITab)) && (msg.wParam > 0))
-														__push_item(L, w, msg.wParam-1, w->wtype == UITree ? (HTREEITEM)msg.wParam : NULL);
-													break;							
-								case WM_LUACLICK:	
-		push_params:									lua_pushinteger(L, msg.wParam);
-														lua_pushinteger(L, msg.lParam);	
-													break;
-								case WM_LUAHOVER:	goto push_params;
-								case WM_LUACHANGE:	if (w->wtype == UICombo)
-														GetText(L, (HANDLE)SendMessage(w->handle, CBEM_GETEDITCONTROL, 0, 0));
-													else if (w->wtype == UITree) {
-														if (msg.wParam) {
-															lua_pushwstring(L, (wchar_t *)msg.lParam);
-															free((wchar_t *)msg.lParam);
-														}
-														else __push_item(L, w, 0, (HTREEITEM)msg.lParam);
-														lua_pushstring(L, msg.wParam ? "removed" : "edited");
-													} else if (w->wtype == UIEdit)
-														SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_MOUSEEVENTS);
-													break;
-								case WM_LUASELECT:	if (w->wtype == UIEntry)
-														GetText(L, w->handle);
-													else if (w->wtype >= UIList && w->wtype <= UITab)
-														__push_item(L, w, msg.wParam, (HTREEITEM)msg.lParam);
-													else if (w->wtype == UIDate)
-														pushDate(L, w->handle);
-													else if (w->wtype == UIEdit)
-														goto push_params;
-													break;
-								case WM_LUAKEY:		if (!msg.wParam)
-														lua_pushlstring(L, (const char*)&msg.lParam, 1);
-													else lua_pushstring(L, (const char *)msg.wParam);
-							}
-						} else lua_pop(L, 1);		
-					} 		
-				} else if (msg.message == WM_LUAMENU) {			
-					int type = 	lua_rawgeti(L, LUA_REGISTRYINDEX, msg.wParam);
-					if (type == LUA_TTABLE && lua_getfield(L, -1, "onClick")) {
-						lua_insert(L, -2);
-						if (msg.lParam > -1) {
-							lua_pushinteger(L, msg.lParam);
-							lua_pushinstance(L, MenuItem, 2);
-							lua_remove(L, -2);
+	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {	
+		if ((msg.message >= WM_LUAMIN) && (msg.message <= WM_LUAMAX)) {
+			Widget *w = NULL;
+			int n = lua_gettop(L), nargs;
+			if (msg.hwnd) {
+				if (!(w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA)))
+					goto do_msg; //--- private control msg
+				if (lua_rawgeti(L, LUA_REGISTRYINDEX, w->ref) != LUA_TTABLE) 
+					continue;						
+				else {
+					int count = lua_gettop(L);
+					const char *methodname = lua_getevent(L, msg.message, &type);
+					if (type == LUA_TFUNCTION) {
+						lua_pushvalue(L, -2);
+						lua_pushlightuserdata(L, &msg);
+						if (lua_pcall(L, 2, LUA_MULTRET, 0))
+							lua_error(L);
+						count = lua_gettop(L)-count;
+						if (count == 1) {
+							if (lua_isnil(L, -1))
+								lua_pop(L, 1);
+							else lua_insert(L, -2);
 						}
-					} 
-				} else goto do_msg;
-				if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
-					if (lua_pcall(L, nargs, LUA_MULTRET, 0))
-						lua_error(L);
-					if (msg.message == WM_LUACHANGE && w->wtype == UIEdit)
-						SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
-					else if (msg.message == WM_LUACLOSE) {
-						int result = lua_gettop(L);
-						if (!result || lua_toboolean(L, -1)) {
-							ShowWindow(w->handle, SW_HIDE);
-							if (w->wtype == UIWindow && w->tooltip) {
-								EnableWindow(w->tooltip, TRUE);
-								SetActiveWindow(w->tooltip);
-								w->tooltip = NULL;
-							}
-							if (w->ismain) {
-								DestroyWindow(w->handle);
-								w->handle = NULL;
-							}
+						else if (count > 1) {
+							lua_pushvalue(L, -count-1);
+							lua_remove(L, -count-2);
+							lua_insert(L, -count);
+						} 
+					} else if (lua_getfield(L, -1, methodname)) {
+						lua_insert(L, -2);							
+						switch (msg.message) {
+							case WM_LUADBLCLICK:
+							case WM_LUACONTEXT:	if (((w->wtype >= UIList) && (w->wtype <= UITab)) && (msg.wParam > 0))
+													__push_item(L, w, msg.wParam-1, w->wtype == UITree ? (HTREEITEM)msg.wParam : NULL);
+												break;							
+							case WM_LUACLICK:	
+	push_params:									lua_pushinteger(L, msg.wParam);
+													lua_pushinteger(L, msg.lParam);	
+												break;
+							case WM_LUAHOVER:	goto push_params;
+							case WM_LUACHANGE:	if (w->wtype == UICombo)
+													GetText(L, (HANDLE)SendMessage(w->handle, CBEM_GETEDITCONTROL, 0, 0));
+												else if (w->wtype == UITree) {
+													if (msg.wParam) {
+														lua_pushwstring(L, (wchar_t *)msg.lParam);
+														free((wchar_t *)msg.lParam);
+													}
+													else __push_item(L, w, 0, (HTREEITEM)msg.lParam);
+													lua_pushstring(L, msg.wParam ? "removed" : "edited");
+												} else if (w->wtype == UIEdit)
+													SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_MOUSEEVENTS);
+												break;
+							case WM_LUASELECT:	if (w->wtype == UIEntry)
+													GetText(L, w->handle);
+												else if (w->wtype >= UIList && w->wtype <= UITab)
+													__push_item(L, w, msg.wParam, (HTREEITEM)msg.lParam);
+												else if (w->wtype == UIDate)
+													pushDate(L, w->handle);
+												else if (w->wtype == UIEdit)
+													goto push_params;
+												break;
+							case WM_LUAKEY:		if (!msg.wParam)
+													lua_pushlstring(L, (const char*)&msg.lParam, 1);
+												else lua_pushstring(L, (const char *)msg.wParam);
 						}
-						lua_pop(L, result);
-				 	}
-				} else if (w->wtype > UIMenuItem)
-					goto do_msg;
-			} else {				 
-				Widget *wp = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
-				while(wp && (wp->wtype != UIWindow))
-					wp = (Widget*)GetWindowLongPtr(GetParent(wp->handle), GWLP_USERDATA);					
-				if (wp) {
-					if ((msg.message == WM_KEYDOWN) && (msg.wParam == VK_TAB)) {
-						HWND h;
-						Widget *w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
-						if (w && (w->wtype != UIEdit) && (h = GetNextDlgTabItem(wp->handle, msg.hwnd, GetAsyncKeyState(VK_SHIFT) & 0x8000 ? TRUE : FALSE))) {
-							SetFocus(h);
-							continue;
+					} else lua_pop(L, 1);		
+				} 		
+			} else if (msg.message == WM_LUAMENU) {			
+				int type = 	lua_rawgeti(L, LUA_REGISTRYINDEX, msg.wParam);
+				if (type == LUA_TTABLE && lua_getfield(L, -1, "onClick")) {
+					lua_insert(L, -2);
+					if (msg.lParam > -1) {
+						lua_pushinteger(L, msg.lParam);
+						lua_pushinstance(L, MenuItem, 2);
+						lua_remove(L, -2);
+					}
+				} 
+			} else goto do_msg;
+			if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
+				if (lua_pcall(L, nargs, LUA_MULTRET, 0))
+					lua_error(L);
+				if (msg.message == WM_LUACHANGE && w->wtype == UIEdit)
+					SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
+				else if (msg.message == WM_LUACLOSE) {
+					int result = lua_gettop(L);
+					if (!result || lua_toboolean(L, -1)) {
+						ShowWindow(w->handle, SW_HIDE);
+						if (w->wtype == UIWindow && w->tooltip) {
+							EnableWindow(w->tooltip, TRUE);
+							SetActiveWindow(w->tooltip);
+							w->tooltip = NULL;
+						}
+						if (w->ismain) {
+							DestroyWindow(w->handle);
+							w->handle = NULL;
 						}
 					}
-					if (TranslateAcceleratorW(wp->handle, wp->accel_table, &msg))
-						goto dispatch;
+					lua_pop(L, result);
 				}
+			} else if (w->wtype > UIMenuItem)
+				goto do_msg;
+		} else {				 
+			Widget *wp = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
+			while(wp && (wp->wtype != UIWindow))
+				wp = (Widget*)GetWindowLongPtr(GetParent(wp->handle), GWLP_USERDATA);					
+			if (wp) {
+				if ((msg.message == WM_KEYDOWN) && (msg.wParam == VK_TAB)) {
+					HWND h;
+					Widget *w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
+					if (w && (w->wtype != UIEdit) && (h = GetNextDlgTabItem(wp->handle, msg.hwnd, GetAsyncKeyState(VK_SHIFT) & 0x8000 ? TRUE : FALSE))) {
+						SetFocus(h);
+						continue;
+					}
+				}
+				if (TranslateAcceleratorW(wp->handle, wp->accel_table, &msg))
+					goto dispatch;
+			}
 do_msg:			TranslateMessage(&msg);
 dispatch:		DispatchMessage(&msg);
-			}
-			lua_pop(L, lua_gettop(L));
-		}	
-	}
+		}
+		lua_pop(L, lua_gettop(L));
+	}	
 	Sleep(1);
 	return 0;
 }
 
 LUA_METHOD(ui, update) {
-	return do_update(L, (ULONGLONG)luaL_optinteger(L, 1, 10));
-}
-
-static int UiTaskContinue(lua_State* L, int status, lua_KContext ctx) {
-    Widget *w = (Widget*)ctx;
-    
-	do_update(L, 10);
-    if ( !w->handle )
-		return 0;
-    return lua_yieldk(L, 0, ctx, UiTaskContinue);
-}
-
-static int WaitTask(lua_State *L) {	
-    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), UiTaskContinue);
+	return do_update(L);
 }
 
 LUA_METHOD(ui, run) {
 	Widget *w = check_widget(L, 1, UIWindow);
-	Task *t;
 
 	w->ismain = TRUE;
 	Widget_show(L);
-	lua_pushlightuserdata(L, w);
-    lua_pushcclosure(L, WaitTask, 1);
-    t = lua_pushinstance(L, Task, 1);
-	start_task(L, t, 0);
-	do {
-		update_tasks(L, t);	
-		lua_sleep(L, 1);
-	} while (t->status != TTerminated);		
+	do
+		lua_schedule(L);
+	while (w->handle);
 	return 0;
 }
 
@@ -745,8 +725,7 @@ END
 
 /* ------------------------------------------------------------------------ */
 
-int luaopen_ui(lua_State *L)
-{
+int luaopen_ui(lua_State *L) {
 	WNDCLASSEX wcex = {0};
 	DWORD dwLayout;
 	int i = -1;
@@ -805,5 +784,6 @@ int luaopen_ui(lua_State *L)
 	lua_widgetdestructor = Widget_destructor;
 	lua_widgetproc = ProcessUIMessage;
 	WIDGET_METHODS = Widget_methods;
+	update = do_update;
 	return 1;
 }

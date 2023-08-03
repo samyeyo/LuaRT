@@ -16,6 +16,8 @@ extern "C" {
     #include <luart.h>
     #include <Task.h>
 
+    Task *create_task(lua_State *L);
+
     //-------- Start a created Task
     int start_task(lua_State *L, Task *t, int args);
 
@@ -29,12 +31,11 @@ extern "C" {
     int resume_task(lua_State *L, Task *t, int args);
 
     //-------- Task scheduler
-    int update_tasks(lua_State *waitingState, Task *waitedTask);
+    int update_tasks(lua_State *L);
 
     //-------- Wait for all tasks
     int waitall_tasks(lua_State *L);
 
-    extern lua_State *mainL;
 
 #ifdef __cplusplus
 }

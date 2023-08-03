@@ -13,8 +13,9 @@
 #include <locale.h>
 #include <malloc.h>
 #include <stdint.h>
-#include "lrtapi.h"
 #include <luart.h>
+#include "lrtapi.h"
+#include <Task.h>
 #include <wchar.h>
 #include <stdlib.h>
 #include <shlwapi.h>
@@ -276,33 +277,40 @@ int main() {
 					lua_concat(L, 2);
 					goto error;
 				}
-			} else 
-execscript:	if (luaL_loadfile(L, __argv[argfile]) || lua_pcall(L, 0, LUA_MULTRET, 0)) {
+			} else { 
+execscript:		if (luaL_loadfile(L, __argv[argfile]) == LUA_OK) {
+					Task *t = lua_pushinstance(L, Task, 1);
+					t->status = TRunning;
+					if (lua_pcall(L, 0, 0, 0)) {
 error:			
-				{
+						{
 #ifdef RTWIN
-					const wchar_t *err = lua_towstring(L, -1);
+						const wchar_t *err = lua_towstring(L, -1);
 
-					if (is_embeded) {
-						wchar_t *err_embed;
-						if ( (err_embed = wcsstr(err, L": ")) )
-							err = err_embed + 2;
-					}
-					MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK);
-					free(err);
+						if (is_embeded) {
+							wchar_t *err_embed;
+							if ( (err_embed = wcsstr(err, L": ")) )
+								err = err_embed + 2;
+						}
+						MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK);
+						free(err);
 #else
-					const char *err = lua_tostring(L, -1);
+						const char *err = lua_tostring(L, -1);
 
-					if (is_embeded) {
-						char *err_embed;
-						if ( (err_embed = strstr(err, ": ")) )
-							err = err_embed + 2;
-					}
-					fputs(err, stderr);
-					fputs("\n", stderr);
+						if (is_embeded) {
+							char *err_embed;
+							if ( (err_embed = strstr(err, ": ")) )
+								err = err_embed + 2;
+						}
+						fputs(err, stderr);
+						fputs("\n", stderr);
 #endif
-					result = EXIT_FAILURE;
-				}
+						result = EXIT_FAILURE;
+						}
+					} else do 
+						lua_schedule(L);
+					while (lua_status(t->L) != LUA_OK);
+				} else goto error;
 			}
 		}
 	}

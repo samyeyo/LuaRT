@@ -14,8 +14,6 @@
 #include "sys\async.h"
 #include <windows.h>
 
-lua_State *mainL;
-
 //-------------------------------------------------[UTF8 strings conversion functions]
 char *wchar_toutf8(const wchar_t *str, int *len) {
 	char *buff;
@@ -92,21 +90,27 @@ LUALIB_API void luaL_require(lua_State *L, const char *modname) {
 	luaL_requiref(L, modname, module_error, 0);
 }
 
+//-------------------------------------------------[LuaL_require alternative with luaL_requiref]
+int lua_schedule(lua_State *L) {
+	return update_tasks(L);
+}
+
 //-------------------------------------------------[lua_sleep() function]
-void do_sleep(lua_State *L, lua_Integer delay, BOOL yielding) {
+int do_sleep(lua_State *L, lua_Integer delay, BOOL yielding) {
 	Task *t;
 
-	if ((L != mainL) && (t = search_task(L))) {
+	if ((t = search_task(L))) {
 		t->sleep =  GetTickCount64() + delay;
 		t->status = TSleep;
 		Sleep(1);
 		if (yielding)
-			lua_yield(L, 0);		
+			return lua_yield(L, 0);		
 	} else {
 		ULONGLONG start = GetTickCount64();
 		while (GetTickCount64() < start+delay)
-			update_tasks(L, NULL);
+			update_tasks(L);
 	}
+	return 0;
 }
 
 LUA_API void lua_sleep(lua_State *L, lua_Integer delay) {
@@ -126,12 +130,12 @@ LUA_METHOD(luaB, await) {
 		t = (Task *)lua_pushinstance(L, Task, 1);
 	}
 	t->waiting = search_task(L);
-	if (t->status == TCreated)
+	if (t->status == TCreated) 
 		start_task(L, t, idx);
-	nresults = lua_gettop(L);
+	t->waiting->status = TWaiting;
 	while(t->status != TTerminated)
-		update_tasks(L, !t->waiting ? NULL : t);
-	return lua_gettop(L)-nresults;
+		nresults = update_tasks(L);
+	return nresults;
 }
 
 //----------------------------------[ sleep() ]
@@ -331,7 +335,7 @@ static const luaL_Reg def_libs[] = {
 
 LUALIB_API void luaL_openlibs(lua_State *L) {
 	const luaL_Reg *lib;
-	mainL = L;
+
 	for (lib = def_libs; lib->func; lib++) {
 		luaL_requiref(L, lib->name, lib->func, 1);
 		lua_pop(L, 1);

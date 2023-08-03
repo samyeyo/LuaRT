@@ -627,3 +627,4 @@ WIDGET_DESTRUCTOR	lua_widgetdestructor = NULL;
 WIDGET_PROC			lua_widgetproc = NULL;
 luaL_Reg 			*WIDGET_METHODS = NULL;
 luart_type			TWidget = 0;
+__declspec(dllexport) lua_CFunction 		update = NULL;

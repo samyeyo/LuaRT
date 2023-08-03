@@ -3,7 +3,7 @@
  | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
- | async.c | LuaRT async module
+ | async.cpp | LuaRT async module
 */
 
 #define LUA_LIB
@@ -12,16 +12,35 @@
 #include <Task.h>
 #include <list>
 #include "async.h"
+#include "../lrtapi.h"
 
-lua_State *mainL;
 static std::list<Task *> Tasks;
+extern "C" {
+	extern lua_CFunction 		update;
+}
+
+Task *create_task(lua_State *L) {
+	Task *tt, *t = (Task*)calloc(1, sizeof(Task));
+
+	t->L = lua_newthread(L);
+	t->status = TCreated;
+	t->ref = luaL_ref(L, LUA_REGISTRYINDEX);
+	if ((tt = search_task(L)))
+		t->from = tt;
+	luaL_checktype(L, 2, LUA_TFUNCTION);
+	lua_pushvalue(L, 2);
+	lua_xmove(L, t->L, 1);	
+	lua_pushvalue(L, 1);
+	t->taskref = luaL_ref(L, LUA_REGISTRYINDEX);
+	Tasks.push_back(t);
+	return t;	
+}
 
 //-------- Search for the current running Task
 Task *search_task(lua_State *L) {
-	if (Tasks.size())
-		for (auto it = Tasks.begin(); it != Tasks.end(); ++it) 
-			if ((*it)->L == L)
-				return (*it);		
+	for (auto it = Tasks.begin(); it != Tasks.end(); ++it) 
+		if ((*it)->L == L)
+			return (*it);		
 	return NULL;
 } 
 
@@ -34,7 +53,6 @@ int start_task(lua_State *L, Task *t, int args) {
 			lua_pushvalue(L, i);
 		lua_xmove(L, t->L, nargs);
 	}
-	Tasks.push_back(t);
 	t->status = TRunning;
 	nargs = resume_task(L, t, nargs);
 	if (nargs == -1)
@@ -53,7 +71,6 @@ void close_task(lua_State *L, Task *t) {
 		}
 	}	
 }
-
 //-------- Resume a Task
 int resume_task(lua_State *L, Task *t, int args) {
 	int nresults = 0, status;
@@ -84,55 +101,49 @@ int resume_task(lua_State *L, Task *t, int args) {
 }
 
 //-------- Task scheduler
-int update_tasks(lua_State *waitingState, Task *waitedTask) {
-loop:
-	if (Tasks.size())
-		for (auto it = Tasks.begin(); it != Tasks.end(); ++it) {
-			Task *t = *it;
-			switch (t->status) {
-				case TSleep:	
-								if (t->sleep < GetTickCount64()) {	
-									t->sleep = 0;
-									t->status = TRunning;
-								} break;
+int update_tasks(lua_State *L) {
+	for (auto it = Tasks.begin(); it != Tasks.end(); ++it) {
+		Task *t = *it;
+		switch (t->status) {
+			case TSleep:	
+							if (t->sleep < GetTickCount64()) {	
+								t->sleep = 0;
+								t->status = TRunning;
+							} break;
 
-				case TRunning:	{
-									if (t->L != waitingState) {
-run:									int nresults = resume_task(waitingState, waitedTask ? waitedTask : t, -1);
-										if (nresults == -1)
-											lua_error(t->L);
-										if (t == waitedTask)
-											return nresults;
-									}
-									if (t->status == TTerminated) {
-										if (t->waiting) {
-											t = t->waiting;
-											t->status = TRunning;
-											goto run;
-										} 
-										goto loop;
-									}
-								}
-				default:		break;
-
-			}
-		}
-	if (Tasks.size())		
-		for (auto it = Tasks.begin(); it != Tasks.end();) {
-			Task *tt = *it;
-			if (tt->status == TTerminated) {
-				luaL_unref(mainL, LUA_REGISTRYINDEX, tt->ref);
-				luaL_unref(mainL, LUA_REGISTRYINDEX, tt->taskref);
-				tt->ref = -1;
-				it = Tasks.erase(it);
-			} else ++it;
-		}	
+			case TRunning:	{
+								if (lua_status(t->L) == LUA_YIELD) {
+									int nresults = resume_task(L, t, -1);
+									if (nresults == -1)
+										lua_error(t->L);
+									if ((t->status == TTerminated) && (t->waiting)) {
+										t->waiting->status = TRunning;
+										t->waiting = NULL;	
+										return nresults;									
+									}										
+								}	
+							}
+			default:		break;
+		}		
+	}
+	if (update)
+		update(L);
+	for (auto it = Tasks.begin(); it != Tasks.end();) {
+		Task *tt = *it;
+		if (tt->status == TTerminated) {
+			luaL_unref(L, LUA_REGISTRYINDEX, tt->ref);
+			luaL_unref(L, LUA_REGISTRYINDEX, tt->taskref);
+			tt->ref = -1;
+			it = Tasks.erase(it);
+		} else ++it;
+	}	
 	return 0;
 }
 
 //-------- Wait for all tasks
 int waitall_tasks(lua_State *L) {
-    while (Tasks.size())
-		update_tasks(L, NULL);
+    do 
+		update_tasks(L);
+	while (Tasks.size() > 1);		
     return 0;
 }
