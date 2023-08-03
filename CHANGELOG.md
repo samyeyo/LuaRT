@@ -1,3 +1,77 @@
+## LuaRT v1.5.0 (Jul 30 2023)
+
+#### Asynchronous programming with LuaRT
+- Asynchronous programming with LuaRT is now available with a thin layer around Lua coroutines, with an integrated scheduler
+- New global functions `async()`, `await()`, and `waitall()` functions
+- New global function `sleep()` that replaces `sys.sleep()`
+- New `sys.Task` object
+
+#### LuaRT codebase 
+- Visual C++ compiler support is now complete, thus becoming the default target compiler for LuaRT
+- LuaRT release package is built using `cl.exe` version 19.35.32217.1 (Visual Studio 2022). See build instructions in `README.md`
+- Mingw-w64 compiler support still available, but is now deprecated (might be removed later)
+- LuaRT won't use AVX2 instructions set by default anymore (causes crash on CPU that don't provide it)
+
+#### Lua VM
+- Updated: LuaRT is now using Lua 5.4.6
+
+#### LuaRT C API
+- New: `lua_pushtask()` and `lua_sleep()` to create `Task` object and to `sleep` from C
+- Fixed: `luaL_checkFilename()` now checks for a File instance
+
+### QuickRT
+- Better support of `ui` module (Window/widget can now be created and manipulated interactively from the command prompt) (suggestion [#72](https://github.com/samyeyo/LuaRT/issues/72))
+
+### `sys` module	
+- New: `sys.COM` objects can now manage enumeration properties by getting/setting string values
+- New: `sys.COM` constructor can now use an already running instance of a COM object
+- New: `sys.Task` object that encapsulates a Lua coroutine with scheduling capabilites
+- Updated: `Pipe.read()` and `Pipe.readerror()` methods are now asynchronous and returns a `Task` object instance
+- Removed: `sys.sleep()` function have been replaced by the new global `sleep()` function
+- Fixed: `File.open()` with "append" mode don't recreate a new file instead of appending to it anymore (Fixes [#79](https://github.com/samyeyo/LuaRT/issues/79))
+- Fixed: Errors now uses current locale encoding when displayed (Fixes [#89](https://github.com/samyeyo/LuaRT/issues/89))
+
+### `console` module
+- Fixed: `console.fullscreen` now works as expected on x64 (Fixes [#90](https://github.com/samyeyo/LuaRT/issues/90))
+
+### `net` module	
+- Total rework of the `net` module to use asynchronous operations
+- `Http` object uses asynchronous Tasks for GET, POST, PUT, and DELETE HTTP requests
+- `Http` object now supports headers, cookies and proxy connections (suggestion [#63](https://github.com/samyeyo/LuaRT/issues/63))
+- `Http.sheme`, `Http.status`, `Http.statuscode`, `Http.mime`, `Http.open()` members have been removed
+- New `Http.put()`, `Http.delete()`, `Http.cookies`, `Http.proxy()` members
+- `Ftp` object now uses asynchronous Tasks to perform operations
+- `Ftp` object now supports proxy connection and logging
+- `Ftp.open()` and `Ftp.active` members have been removed
+- New `Ftp.proxy()` method
+- `Socket` uses now asynchronous Tasks for non blocking sockets, for `Socket.recv()`, `Socket.send()`, `Socket.connect()` and `Socket.accept()`
+- `Socket.sendall()` method have been removed
+- `net` modules examples have been updated accordingly
+
+### `sqlite` module
+- New binary module for LuaRT that provides SQLite3 database support
+- New `Database`object to execute SQL commands or queries and iterate over the results seamlessly
+
+### `canvas` module
+- Fixed crash on some integrated Intel GPU without Direct2D support (Fixes [#76](https://github.com/samyeyo/LuaRT/issues/76))
+- `Canvas.print()` prints now antialiased text.
+- New `Canvas.rotate()`, `Canvas.translate()`, `Canvas.scale()`, `Canvas.skew()`, `Canvas.identity()` methods
+
+### `audio` module
+- Fixed crash on CPU that don't have AVX2 instruction set (Fixes [#77](https://github.com/samyeyo/LuaRT/issues/77))
+
+### `ui` module
+- New: Added support for RTL (right to left) layout, with layout autodetection and `ui.rtl` property to force a RTL or LTR layout
+- New `ui.run()` function to the specified main Window asynchronously, while processing events, and returning only when this Window have been closed
+- Updated `ui.update()` that don't use the `delay` argument anymore.
+- Fixed iterating `Tree.items` with `each()` (Fixes [#91](https://github.com/samyeyo/LuaRT/issues/91))
+- Fixed `Edit.append()` that may crash when appending lot of lines (Fixes [#88](https://github.com/samyeyo/LuaRT/issues/88))
+- Fixed `Window.onMove()` event that was not properly fired (Fixes [#87](https://github.com/samyeyo/LuaRT/issues/87))
+- Fixed `Groupbox` not redrawing correctly (Fixes #80 and #81)
+- Fixed `Edit.onCaret()` event that was not fired (Fixes #75)
+- Fixed `Edit.selection.visible` that was not hiding selection as expected (Fixes #74)
+- Fixed `Edit.load()` to support BOM and prevent crash for big files (Fixes #73)
+
 ## LuaRT v1.4.0 (Apr 21 2023)
 
 #### LuaRT codebase
