@@ -16,6 +16,9 @@ local button = ui.Button(win, "Generate QR code !", entry.x + entry.width + 6, e
 function button:onClick()
     -- Generate a QR Code with the free REST API https://goqr.me/, trademark of DENSO WAVE INCORPORATED
     local _, response = await(net.Http("https://api.qrserver.com"):download("/v1/create-qr-code/?size=150x150&data="..entry.text))
+    if not response then
+      error(net.error)
+    end
     img:load(response.file)
     response.file:remove()
     ui.Button(win, "Save QR Code...", 190, 50+img.height+6).onClick = function (self)
@@ -25,6 +28,5 @@ function button:onClick()
       end
     end
 end
-
 
 ui.run(win)
