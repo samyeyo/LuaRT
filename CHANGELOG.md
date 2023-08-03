@@ -1,4 +1,4 @@
-## LuaRT v1.5.0 (Jul 30 2023)
+## LuaRT v1.5.0 (Aug 03 2023)
 
 #### Asynchronous programming with LuaRT
 - Asynchronous programming with LuaRT is now available with a thin layer around Lua coroutines, with an integrated scheduler
