@@ -1,6 +1,12 @@
 *.zip
 *.exe
 *.dll
+*.exp
+*.ilk
+*.obj
+*.lib
+*.pdb
+*.res
 *.a
 *.o
 .vscode/*.*
