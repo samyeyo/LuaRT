@@ -166,7 +166,7 @@ $(LUAWRT_T): $(BASE_O) $(UI_O)
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(CC) /c /DRTWIN $(CFLAGS) luart.c /Fowluart.obj >nul 2>&1
-	@$(LD) $(LDFLAGS) resource.res wluart.obj sys\async.obj $(UI_O) $(LIBS) $(UI_LIBS) /OUT:$@ /SUBSYSTEM:windows >nul 2>&1
+	@$(LD) $(LDFLAGS) resource.res wluart.obj $(UI_O) $(LIBS) $(UI_LIBS) /OUT:$@ /SUBSYSTEM:windows >nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
@@ -254,6 +254,7 @@ clean: utf8
 	@$(RM) *.pdb >nul 2>&1
 	@$(RM) *.exp >nul 2>&1
 	@$(RM) *.lib >nul 2>&1
+	@$(RM) *.ilk >nul 2>&1
 	@$(RM) lua54.* >nul 2>&1
 	@$(RM) resource.res >nul 2>&1
 	@$(RM) ..\..\lib\lua54.lib >nul 2>&1
