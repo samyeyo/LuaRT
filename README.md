@@ -43,7 +43,10 @@ Lua multipurpose programming framework to develop Windows applications
 The preferred way to install LuaRT is to download the latest release package available on GitHub, and run the setup executable.
 It will install the LuaRT binaries, create the Windows Start menu shortcuts for the IDE and REPL, and update the PATH system variable. 
 It's the easiest and fastest way to start developing with LuaRT.
-  
+
+> [!WARNING]  
+> Critical issue : a bug prevent the installer to launch if you have a previous LuaRT distribution installed. Please remove it before proceeding with LuaRT 1.5.0 installer.
+
 #### Method 2 : Building from sources (Visual C++) :gear:
 
 All you need to build LuaRT from sources is a valid installation of Visual C++ compiler (Mingw-w64 GCC compiler is supported but is deprecated and might be removed in next releases).
