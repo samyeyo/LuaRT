@@ -71,7 +71,6 @@ LUA_METHOD(Pipe, write) {
 static int pipe_read(lua_State *L, HANDLE h) {
 	DWORD read, done, avail = 1;
 	char *buff;
-
 	if (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) && avail) {	
 		buff = calloc(1, avail);
 		done = 0;
@@ -98,25 +97,17 @@ static int PipeReadTaskContinue(lua_State* L, int status, lua_KContext ctx) {
 }
 
 static int PipeReadTask(lua_State *L) {	
-    return lua_yieldk(L, 0, (lua_KContext)lua_tointeger(L, lua_upvalueindex(1)), PipeReadTaskContinue);
+    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), PipeReadTaskContinue);
 }
 
 LUA_METHOD(Pipe, read) {
-#if _WIN64 || __x86_64__
-	lua_pushinteger(L, (lua_Integer)lua_self(L, 1, Pipe)->out_read);
-#else
-	lua_pushinteger(L, (int)lua_self(L, 1, Pipe)->out_read);
-#endif
+	lua_pushlightuserdata(L, (void*)lua_self(L, 1, Pipe)->out_read);
 	return lua_pushtask(L, PipeReadTask, 1);
 }
 
 //-------------------------------------[ Pipe.readerror ]
 LUA_METHOD(Pipe, readerror) {
-#if _WIN64 || __x86_64__	
-	lua_pushinteger(L, (lua_Integer)lua_self(L, 1, Pipe)->err_read);
-#else
-	lua_pushinteger(L, (int)lua_self(L, 1, Pipe)->err_read);
-#endif
+	lua_pushlightuserdata(L, (void*)lua_self(L, 1, Pipe)->err_read);
 	return lua_pushtask(L, PipeReadTask, 1);
 }
 
