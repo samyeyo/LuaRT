@@ -37,7 +37,7 @@ Task *create_task(lua_State *L) {
 }
 
 //-------- Search for the current running Task
-Task *search_task(lua_State *L) {
+LUA_API Task *search_task(lua_State *L) {
 	for (auto it = Tasks.begin(); it != Tasks.end(); ++it) 
 		if ((*it)->L == L)
 			return (*it);		
@@ -45,9 +45,7 @@ Task *search_task(lua_State *L) {
 } 
 
 //-------- Start a created Task
-int start_task(lua_State *L, Task *t, int args) {
-	int nargs = args;// != -1 ? args : lua_gettop(L);
-	
+int start_task(lua_State *L, Task *t, int nargs) {	
 	if (nargs) {
 		for (int i = 2; i <= nargs+1; i++)
 			lua_pushvalue(L, i);

@@ -9,6 +9,8 @@
 
 #include <luart.h>
 #include <Widget.h>
+#include <Task.h>
+#include "..\sys\async.h"
 #include "ui.h"
 #include <File.h>
 #include "lrtapi.h"
@@ -347,6 +349,8 @@ LUA_METHOD(ui, remove) {
 	return 0;
 }
 
+static const char *mouse_buttons[] = { "left", "right", "middle", NULL };
+
 int do_update(lua_State *L) {
 	int type;
 	MSG msg;
@@ -385,7 +389,13 @@ int do_update(lua_State *L) {
 							case WM_LUADBLCLICK:
 							case WM_LUACONTEXT:	if (((w->wtype >= UIList) && (w->wtype <= UITab)) && (msg.wParam > 0))
 													__push_item(L, w, msg.wParam-1, w->wtype == UITree ? (HTREEITEM)msg.wParam : NULL);
-												break;							
+												break;		
+
+							case WM_LUAMOUSEDOWN:				
+							case WM_LUAMOUSEUP:		lua_pushstring(L, mouse_buttons[msg.wParam]);
+													lua_pushinteger(L,  GET_X_LPARAM(msg.lParam));
+													lua_pushinteger(L,  GET_Y_LPARAM(msg.lParam));
+													break;					
 							case WM_LUACLICK:	
 	push_params:									lua_pushinteger(L, msg.wParam);
 													lua_pushinteger(L, msg.lParam);	
@@ -430,8 +440,13 @@ int do_update(lua_State *L) {
 				} 
 			} else goto do_msg;
 			if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
+				Task *t = search_task(L);
+				if (t)
+					t->isevent = TRUE;
 				if (lua_pcall(L, nargs, LUA_MULTRET, 0))
 					lua_error(L);
+				if (t)
+					t->isevent = FALSE;
 				if (msg.message == WM_LUACHANGE && w->wtype == UIEdit)
 					SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
 				else if (msg.message == WM_LUACLOSE) {

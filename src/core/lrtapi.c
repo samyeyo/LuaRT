@@ -99,7 +99,7 @@ int lua_schedule(lua_State *L) {
 int do_sleep(lua_State *L, lua_Integer delay, BOOL yielding) {
 	Task *t;
 
-	if ((t = search_task(L))) {
+	if ((t = search_task(L)) && !t->isevent) {
 		t->sleep =  GetTickCount64() + delay;
 		t->status = TSleep;
 		Sleep(1);

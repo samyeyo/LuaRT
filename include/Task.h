@@ -27,6 +27,7 @@ typedef struct _Task {
 	int			ref;
 	int 		taskref;
 	Task 		*waiting;
+	BOOL		isevent;
 	ULONGLONG	sleep;
  } Task;
 

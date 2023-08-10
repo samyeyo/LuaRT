@@ -19,10 +19,10 @@ extern "C" {
     Task *create_task(lua_State *L);
 
     //-------- Start a created Task
-    int start_task(lua_State *L, Task *t, int args);
+    int start_task(lua_State *L, Task *t, int nargs);
 
     //-------- Search for the current running Task
-    Task *search_task(lua_State *L);
+    LUA_API Task *search_task(lua_State *L);
 
     //-------- Close a Task
     void close_task(lua_State *L, Task *t);

@@ -252,19 +252,20 @@ int main() {
 		}
 		lua_setglobal(L, "arg");
 		lua_gc(L, LUA_GCGEN, 0, 0);
-		if (is_embeded) {			
-			if (luaL_dostring(L, "require '__mainLuaRTStartup__'"))
+		if (is_embeded) {	
+			if (luaL_loadstring(L, "require '__mainLuaRTStartup__'"))
 				goto error;
+			goto compiledscript;
 		}
 		else {
 			if (*wargv[1] == L'-') {
 				if ((wargv[1][1] == L'e')) {
 					if (argc > 2) {
 						lua_pushwstring(L, wargv[2]);
-						if (luaL_dostring(L, lua_tostring(L, -1))) {
+						if (luaL_loadstring(L, lua_tostring(L, -1)) == LUA_OK) {
 							is_embeded = TRUE;
-							goto error;
-						}
+							goto compiledscript;
+						} 
 						else if (__argc > 3) {
 							argfile = 3;
 							goto execscript;
@@ -279,7 +280,7 @@ int main() {
 				}
 			} else { 
 execscript:		if (luaL_loadfile(L, __argv[argfile]) == LUA_OK) {
-					Task *t = lua_pushinstance(L, Task, 1);
+compiledscript:		Task *t = lua_pushinstance(L, Task, 1);
 					t->status = TRunning;
 					if (lua_pcall(L, 0, 0, 0)) {
 error:			
