@@ -244,10 +244,22 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				lua_closeevent(w, onClose);
 				return 0;
 			}
+
+			case WM_LBUTTONUP:
+			case WM_MBUTTONUP:
+			case WM_RBUTTONUP:
+				lua_paramevent(w, onMouseUp, (Msg-WM_LBUTTONUP)/3, lParam);
+				break;
+
+			case WM_MBUTTONDOWN:
+				lua_paramevent(w, onMouseDown, 2, lParam);
+				break;
 			case WM_RBUTTONDOWN:
+				lua_paramevent(w, onMouseDown, 1, lParam);
 				lua_callevent(w, onContext);
 				break;
 			case WM_LBUTTONDOWN:
+				lua_paramevent(w, onMouseDown, 0, lParam);
 				lua_paramevent(w, onClick, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 				SetFocus(w->handle);
         		return 0;
@@ -377,6 +389,7 @@ LUA_CONSTRUCTOR(Window) {
 	nid->uID  = (UINT)w->ref;
 	nid->uCallbackMessage = WM_APP;
 	w->imglist =  (HIMAGELIST)nid;
+	lua_callevent(w, onCreate);
 	return 1;
 }
 

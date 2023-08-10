@@ -26,7 +26,7 @@ const char *luart_wtypes[] = {
 };
 
 const char *events[] = {
-	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick", "onKey", NULL };
+	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick", "onKey", "onMouseUp", "onMouseDown", NULL };
 
 const char *cursors[] = {
 	"arrow", "working", "cross", "hand", "help", "ibeam", "forbidden", "cardinal", "horizontal", "vertical", "leftdiagonal", "rightdiagonal", "up", "wait", "none"
@@ -157,7 +157,19 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			}						
 		} break;
 
+		case WM_LBUTTONUP:
+		case WM_MBUTTONUP:
+		case WM_RBUTTONUP:
+			lua_paramevent(w, onMouseUp, (uMsg-WM_LBUTTONUP)/3, lParam);
+			break;
+
+		case WM_MBUTTONDOWN:
+		case WM_RBUTTONDOWN:
+			lua_paramevent(w, onMouseDown, (uMsg-WM_LBUTTONDOWN)/3, lParam);
+			break;
+
 		case WM_LBUTTONDOWN:
+			lua_paramevent(w, onMouseDown, 0, lParam);
 			if ((w->wtype != UIButton) && (w->wtype != UILabel) && (w->wtype != UICheck) && (w->wtype != UIRadio) && (w->wtype != UIPicture))
 				lua_paramevent(w, onClick, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));		
 			break;
