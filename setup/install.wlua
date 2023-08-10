@@ -1,9 +1,9 @@
-﻿local VERSION = '1.5.0'
+﻿local VERSION = '1.5.1'
 
 --[[
- | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2022.
- | See Copyright Notice in LICENSE.TXT
+    | LuaRT - A Windows programming framework for Lua
+    | Luart.org, Copyright (c) Tine Samir 2023.
+    | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | install.wlua | LuaRT setup script
 --]]
@@ -35,7 +35,7 @@ end
 
 function x:onClick()
     if not (win.installation and ui.confirm("Installation is in progress. Are you really want to quit ?", "LuaRT installation") ~= "yes" or false) then
-        win.visible = false
+        sys.exit()
     end
 end
 
@@ -43,7 +43,7 @@ local caption = "Install"
 local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LuaRT", "InstallLocation") or false
 
 if update then
-    local p = sys.Pipe('luart -e "print(_VERSION)"') or false
+    local p = sys.Pipe('luart -e print(_VERSION)') or false
     if p then
         local current = (await(p:read()) or VERSION):match("%d%.%d%.%d")
         local numver = VERSION:gsub("%.", "")
@@ -154,8 +154,4 @@ function button:onClick()
     end
 end
 
-win:show()
-
-while win.visible do
-    ui.update()
-end 
+ui.run(win) 

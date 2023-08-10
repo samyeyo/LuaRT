@@ -49,7 +49,7 @@ _ARCH = x86
 #---- LuaRT version
 LUART_MAJOR= 1
 LUART_MINOR= 5
-LUART_RELEASE= 0
+LUART_RELEASE= 1
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 DEFINES_RES= /d LUART_MINOR="$(LUART_MINOR)" /d LUART_MAJOR="$(LUART_MAJOR)" /d LUART_RELEASE="$(LUART_RELEASE)"
 
@@ -240,9 +240,9 @@ buildtools: infotools rtc
 	@cmd /c echo.
 
 setup: toolchain tools buildtools infosetup
-	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM) >nul
+	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@echo|set /p dummy="■"
-	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
+	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).zip ..\..\LuaRT-$(VERSION)-$(PLATFORM).zip >nul
 	@cmd /c echo.
 
 clean: utf8
@@ -278,8 +278,8 @@ clean: utf8
 	@$(RM) ..\..\setup\luaRT.zip >nul 2>&1
 	@$(RM) ..\..\tools\QuickRT\QuickRT.exe >nul 2>&1
 	@$(RM) ..\..\tools\QuickRT\lua54.dll >nul 2>&1
-	@$(RM) LuaRT-$(VERSION)-x64.exe >nul 2>&1
-	@$(RM) LuaRT-$(VERSION)-x86.exe >nul 2>&1
-	@$(RM) ..\..\LuaRT-$(VERSION)-x64.exe >nul 2>&1
-	@$(RM) ..\..\LuaRT-$(VERSION)-x86.exe >nul 2>&1
+	@$(RM) LuaRT-$(VERSION)-x64.* >nul 2>&1
+	@$(RM) LuaRT-$(VERSION)-x86.* >nul 2>&1
+	@$(RM) ..\..\LuaRT-$(VERSION)-x64.* >nul 2>&1
+	@$(RM) ..\..\LuaRT-$(VERSION)-x86.* >nul 2>&1
 	@echo ✓
