@@ -1,3 +1,17 @@
+## LuaRT v1.5.1 Bugfix (Aug 10 2023)
+
+#### LuaRT installer
+- Fixed: now the LuaRT installer will launch even if a previous LuaRT distribution is found
+
+#### Asynchronous programming
+- Fixed: await/async/sleep from a compiled script is now possible (Fixes #95)
+
+#### `ui` module
+- New: `onMouseDown()` and `onMouseUp()` events for `Window` and any other widgets
+- New: example `mouse.wlua` to illustrate the new mouse events
+- Fixed: calling `sleep()` from an ui event handler now works as expected (Fixes #96)
+- Fixed: `Window.onCreate()` event is now fired as expected (Fixes #97)
+
 ## LuaRT v1.5.0 (Aug 03 2023)
 
 #### Asynchronous programming with LuaRT
