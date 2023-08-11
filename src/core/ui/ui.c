@@ -458,10 +458,8 @@ int do_update(lua_State *L) {
 							SetActiveWindow(w->tooltip);
 							w->tooltip = NULL;
 						}
-						if (w->ismain) {
-							DestroyWindow(w->handle);
-							w->handle = NULL;
-						}
+						if (w->ismain)
+							w->ismain = FALSE;
 					}
 					lua_pop(L, result);
 				}
@@ -496,15 +494,26 @@ LUA_METHOD(ui, update) {
 	return do_update(L);
 }
 
+static int RunTaskContinue(lua_State* L, int status, lua_KContext ctx) {
+	do_update(L);
+	return ((Widget *)ctx)->ismain ? lua_yieldk(L, 0, ctx, RunTaskContinue) : 0;
+}
+
+int WaitTask(lua_State *L) {
+	return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), RunTaskContinue);
+}
+
 LUA_METHOD(ui, run) {
 	Widget *w = check_widget(L, 1, UIWindow);
 
 	w->ismain = TRUE;
 	Widget_show(L);
-	do
-		lua_schedule(L);
-	while (w->handle);
+	lua_pushlightuserdata(L, w);
+	lua_pushcclosure(L, WaitTask, 1);
+	lua_pushinstance(L, Task, 1);
+	lua_call(L, 0, 0);
 	return 0;
+	// 
 }
 
 LUA_METHOD(ui, mousepos) {
