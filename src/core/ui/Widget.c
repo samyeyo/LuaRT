@@ -187,7 +187,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 			break;	
 		case WM_NOTIFY:	
 			lpNmHdr = (LPNMHDR) lParam;
-			if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
+notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				SELCHANGE *sc = (SELCHANGE *)lParam;
 				if (sc->seltyp == SEL_EMPTY)
 					lua_callevent(w, onCaret); 
@@ -254,6 +254,10 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 												free(item);
 											} break;
 				}
+			}
+			else if (w->wtype == UIGroup) {
+				if ((w = (Widget*)GetWindowLongPtr(GetDlgItem(w->handle, lpNmHdr->idFrom), GWLP_USERDATA)))
+					goto notify;
 			}
 			return 0;
 		case WM_CONTEXTMENU:
