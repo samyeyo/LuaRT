@@ -21,4 +21,4 @@ function ch:onClick()
     end
 end
 
-ui.run(win)
+ui.run(win):wait()

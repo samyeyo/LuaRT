@@ -25,5 +25,5 @@ function c:onPaint()
 	c:fillellipse(185, 125, 25, 25, 0xe640407F)
 end
 
-ui.run(win)
+ui.run(win):wait()
 

@@ -46,4 +46,4 @@ function c:onPaint()
   end
 end
 
-ui.run(win)
+ui.run(win):wait()

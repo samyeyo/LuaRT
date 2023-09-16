@@ -36,4 +36,4 @@ function canvas:onMouseUp(button, x, y)
     end
 end
 
-ui.run(win)
+ui.run(win):wait()

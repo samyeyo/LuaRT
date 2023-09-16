@@ -38,5 +38,5 @@ function c:onHover(x, y)
 	end
 end
 
-ui.run(win)
+ui.run(win):wait()
 

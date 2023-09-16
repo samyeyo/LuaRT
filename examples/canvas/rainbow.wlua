@@ -28,4 +28,4 @@ function canvas:onPaint()
 end
 
 -- update user interface
-ui.run(win)
+ui.run(win):wait()

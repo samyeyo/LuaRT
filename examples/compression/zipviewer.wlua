@@ -28,7 +28,7 @@ function list:onDoubleClick(item)
 end
 
 
-ui.run(win)
+ui.run(win):wait()
 
 for fname in each(toremove) do
     sys.File(fname):remove()

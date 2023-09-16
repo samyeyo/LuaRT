@@ -27,4 +27,5 @@ function c:onPaint()
 	delta = (scale > 2.5 and delta == 0.1) and -0.1 or ((scale < 1 and delta == -0.1) and 0.1) or delta
 end
 
-ui.run(win)
+
+ui.run(win):wait()

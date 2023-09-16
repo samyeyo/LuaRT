@@ -21,4 +21,4 @@ function Canvas:onPaint()
   Canvas:map(table.concat(pixels))
 end
 
-ui.run(win)
+ui.run(win):wait()

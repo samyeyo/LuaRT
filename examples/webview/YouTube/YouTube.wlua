@@ -14,4 +14,4 @@ end
 
 win:center()
 
-ui.run(win)
+ui.run(win):wait()

@@ -9,4 +9,4 @@ function button:onClick()
     audio.play(sys.env.WINDIR.."\\Media\\Windows Logon.wav")
 end
 
-ui.run(win)
+ui.run(win):wait()

@@ -42,4 +42,4 @@ function win:onShow()
     end
 end
 
-ui.run(win)
+ui.run(win):wait()

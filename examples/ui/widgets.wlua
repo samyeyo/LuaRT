@@ -33,4 +33,4 @@ function demo_win:onClose()
     return not win.visible
 end
 
-ui.run(win)
+ui.run(win):wait()
