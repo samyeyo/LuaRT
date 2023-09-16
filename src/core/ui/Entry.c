@@ -572,8 +572,8 @@ static int set_color(lua_State *L, Widget *w, int scf, BOOL isbg) {
 	if (lua_isnil(L, scf + 2))
 		*col = GetSysColor(isbg ? COLOR_WINDOW : COLOR_WINDOWTEXT);
 	else {
-		int color = luaL_checkinteger(L, scf + 2);
-		*col = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+		DWORD32 color = luaL_checkinteger(L, scf + 2);
+		*col = RGB(GetBValue(color), GetGValue(color), GetRValue(color));
 	}
 	format(L, w, isbg ? CFM_BACKCOLOR : CFM_COLOR, &cf, scf, TRUE);
 	if (isbg && scf == SCF_DEFAULT) 
@@ -685,7 +685,7 @@ luaL_Reg Selection_getfuncs[] = {
 	{"to",			Selection_getto},
 	{"text",		Selection_gettext},
 	{"bgcolor",		Selection_getbgcolor},
-	{"color",		Selection_getcolor},
+	{"fgcolor",		Selection_getcolor},
 	{"font",		Selection_getfont},
     {"fontsize",	Selection_getfontsize},
 	{"fontstyle",	Selection_getfontstyle},
@@ -700,7 +700,7 @@ luaL_Reg Selection_setfuncs[] = {
 	{"to",			Selection_setto},
 	{"text",		Selection_settext},
 	{"bgcolor",		Selection_setbgcolor},
-	{"color",		Selection_setcolor},
+	{"fgcolor",		Selection_setcolor},
 	{"font",		Selection_setfont},
     {"fontsize",	Selection_setfontsize},
 	{"fontstyle",	Selection_setfontstyle},
@@ -782,8 +782,8 @@ luaL_Reg Edit_methods[] = {
 	{"save",			Edit_saveto},
 	{"append",			Edit_append},
 	{"get_selection",	Edit_getselection},
-	{"set_color",		Edit_setcolor},
-	{"get_color",		Edit_getcolor},
+	{"set_fgcolor",		Edit_setcolor},
+	{"get_fgcolor",		Edit_getcolor},
 	{"set_bgcolor",		Edit_setbgcolor},
 	{"get_bgcolor",		Edit_getbgcolor},
 	{"get_line",		Edit_getline},
