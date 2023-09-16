@@ -622,7 +622,7 @@ LUA_CONSTRUCTOR(Picture) {
 
 LUA_CONSTRUCTOR(Progressbar)
 {   
-    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, TRUE, TRUE);
+    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, FALSE, TRUE);
 	ShowWindow(w->handle, SW_SHOWNORMAL);
     return 1;
 }
