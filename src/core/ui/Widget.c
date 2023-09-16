@@ -32,17 +32,9 @@ const char *cursors[] = {
 	"arrow", "working", "cross", "hand", "help", "ibeam", "forbidden", "cardinal", "horizontal", "vertical", "leftdiagonal", "rightdiagonal", "up", "wait", "none"
 };
 
-int getStyle(Widget *w, const int *values, const char *names[]) {
-	LONG style = GetWindowLongPtr(w->handle, GWL_STYLE);
-	int i;	
-	for(i = 0; names[i]; i++)
-		if (style & values[i])
-			return i;
-	return 0;
-}
-
 static const char *align[] = {"left", "right", "center", NULL};
-static const int align_values[] = {SS_LEFT, SS_RIGHT, SS_CENTER};
+static const int align_values[] = {SS_LEFT, SS_RIGHT, SS_CENTER | SS_CENTERIMAGE};
+static const int align_valuesB[] = {BS_LEFT, BS_RIGHT, BS_CENTER};
 
 void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
 	lua_registerobject(L, type, typename, constructor, methods, mt);
@@ -317,7 +309,8 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				if (w->wtype == UITab) 
 					page_resize(w, FALSE);
 				EnumChildWindows(w->handle, ResizeChilds, (LPARAM)w->handle);
-			}
+			} else if (w->wtype == UIList)
+				adjust_listvscroll(w, -1, 0);
 			break;
 		case WM_PAINT:
 			if (w->wtype == UITab) { //----- Tab control transparency hack
@@ -348,7 +341,7 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				ReleaseDC(w->handle, hdc);
 				return 0;
 			} break;
-		case WM_ERASEBKGND: if (w->wtype == UIGroup) {
+		case WM_ERASEBKGND: if ((w->wtype == UIGroup) || (w->wtype == UILabel)) {
 			HBRUSH  hOldBrush;
 			HPEN    hPen, hOldPen;
 			RECT    rect;
@@ -540,15 +533,16 @@ LUA_METHOD(Widget, show) {
 	Widget *w = lua_self(L, 1, Widget);
 
 	if (w->wtype == UIWindow) {
+		GetWindowPlacement(w->handle, &w->wp);
 		SendMessage(w->handle, WM_SETREDRAW, 1, 0);
 		DrawMenuBar(w->handle);
 		RedrawWindow(w->handle, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE | RDW_ALLCHILDREN);
-		ShowWindow(w->handle, SW_HIDE);
 	}
 	ShowWindow(w->handle, SW_SHOWNORMAL);
 	SetWindowPos(w->handle, HWND_TOP, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE);
-	SetForegroundWindow(w->handle);
-	SetFocus(w->handle);
+	if (w->wtype == UIWindow)
+		SetForegroundWindow(w->handle);
+	else SetFocus(w->handle);
 	EnumChildWindows(w->handle, ResizeChilds, (LPARAM)w->handle);
 	return 0;
 }
@@ -624,6 +618,8 @@ void do_align(Widget *w) {
 		}
 		if (w->wtype == UIPicture)
 			InvalidateRect(GetParent(w->handle), NULL, TRUE);
+		else
+			InvalidateRect(w->handle, NULL, TRUE);
 	}
 }
 
@@ -797,11 +793,13 @@ LUA_PROPERTY_SET(Widget, y) {
 
 LUA_PROPERTY_GET(Widget, bgcolor) {
 	Widget *w = lua_self(L, 1, Widget);
+	COLORREF color;
 	if (w->brush) {
 		LOGBRUSH lbr;
 		GetObject(w->brush, sizeof(lbr), &lbr);
-		lua_pushinteger(L, GetRValue(lbr.lbColor) << 16 | GetGValue(lbr.lbColor) << 8 | GetBValue(lbr.lbColor));
-	} else lua_pushnil(L);
+		color = lbr.lbColor;
+	} else color = GetSysColor(COLOR_3DFACE);
+	lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
 	return 1;
 }
 
@@ -814,18 +812,18 @@ LUA_PROPERTY_SET(Widget, bgcolor) {
 	else {
 		DWORD32 color = luaL_checkinteger(L, 2);
 		w->brush = CreateSolidBrush(RGB(GetBValue(color), GetGValue(color), GetRValue(color)));
-		if (w->wtype == UIWindow)
-			SetClassLongPtr(w->handle, GCLP_HBRBACKGROUND, (LONG_PTR)w->brush);
+		// if (w->wtype == UIWindow)
+		// 	SetClassLongPtr(w->handle, GCLP_HBRBACKGROUND, (LONG_PTR)w->brush);
 	}
 	InvalidateRect(w->handle, NULL, TRUE);
+	RedrawWindow(w->handle, NULL, NULL, RDW_UPDATENOW | RDW_ALLCHILDREN);
 	return 0;	
 }
 
 LUA_PROPERTY_GET(Widget, fgcolor) {
 	Widget *w = lua_self(L, 1, Widget);
-	if (w->color)
-		lua_pushinteger(L, GetRValue(w->color) << 16 | GetGValue(w->color) << 8 | GetBValue(w->color));
-	else lua_pushnil(L);
+	COLORREF color = w->color ? w->color : GetSysColor(COLOR_BTNTEXT);
+	lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
 	return 1;
 }
 
@@ -844,18 +842,30 @@ LUA_PROPERTY_SET(Widget, fgcolor) {
 LUA_PROPERTY_SET(Widget, textalign) {
 	Widget *w = lua_self(L, 1, Widget);
 	int i = luaL_checkoption(L, 2, align[0], align);
-	LONG style = GetWindowLongPtr(w->handle, GWL_STYLE );
+	LONG style = GetWindowLongPtr(w->handle, GWL_STYLE);
 
 	if (i == -1)
 		luaL_error(L, "unknown alignment '%s'", lua_tostring(L, 2));
-	style = ( style & ~( SS_LEFT | SS_CENTER | SS_RIGHT | SS_LEFTNOWORDWRAP ) ) | align_values[i];
+	style = w->wtype == UIButton ? ( style & ~BS_CENTER ) | align_valuesB[i] : ( style & ~( SS_LEFT | SS_CENTER | SS_RIGHT | SS_LEFTNOWORDWRAP ) ) | align_values[i];
 	SetWindowLongPtr(w->handle, GWL_STYLE, style);
 	InvalidateRect(w->handle, NULL, TRUE);
+	UpdateWindow(w->handle);
 	return 0;
 }
 
 LUA_PROPERTY_GET(Widget, textalign) {
-	lua_pushstring(L, align[getStyle(lua_self(L, 1, Widget), align_values, align)]);
+	Widget *w = lua_self(L, 1, Widget);
+	LONG style = GetWindowLongPtr(w->handle, GWL_STYLE);
+	const int *values = w->wtype == UIButton ? align_valuesB : align_values;
+	int i, result = 0;
+	for(i = 0; align[i]; i++)
+		if (style & values[i]) {
+			if (((i == 0) && (style & BS_RIGHT)) || ((i == 1) && (style & BS_LEFT)))
+				result = 2;
+			else result = i;
+			break;
+		}
+	lua_pushstring(L, align[result]);
 	return 1;
 }
 
@@ -1215,11 +1225,27 @@ LUA_METHOD(Progressbar, advance) {
     return 0;
 }
 
+LUA_PROPERTY_GET(Progressbar, themed) {
+	lua_pushboolean(L, lua_self(L, 1, Widget)->index);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Progressbar, themed) {
+	Widget *w = lua_self(L, 1, Widget);
+	w->index = lua_toboolean(L, 2);
+
+	if (w->index)
+		SetWindowTheme(w->handle, L"Explorer", NULL);
+	else
+		SetWindowTheme(w->handle, L"", L"");
+	return 0;
+}
+
 LUA_PROPERTY_GET(Progressbar, fgcolor) {
 	lua_Integer color = SendMessage(lua_self(L, 1, Widget)->handle, PBM_GETBARCOLOR, 0, 0);	
 	if (color == CLR_DEFAULT)
-		lua_pushnil(L);
-	else lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
+		color =  GetSysColor(COLOR_3DFACE);
+	lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
 	return 1;
 }
 
@@ -1240,8 +1266,8 @@ LUA_PROPERTY_SET(Progressbar, fgcolor) {
 LUA_PROPERTY_GET(Progressbar, bgcolor) {
 	lua_Integer color = SendMessage(lua_self(L, 1, Widget)->handle, PBM_GETBKCOLOR, 0, 0);	
 	if (color == CLR_DEFAULT)
-		lua_pushnil(L);
-	else lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
+		color =  GetSysColor(COLOR_3DFACE);
+	lua_pushinteger(L, GetRValue(color) << 16 | GetGValue(color) << 8 | GetBValue(color));
 	return 1;
 }
 
@@ -1249,7 +1275,7 @@ LUA_PROPERTY_SET(Progressbar, bgcolor) {
 	Widget *w = lua_self(L, 1, Widget);
 	lua_Integer color;
 	if (lua_isnil(L, 2)) 
-		color = CLR_DEFAULT;
+		color =  GetSysColor(COLOR_3DFACE);
 	else {
 		color = luaL_checkinteger(L, 2);
 		color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
@@ -1305,6 +1331,8 @@ luaL_Reg Progressbar_methods[] = {
 	{"advance",	    	Progressbar_advance},
 	{"set_range",		Progressbar_setrange},
 	{"get_range",		Progressbar_getrange},
+	{"set_themed",		Progressbar_setthemed},
+	{"get_themed",		Progressbar_getthemed},
 	{NULL, NULL}
 };
 
