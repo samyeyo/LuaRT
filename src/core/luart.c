@@ -55,6 +55,7 @@ int link(lua_State *L) {
 	
 	if (ReadFile(hFile, pBuffer, FileSize, &dwBytesRead, NULL)) {
 		hExeFile = BeginUpdateResourceW(fexe, FALSE);
+		*pBuffer = 0x4C;
 		result = UpdateResource(hExeFile, RT_RCDATA, MAKEINTRESOURCE(100), MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), (LPVOID)pBuffer, FileSize);
 	}
 	EndUpdateResource(hExeFile, FALSE);
@@ -205,6 +206,7 @@ int main() {
 	BOOL is_embeded = FALSE;
 	wchar_t **envp, **wargv;
 	int argc, si = 0, argfile = 1;
+	Task *t;
 #ifdef _MSC_VER	
     static int (*__wgetmainargs)(int *, wchar_t ***, wchar_t ***, int, int *);
     HMODULE h = LoadLibraryA("msvcrt.dll");
@@ -280,20 +282,18 @@ int main() {
 				}
 			} else { 
 execscript:		if (luaL_loadfile(L, __argv[argfile]) == LUA_OK) {
-compiledscript:		Task *t = lua_pushinstance(L, Task, 1);
+compiledscript:		t = (Task*)lua_pushinstance(L, Task, 1);
 					t->status = TRunning;
-					if (lua_pcall(L, 0, 0, 0)) {
+					if (lua_pcall(L, 0, 0, 0) > 1) {
 error:			
 						{
 #ifdef RTWIN
-						const wchar_t *err = lua_towstring(L, -1);
+						wchar_t *err = lua_towstring(L, -1);
+						wchar_t *err_embed;
 
-						if (is_embeded) {
-							wchar_t *err_embed;
-							if ( (err_embed = wcsstr(err, L": ")) )
-								err = err_embed + 2;
-						}
-						MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK);
+						if (is_embeded)
+							err_embed = wcsstr(err, L": ");
+						MessageBoxW(NULL, is_embeded ? err_embed + 2 : err, L"Runtime error", MB_ICONERROR | MB_OK);
 						free(err);
 #else
 						const char *err = lua_tostring(L, -1);
@@ -308,10 +308,11 @@ error:
 #endif
 						result = EXIT_FAILURE;
 						}
-					} else do 
-						lua_schedule(L);
-					while (lua_status(t->L) != LUA_OK);
-				} else goto error;
+					} else 
+						do
+							lua_schedule(L);
+						while (t->status != TTerminated);
+					} else goto error;
 			}
 		}
 	}

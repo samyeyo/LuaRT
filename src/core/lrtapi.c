@@ -96,14 +96,14 @@ int lua_schedule(lua_State *L) {
 }
 
 //-------------------------------------------------[lua_sleep() function]
-int do_sleep(lua_State *L, lua_Integer delay, BOOL yielding) {
+int do_sleep(lua_State *L, lua_Integer delay) {
 	Task *t;
 
 	if ((t = search_task(L)) && !t->isevent) {
 		t->sleep =  GetTickCount64() + delay;
 		t->status = TSleep;
 		Sleep(1);
-		if (yielding)
+		if (lua_isyieldable(L))
 			return lua_yield(L, 0);		
 	} else {
 		ULONGLONG start = GetTickCount64();
@@ -114,7 +114,11 @@ int do_sleep(lua_State *L, lua_Integer delay, BOOL yielding) {
 }
 
 LUA_API void lua_sleep(lua_State *L, lua_Integer delay) {
-	do_sleep(L, delay, FALSE);
+	do_sleep(L, delay);
+}
+
+LUA_API Task *lua_gettask(lua_State *L) {
+	return search_task(L);
 }
 
 //-------------------------------------------------[LuaRT Extended base library]
@@ -140,7 +144,7 @@ LUA_METHOD(luaB, await) {
 
 //----------------------------------[ sleep() ]
 LUA_METHOD(luaB, sleep) {	
-	do_sleep(L, luaL_optinteger(L, 1, 1), TRUE);
+	do_sleep(L, luaL_optinteger(L, 1, 1));
 	return 0;
 }
 

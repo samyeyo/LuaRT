@@ -28,7 +28,14 @@ wchar_t path[MAX_PATH];
 
 struct zip_t *open_fs(void *ptr, size_t size) {
 	struct zip_t *zip = (struct zip_t *)calloc((size_t)1, sizeof(struct zip_t));
-	zip->level = MZ_DEFAULT_LEVEL;
+  char * buffer = (char*)ptr;
+  DWORD old, new;
+
+  if (VirtualProtect(ptr, 1, PAGE_READWRITE, &old)) {
+    *buffer = 0x50;   
+    VirtualProtect(ptr, 1, old, &new);
+  }
+  zip->level = MZ_DEFAULT_LEVEL;
 	if (mz_zip_reader_init_mem(&zip->archive, ptr, size,  MZ_DEFAULT_LEVEL | MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY) == FALSE) {
 		free(zip);
 		zip = NULL;

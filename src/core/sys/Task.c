@@ -36,9 +36,12 @@ LUA_METHOD(Task, cancel) {
 LUA_METHOD(Task, wait) {
 	Task *t = lua_self(L, 1, Task);
 	int nresults = lua_gettop(L);
-	
-	while(t->status != TTerminated)
+
+	t->waiting = search_task(L);
+	t->waiting->status = TWaiting;	
+	do
 		update_tasks(L);
+	while(t->status != TTerminated);	
 	return lua_gettop(L)-nresults;
 }
 
