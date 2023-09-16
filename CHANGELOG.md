@@ -1,3 +1,37 @@
+## LuaRT v1.5.2 Bugfix (Sept 16 2023)
+
+#### LuaRT installer
+- Fixed: now the LuaRT installer window will show over other windows.
+
+#### LuaRT toolchain
+- Updated: `rtc` now prevent to access embedded content from generated executables.
+- Fixed: LuaRT can now be built with `mingw-w64` compiler again (Fixes #105)
+
+#### LuaRT C API
+- New: `lua_gettask()` function to get the current executing Task.
+
+#### `sys` module
+- Fixed: Getting COM enumeration property value don't crash anymore (Fixes #104)
+
+#### Asynchronous programming
+- Fixed: Calling `sleep()` from a compiled script don't cause a fatal error anymore (Fixes #103)
+
+#### `ui` module
+- New: `Progressbar.themed` property (as a side effect the `isthemed` constructor parameter is no more used).
+- New: example `filelist.wlua` that implements an explorer-like List widget.
+- Updated: `ui.run()` function now returns a `Task` object that will update the GUI asynchronously.
+- Updated: `bgcolor` and `fgcolor` properties now returns the default color instead of `nil`.
+- Updated: `Edit.selection.color` renamed to `Edit.selection.fgcolor` for consistency.
+- Updated: `Edit.color` renamed to `Edit.fgcolor` for consistency.
+- Fixed: `ui.colordialog()` and `ui.fontdialog()` now return a RGB color value as expected (Fixes #111)
+- Fixed: `Tab.onMouseUp()` and `Tab.onMouseDown()` events are now fired when the mouse is over the entire Tab (Fixes #108)
+- Fixed: Setting `List.selected` property now ensures the selected item is visible (Fixes #107)
+- Fixed: `Label.bgcolor` now renders the Label background correctly (Fixes #102)
+- Fixed: `Picture` constructor now uses the width and height parameters as expected (Fixes #106)
+- Fixed: `Picture` transparency bug fixed when inside a Tab (Fixes #100)
+- Fixed: `List` now redraws correctly when resized (Fixes #110)
+- Fixed: `Button.textalign`, `Label.textalign`, and `Entry.textalign` properties now behave as expected (Fixes #99)
+
 ## LuaRT v1.5.1 Bugfix (Aug 10 2023)
 
 #### LuaRT installer

@@ -1,4 +1,4 @@
-﻿local VERSION = '1.5.1'
+﻿local VERSION = '1.5.2'
 
 --[[
     | LuaRT - A Windows programming framework for Lua
@@ -93,13 +93,14 @@ function button:onClick()
     local dir = update and sys.Directory(update) or ui.dirdialog("Select a directory to install LuaRT")
     if dir ~= nil then
         win.installation = true
-        local label = ui.Label(win, "", 40, 188)
+        local label = ui.Label(win, "", 40, 190)
         label.autosize = false        
         label.fontsize = 8
         label.width = 312
         label.textalign = "left"
         label.fgcolor = 0x002A5A
-        local bar = ui.Progressbar(win, true, 40, 170, 306)
+        local bar = ui.Progressbar(win, 40, 170, 306)
+        bar.themed = false
         bar.fgcolor = 0xEFB42C
         bar.bgcolor = 0xFFFFFF
         local archive = compression.Zip(File("luaRT.zip"))
@@ -154,4 +155,4 @@ function button:onClick()
     end
 end
 
-ui.run(win) 
+ui.run(win):wait()
