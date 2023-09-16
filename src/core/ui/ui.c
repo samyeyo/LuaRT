@@ -6,7 +6,6 @@
  | ui.c | LuaRT ui module
 */
 
-
 #include <luart.h>
 #include <Widget.h>
 #include <Task.h>
@@ -31,7 +30,11 @@
 
 #include "..\resources\resource.h"
 
-__declspec(dllimport) lua_CFunction 		update;
+#ifdef _MSC_VER
+__declspec(dllimport) lua_CFunction update;
+#else
+lua_CFunction update;
+#endif
 
 static HMODULE richeditlib;
 int UIWindow;
@@ -511,9 +514,9 @@ LUA_METHOD(ui, run) {
 	lua_pushlightuserdata(L, w);
 	lua_pushcclosure(L, WaitTask, 1);
 	lua_pushinstance(L, Task, 1);
+	lua_pushvalue(L, -1);
 	lua_call(L, 0, 0);
-	return 0;
-	// 
+	return 1; 
 }
 
 LUA_METHOD(ui, mousepos) {
@@ -532,11 +535,11 @@ LUA_METHOD(ui, colordialog) {
 
 	cc.lStructSize = sizeof(CHOOSECOLORA);
 	cc.hwndOwner = GetActiveWindow();
-	cc.rgbResult = lua_gettop(L) ? luaL_checkinteger(L, 2) : 0;
+	cc.rgbResult = lua_gettop(L) ? luaL_checkinteger(L, 1) : 0;
 	cc.Flags = CC_FULLOPEN;
 	cc.lpCustColors = (LPDWORD)colors;
 	if (ChooseColorA(&cc)==TRUE) {
-		lua_pushinteger(L, cc.rgbResult);
+		lua_pushinteger(L, GetRValue(cc.rgbResult) << 16 | GetGValue(cc.rgbResult) << 8 | GetBValue(cc.rgbResult));
 		result = 1;
 	}
 	SetFocus(cc.hwndOwner);
@@ -573,11 +576,12 @@ LUA_METHOD(ui, fontdialog) {
 		lua_pushwstring(L, cf.lpLogFont->lfFaceName);
 		lua_pushinteger(L, fontsize_fromheight(cf.lpLogFont->lfHeight));
 		fontstyle_createtable(L, cf.lpLogFont);
-		lua_pushinteger(L, cf.rgbColors);
+		lua_pushinteger(L, GetRValue(cf.rgbColors) << 16 | GetGValue(cf.rgbColors) << 8 | GetBValue(cf.rgbColors));//cf.rgbColors);
 		free(cf.lpLogFont);
 		SetFocus(cf.hwndOwner);
 		return 4;
 	}
+	free(cf.lpLogFont);
 	return 1;
 }
 
@@ -587,23 +591,30 @@ LUA_CONSTRUCTOR(Button) {
 		{"set_hastext", Widget_sethastext},
 		{NULL, NULL}
 	};
-	Widget_create(L, UIButton, 0, WC_BUTTONW, WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, TRUE, TRUE);
+	Widget_create(L, UIButton, 0, WC_BUTTONW, WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER, TRUE, TRUE);
 	luaL_setrawfuncs(L, funcs);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Label) {
-	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, WS_VISIBLE | SS_NOTIFY | SS_LEFT, TRUE, TRUE);
+	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, WS_VISIBLE | SS_NOTIFY | SS_CENTER | SS_CENTERIMAGE, TRUE, TRUE);
 	SetWindowTheme(w->handle, L"", L"");
 	luaL_setrawfuncs(L, color_methods);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Picture) {
+	int nargs = lua_gettop(L);
 	Widget *w = Widget_create(L, UIPicture, 0, WC_STATICW, SS_NOTIFY | SS_BITMAP | SS_REALSIZECONTROL | WS_CHILD | WS_VISIBLE, TRUE, TRUE);
 	BITMAP bm; 
 	w->status = (HANDLE)LoadImg(luaL_checkFilename(L, 3));
 	GetObject(w->status, sizeof(BITMAP), &bm);
+	if (nargs > 5) {
+		RECT r;
+		GetWindowRect(w->handle, &r);
+		bm.bmWidth = r.right-r.left;
+		bm.bmHeight = r.bottom-r.top;
+	}
 	SetWindowPos(w->handle, NULL, 0, 0, bm.bmWidth, bm.bmHeight, SWP_NOZORDER | SWP_NOMOVE);
     SendMessage(w->handle, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
 	return 1;
@@ -611,10 +622,7 @@ LUA_CONSTRUCTOR(Picture) {
 
 LUA_CONSTRUCTOR(Progressbar)
 {   
-	int isbool = lua_isboolean(L, 3);
-    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, isbool, TRUE);
-	if (isbool && lua_toboolean(L, 3))
-		SetWindowTheme(w->handle, L"", L"");
+    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, TRUE, TRUE);
 	ShowWindow(w->handle, SW_SHOWNORMAL);
     return 1;
 }
@@ -748,7 +756,6 @@ MODULE_FUNCTIONS(ui)
 END
 
 /* ------------------------------------------------------------------------ */
-
 int luaopen_ui(lua_State *L) {
 	WNDCLASSEX wcex = {0};
 	DWORD dwLayout;
@@ -774,14 +781,14 @@ int luaopen_ui(lua_State *L) {
 		lua_registerevent(L, events[i], NULL);
 	lua_regmodulefinalize(L, ui); 
 	widget_type_new(L, &UIWindow, "Window", Window_constructor, Window_methods, Window_metafields, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE);
-	widget_type_new(L, &UIButton, "Button", Button_constructor, NULL, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE);
+	widget_type_new(L, &UIButton, "Button", Button_constructor, NULL, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
 	widget_type_new(L, &UILabel, "Label", Label_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	widget_type_new(L, &UIEntry, "Entry", Entry_constructor, Entry_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	if ( (richeditlib = LoadLibraryA("Riched20.dll")) )
 		widget_type_new(L, &UIEdit, "Edit", Edit_constructor, Edit_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_noinherit(L, &UIMenu, "Menu", Menu_constructor, Menu_methods, Menu_metafields);
-	widget_type_new(L, &UICheck, "Checkbox", Checkbox_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
-	widget_type_new(L, &UIRadio, "Radiobutton", Radiobutton_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
+	widget_type_new(L, &UICheck, "Checkbox", Checkbox_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE);
+	widget_type_new(L, &UIRadio, "Radiobutton", Radiobutton_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE);
 	widget_type_new(L, &UIGroup, "Groupbox", Groupbox_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UIDate, "Calendar", Calendar_constructor, Calendar_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UIList, "List", Listbox_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);

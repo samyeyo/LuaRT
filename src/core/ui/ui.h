@@ -51,7 +51,6 @@ void __free_item(Widget *w, size_t idx, HTREEITEM hti);
 size_t get_count(Widget *w);
 void add_column(Widget *w);
 
-int getStyle(Widget *w, const int *values, const char *names[]);
 void copy_menuitems(lua_State *L, HMENU from, HMENU to);
 
 void do_align(Widget *w);
@@ -159,6 +158,7 @@ int GetText(lua_State *L, HANDLE h);
 int AdjustTab_height(HWND h);
 void FreeMenu(lua_State *L, Widget *w);
 void remove_menuitem(lua_State *L, Widget *w, int idx);
+int adjust_listvscroll(Widget *w, int start, int end);
 
 LUA_CONSTRUCTOR(Item);
 LUA_CONSTRUCTOR(Menu);
