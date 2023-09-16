@@ -68,7 +68,20 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			FillRect((HDC)wParam, &rect, w->brush);
 			return TRUE;
 		}
-		case WM_LBUTTONDOWN: lua_paramevent(w, onClick, GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)); break;
+		case WM_LBUTTONDOWN:lua_paramevent(w, onMouseDown, 0, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)));
+							lua_paramevent(w, onClick, GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam));
+							break;
+		case WM_LBUTTONUP:
+		case WM_MBUTTONUP:
+		case WM_RBUTTONUP:
+			lua_paramevent(w, onMouseUp, (Msg-WM_LBUTTONUP)/3, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)));
+			break;
+
+		case WM_MBUTTONDOWN:
+		case WM_RBUTTONDOWN:
+			lua_paramevent(w, onMouseDown, (Msg-WM_LBUTTONDOWN)/3, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)));
+			break;
+
 		case WM_NOTIFY: 
 			return SendMessage(((LPNMHDR)lParam)->hwndFrom, Msg, wParam, lParam);
 		case WM_COMMAND:
@@ -85,7 +98,7 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
 			break;			
 		case WM_CTLCOLORBTN:
-		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
+		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, w->handle);
 		default: break;
 	}
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
@@ -182,7 +195,7 @@ void *__push_item(lua_State *L, Widget *w, int idx, HTREEITEM hti) {
 	return item;
 }
 
-static int adjust_listvscroll(Widget *w, int start, int end) {
+int adjust_listvscroll(Widget *w, int start, int end) {
 	int i, size, width;
 	if (start == -1) {
 		RECT r;
@@ -275,10 +288,8 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 	}
 	ImageList_SetImageCount(w->imglist, ImageList_GetImageCount(w->imglist)+1);
 	result = SendMessageW(h, msg, idx, (LPARAM)item);
-	if (w->wtype == UIList) {
+	if (w->wtype == UIList)
 		adjust_listvscroll(w, count, count);
-		ListView_EnsureVisible(h, count, FALSE);
-	}
 	free(str);
 	free(item);
 	return result;
@@ -533,7 +544,7 @@ push_treeitem:
 		}
 		return 0;
 	} else {
-		if (idx < get_count(w)) {
+		if ((idx > 0) && ((size_t)idx < get_count(w))) {
 			push_item(L, w, idx);
 			lua_pushinteger(L, ++idx);
 done:		lua_replace(L, lua_upvalueindex(2));
@@ -751,8 +762,9 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		if (w->wtype == UITree)
 			TreeView_SelectItem(w->handle, sel->item.treeitem->hItem);
 		else if (w->wtype == UIList) {
-			ListView_SetItemState(w->handle, sel->index,LVIS_FOCUSED | LVIS_SELECTED,LVIS_FOCUSED | LVIS_SELECTED);
 			SetFocus(w->handle);
+			ListView_EnsureVisible(w->handle, sel->index, FALSE);
+			ListView_SetItemState(w->handle, sel->index, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
 		}
 		else if (w->wtype == UITab)
 			SendMessageW(w->handle, TCM_SETCURFOCUS, sel->index, 0);
