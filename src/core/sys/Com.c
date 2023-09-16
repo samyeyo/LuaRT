@@ -200,8 +200,8 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 											ITypeInfo_GetDocumentation(t, vardesc->memid, &name, NULL, NULL, NULL);
 											lua_pushwstring(L, name);
 											done = TRUE;
+											SysFreeString(name);
 										}
-										SysFreeString(name);
 										ITypeInfo_ReleaseVarDesc(t, vardesc);									
 									}									
 								} else lua_pushinteger(L, V_I8(&result)); break;
