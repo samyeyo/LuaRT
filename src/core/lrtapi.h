@@ -28,7 +28,7 @@ LUAMOD_API int luaopen_sys(lua_State *L);
 LUAMOD_API int luaopen_crypto(lua_State *L);
 LUAMOD_API int luaopen_compression(lua_State *L);
 LUAMOD_API int luaopen_net(lua_State *L);
-LUAMOD_API int luaopen_ui(lua_State *L);
+int luaopen_ui(lua_State *L);
 LUAMOD_API int luaopen_console(lua_State *L);
 LUAMOD_API int luaopen_embed(lua_State *L);
 LUAMOD_API int luaopen_io(lua_State *L);

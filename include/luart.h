@@ -182,8 +182,13 @@ LUA_API void luaL_require(lua_State *L, const char *modname);
 //--- Always returns 1
 LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs);
 
+#include <Task.h>
+
 //--- Sleeps the current task or the current Lua state for the provided delay
 LUA_API void lua_sleep(lua_State *L, lua_Integer delay);
+
+//--- Get the current executing Task
+LUA_API Task *lua_gettask(lua_State *L);
 
 //--- Schedule all current tasks and return the number of results is a Task is terminated
 LUA_API int lua_schedule(lua_State *L);
