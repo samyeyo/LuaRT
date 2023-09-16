@@ -282,11 +282,9 @@
 #ifdef _MSC_VER
 #define LUA_API		 __declspec(dllimport)
 #else
-#define LUA_API		 extern
+#define LUA_API extern
 #endif
-#endif						/* } */
-
-
+#endif	
 
 
 /*
