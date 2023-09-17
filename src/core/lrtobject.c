@@ -521,11 +521,13 @@ void *lua_checkcinstance(lua_State *L, int idx, luart_type t) {
 	else 
 error:	
 	{
-		char typename[256];
-		lua_getfield(L, LUA_REGISTRYINDEX, LUART_OBJECTS);
-		lua_rawgeti(L, -1, t);
-		_snprintf(typename, 128, "%s instance", lua_tostring(L, -1));
-		lua_pop(L, 2);
+		char typename[128] = "Widget";
+		if (t) {
+			lua_getfield(L, LUA_REGISTRYINDEX, LUART_OBJECTS);
+			lua_rawgeti(L, -1, t);
+			_snprintf(typename, 128, "%s instance", lua_tostring(L, -1));
+			lua_pop(L, 2);
+		}
 		luaL_typeerror(L, idx, typename);
 	}
 	return NULL;

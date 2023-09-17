@@ -4,8 +4,12 @@
 - Fixed: now the LuaRT installer window will show over other windows.
 
 #### LuaRT toolchain
-- Updated: `rtc` now prevent to access embedded content from generated executables.
+- Updated: `rtc` now prevents access to embedded content from generated executables.
 - Fixed: LuaRT can now be built with `mingw-w64` compiler again (Fixes #105)
+
+#### LuaRT documentation
+- Updated: now the documentation contains all new LuaRT 1.5.0 (and later) changes 
+- Fixed: Checking for a Widget instance won't throw a "((null)) instance expected, found..." anymore
 
 #### LuaRT C API
 - New: `lua_gettask()` function to get the current executing Task.
@@ -18,6 +22,7 @@
 
 #### `ui` module
 - New: `Progressbar.themed` property (as a side effect the `isthemed` constructor parameter is no more used).
+- New: `Button.textalign`, and `Entry.textalign` properties.
 - New: example `filelist.wlua` that implements an explorer-like List widget.
 - Updated: `ui.run()` function now returns a `Task` object that will update the GUI asynchronously.
 - Updated: `bgcolor` and `fgcolor` properties now returns the default color instead of `nil`.
@@ -30,7 +35,7 @@
 - Fixed: `Picture` constructor now uses the width and height parameters as expected (Fixes #106)
 - Fixed: `Picture` transparency bug fixed when inside a Tab (Fixes #100)
 - Fixed: `List` now redraws correctly when resized (Fixes #110)
-- Fixed: `Button.textalign`, `Label.textalign`, and `Entry.textalign` properties now behave as expected (Fixes #99)
+- Fixed: `Label.textalign` property now behave as expected (Fixes #99)
 
 ## LuaRT v1.5.1 Bugfix (Aug 10 2023)
 
