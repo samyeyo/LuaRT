@@ -48,6 +48,10 @@ file_add("../../setup/uninstall.wlua", "local VERSION = '"..VERSION.."'")
 sys.cmd('..\\..\\bin\\rtc.exe -i "../../setup/img/logo.ico" -s -w -o ..\\dist\\LuaRT-remove.exe ../../setup/uninstall.wlua ../../setup/img >nul')
 console.write("■")
 
+local version = sys.File(parent.."/tools/LuaRT-Studio/src/version.lua"):open("write")
+version:write("ide.VERSION = [["..VERSION.."]]")
+version:close()
+
 z = compression.Zip(parent.."/setup/luaRT.zip", "write", 9)
 z:write(dist)
 console.write("■")
