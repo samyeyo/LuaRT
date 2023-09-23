@@ -597,7 +597,7 @@ LUA_CONSTRUCTOR(Button) {
 }
 
 LUA_CONSTRUCTOR(Label) {
-	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, WS_VISIBLE | SS_NOTIFY | SS_CENTER | SS_CENTERIMAGE, TRUE, TRUE);
+	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, WS_VISIBLE | SS_NOTIFY | SS_LEFT, TRUE, TRUE);
 	SetWindowTheme(w->handle, L"", L"");
 	luaL_setrawfuncs(L, color_methods);
 	return 1;

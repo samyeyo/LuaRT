@@ -846,7 +846,7 @@ LUA_PROPERTY_SET(Widget, textalign) {
 
 	if (i == -1)
 		luaL_error(L, "unknown alignment '%s'", lua_tostring(L, 2));
-	style = w->wtype == UIButton ? ( style & ~BS_CENTER ) | align_valuesB[i] : ( style & ~( SS_LEFT | SS_CENTER | SS_RIGHT | SS_LEFTNOWORDWRAP ) ) | align_values[i];
+	style = w->wtype == UIButton ? ( style & ~BS_CENTER ) | align_valuesB[i] : ( style & ~( SS_LEFT | SS_CENTER | SS_CENTERIMAGE | SS_RIGHT | SS_LEFTNOWORDWRAP ) ) | align_values[i];
 	SetWindowLongPtr(w->handle, GWL_STYLE, style);
 	InvalidateRect(w->handle, NULL, TRUE);
 	UpdateWindow(w->handle);
