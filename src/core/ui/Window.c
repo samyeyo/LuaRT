@@ -327,8 +327,8 @@ static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_
 
 extern int size(Widget *w, lua_State *L, int offset_from, int offset_to, BOOL set, LONG value, BOOL iswidth);
 
-#ifndef _MSC_VER
-//---------- dwmapi.h from Mingw-w64 compiler are not uptodate
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+//---------- in case dwmapi.h is not uptodate
 #define DWMWA_WINDOW_CORNER_PREFERENCE  33
 
 typedef enum {
