@@ -97,8 +97,8 @@ LUA_METHOD(Datetime, interval) {
 	Timeunion t1, t2;
 	int interval = luaL_checkoption(L, 3, "days", intervals);
 
-	SystemTimeToFileTime(lua_self(L, 1, Datetime)->st, &t1.fTime);
-	SystemTimeToFileTime(lua_self(L, 2, Datetime)->st, &t2.fTime);
+	SystemTimeToFileTime(lua_self(L, 1, Datetime)->st, &t2.fTime);
+	SystemTimeToFileTime(lua_self(L, 2, Datetime)->st, &t1.fTime);
 	lua_pushinteger(L, (lua_Integer)((t2.ul.QuadPart - t1.ul.QuadPart)/intervals_values[interval]));
 	return 1;
 }
