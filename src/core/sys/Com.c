@@ -21,8 +21,6 @@
 #include <shlguid.h>
 #include <propvarutil.h>
 
-// #include <activscp.h>
-
 luart_type TCOM;
 
 //-------------------------------------[ COM Constructor ]
@@ -110,7 +108,7 @@ static int COM_method_call(lua_State *L) {
 		switch(lua_type(L, idx)) {
 			case LUA_TNIL:		var->vt = VT_NULL; break;
 			case LUA_TBOOLEAN:	var->vt = VT_BOOL; var->boolVal = lua_toboolean(L, idx); break;
-			case LUA_TNUMBER:	if (lua_isinteger(L, idx)) {
+number:		case LUA_TNUMBER:	if (lua_isinteger(L, idx)) {
 									var->vt = VT_I4;
 									V_I4(var) = (__int32)lua_tointeger(L, idx);
 								} else {
@@ -118,7 +116,9 @@ static int COM_method_call(lua_State *L) {
 									var->dblVal = lua_tonumber(L, idx);
 								}
 								break;
-			case LUA_TSTRING:	str = lua_towstring(L, idx);
+			case LUA_TSTRING:	if (lua_isnumber(L, idx))
+									goto number;
+								str = lua_towstring(L, idx);
 								if ((method & DISPATCH_PROPERTYPUT) && restype == TKIND_ENUM) {
 									wchar_t *name;
 									BOOL done = FALSE;
@@ -128,7 +128,7 @@ static int COM_method_call(lua_State *L) {
 										ITypeInfo_GetDocumentation(t, vardesc->memid, &name, NULL, NULL, NULL);
 										if (wcscmp(str, name) == 0) {
 											var->vt = VT_I4;
-											V_I4(var) = vardesc->lpvarValue->intVal;
+											V_I4(var) = (__int32)vardesc->lpvarValue->intVal;
 											done = TRUE;
 										}
 										SysFreeString(name);
@@ -162,8 +162,8 @@ static int COM_method_call(lua_State *L) {
 		VariantInit(&result);
 		if (FAILED( (hr = IDispatch_Invoke(obj->this, id, &IID_NULL, 0, method, &params, &result, &execpInfo, &puArgErr)) )) {			
 			switch(hr) {
-				case DISP_E_BADPARAMCOUNT:	lua_pushstring(L, "COM error : bad parameter count"); break;
-				case DISP_E_MEMBERNOTFOUND:	lua_pushfstring(L, "COM error : no member '%s' found", lua_tostring(L, lua_upvalueindex(1)));
+				case DISP_E_BADPARAMCOUNT:	lua_pushstring(L, "bad parameter count"); break;
+				case DISP_E_MEMBERNOTFOUND:	lua_pushfstring(L, "no member '%s' found", lua_tostring(L, lua_upvalueindex(1)));
 											break;
 				case DISP_E_EXCEPTION:		if (id_setprop == DISPID_VALUE) {
 												hr = S_OK;
@@ -176,8 +176,9 @@ static int COM_method_call(lua_State *L) {
 											if (execpInfo.bstrSource)
 												SysFreeString(execpInfo.bstrSource);
 											break;
-				case DISP_E_TYPEMISMATCH:	lua_pushfstring(L, "COM error : type mismatch for parameter %d", puArgErr); break;
-				default: 					lua_pushstring(L, "COM error : unknown error");
+				case DISP_E_BADVARTYPE:		lua_pushstring(L, "Bad argument type");							
+				case DISP_E_TYPEMISMATCH:	lua_pushfstring(L, "type mismatch for parameter %d", puArgErr); break;
+				default: 					lua_pushstring(L, "unknown error");
 			} 
 		} else switch(result.vt) {
 			case VT_EMPTY:
