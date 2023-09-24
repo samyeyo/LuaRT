@@ -330,7 +330,9 @@ extern int size(Widget *w, lua_State *L, int offset_from, int offset_to, BOOL se
 #ifndef DWMWA_WINDOW_CORNER_PREFERENCE
 //---------- in case dwmapi.h is not uptodate
 #define DWMWA_WINDOW_CORNER_PREFERENCE  33
+#endif
 
+#ifndef _MSC_VER
 typedef enum {
     DWMWCP_DEFAULT                                 = 0,
     DWMWCP_DONOTROUND                              = 1,
