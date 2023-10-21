@@ -3,7 +3,7 @@
  | Luart.org, Copyright (c) Tine Samir 2023
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
- | COM.c | LuaRT COM COM implementation
+ | COM.c | LuaRT COM Objects implementation
 */
 
 #define CINTERFACE
@@ -20,6 +20,7 @@
 #include <objidl.h>
 #include <shlguid.h>
 #include <propvarutil.h>
+#include <stdint.h>
 
 luart_type TCOM;
 
@@ -96,9 +97,11 @@ static int COM_method_call(lua_State *L) {
 		idx = 1;
 	}
 
-	if (SUCCEEDED(ITypeInfo_GetRefTypeInfo(obj->typeinfo, hreftype, &t)))
+	if (hreftype && SUCCEEDED(ITypeInfo_GetRefTypeInfo(obj->typeinfo, hreftype, &t)))
 		if (SUCCEEDED(ITypeInfo_GetTypeAttr(t, &attr)))
 			restype = attr->typekind;
+		else
+			restype = -1;
 	params.cArgs = n;
 	args = calloc(n+1, sizeof(VARIANT));
 	for (i = (n - 1); i >= 0; i--) {
@@ -189,8 +192,7 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 			case VT_I2:
 			case VT_I4:
 			case VT_I8:
-			case VT_INT:		VariantChangeType(&result, &result, 0, VT_I8);
-								if (restype == TKIND_ENUM) {
+			case VT_INT:		if (restype == TKIND_ENUM) {
 									wchar_t *name;
 									VARDESC *vardesc;
 									BOOL done = FALSE;
@@ -205,7 +207,11 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 										}
 										ITypeInfo_ReleaseVarDesc(t, vardesc);									
 									}									
-								} else lua_pushinteger(L, V_I8(&result)); break;
+								} else {
+									VariantChangeType(&result, &result, 0, VT_I8);
+									lua_pushinteger(L, V_I8(&result));
+								}
+								break;
 			case VT_R4:
 			case VT_R8:
 			case VT_DECIMAL:	VariantChangeType(&result, &result, 0, VT_R8);
@@ -263,6 +269,8 @@ static BOOL GetResultType(COM *obj, wchar_t *field, HREFTYPE *restype) {
 				ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
 			}
 	}
+	if (!found)
+		restype = NULL;
 	ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);			
 	return found;	
 }
@@ -373,10 +381,10 @@ LUA_METHOD(COM, __tostring) {
 
 LUA_METHOD(COM, __gc) {
 	COM *obj = lua_self(L, 1, COM);
-	if (obj->this)
-		IDispatch_Release(obj->this);
 	if (obj->typeinfo)
 		ITypeInfo_Release(obj->typeinfo);
+	if (obj->this)
+		IDispatch_Release(obj->this);
 	if (obj->getobject)
 		IUnknown_Release(obj->getobject);
 	free(obj->name);
