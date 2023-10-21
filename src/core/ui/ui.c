@@ -499,7 +499,7 @@ LUA_METHOD(ui, update) {
 
 static int RunTaskContinue(lua_State* L, int status, lua_KContext ctx) {
 	do_update(L);
-	return ((Widget *)ctx)->ismain ? lua_yieldk(L, 0, ctx, RunTaskContinue) : 0;
+	return ((Widget *)ctx)->ismain && IsWindowVisible(((Widget *)ctx)->handle) ? lua_yieldk(L, 0, ctx, RunTaskContinue) : 0;
 }
 
 int WaitTask(lua_State *L) {
@@ -762,7 +762,7 @@ int luaopen_ui(lua_State *L) {
 	int i = -1;
 	
 	wcex.cbSize = sizeof(WNDCLASSEX);
-	wcex.style = 0;
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WindowProc;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
