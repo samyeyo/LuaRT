@@ -149,8 +149,8 @@ LUA_METHOD(Webview, hostfromfolder) {
    	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
 	int result = FALSE;
 	if (wv->webview3) {
-		wchar_t *host = luaL_checkFilename(L, 2);
-		wchar_t *path = luaL_checkFilename(L, 3);
+		wchar_t *host = lua_towstring(L, 2);
+		wchar_t *path = lua_towstring(L, 3);
 		result = SUCCEEDED(wv->webview3->lpVtbl->SetVirtualHostNameToFolderMapping(wv->webview3, host, path, COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY));
 		free(path);
 		free(host);
@@ -163,7 +163,7 @@ LUA_METHOD(Webview, restorehost) {
    	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
 	int result = FALSE;
 	if (wv->webview3) {
-		wchar_t *host = luaL_checkFilename(L, 2);
+		wchar_t *host = lua_towstring(L, 2);
 		result = SUCCEEDED(wv->webview3->lpVtbl->ClearVirtualHostNameToFolderMapping(wv->webview3, host));
 		free(host);
 	}
