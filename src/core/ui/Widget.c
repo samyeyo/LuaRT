@@ -111,6 +111,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 	LPNMHDR lpNmHdr;
 
 	switch(uMsg) {
+
 		case WM_COMMAND: {
 			WPARAM cmd = HIWORD(wParam);
 			if (w->wtype == UIGroup)
@@ -142,6 +143,7 @@ int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uI
 						SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
 						free(text);
 						lua_indexevent(w, onSelect, idx);
+						UpdateWindow(GetParent(w->handle));
 						return FALSE;
 					}
 				}
@@ -287,9 +289,11 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				lua_callevent(w, onShow);
 			break;
 		case WM_NCHITTEST:
+			if (w->ismain)
+				return HTTRANSPARENT;
 			if (w->wtype == UIGroup) 
 				return HTCLIENT;
-			break;
+			return DefSubclassProc(w->handle, uMsg, wParam, lParam);
 		case WM_MOUSELEAVE:
 			lua_callevent(w, onLeave);
 			break;
@@ -298,6 +302,8 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				HideCaret(w->handle);
 				return TRUE;
 			}
+			if (w->ismain)
+				return 0;
 			if (!(w->wtype == UIList || w->wtype == UIEntry || w->wtype == UIEdit || w->wtype == UITree))
 				return 0;
 			break;
@@ -345,7 +351,7 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 			HBRUSH  hOldBrush;
 			HPEN    hPen, hOldPen;
 			RECT    rect;
-			HDC     hDC = GetDC(w->handle);
+			HDC     hDC = (HDC)wParam;
 			LOGBRUSH lbr;
 			COLORREF col;
 			
@@ -356,13 +362,10 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 			hPen = CreatePen(PS_SOLID, 1, col);
 			hOldPen = SelectObject(hDC, hPen);
 			GetClientRect(w->handle, &rect);
-			Rectangle(hDC, rect.left, rect.top, rect.right, rect.bottom);
+			Rectangle(hDC, 0, 0, rect.right, rect.bottom);
 			SelectObject(hDC, hOldPen);
 			SelectObject(hDC, hOldBrush);
 			DeleteObject(hPen);
-			ReleaseDC(w->handle, hDC);
-			InvalidateRect(w->handle, NULL, FALSE);
-			RedrawWindow(w->handle, NULL, NULL, RDW_UPDATENOW | RDW_ALLCHILDREN);
 			return TRUE;
 		} break;			
 		case WM_CTLCOLORBTN:
@@ -377,7 +380,7 @@ LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 	int result;
 
 	if (w && (w->wtype))
-		if ((result = ProcessUIMessage(w, uMsg, wParam, lParam, uIdSubclass)) >= 0)
+		if (((result = ProcessUIMessage(w, uMsg, wParam, lParam, uIdSubclass)) >= 0) || (uMsg == WM_NCHITTEST))
 			return result;	
 	return DefSubclassProc(hwnd, uMsg, wParam, lParam);
 }
@@ -494,7 +497,7 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     int idx = 3+caption;
     HANDLE h;
     wchar_t *text;
-    HMENU id = 0;
+    HMENU id;
 	LOGBRUSH lbr;
             
     hParent = Widget_init(L, &wp);
@@ -502,17 +505,18 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     if (!hInstance)
         hInstance = GetModuleHandle(NULL);
     if (wp->wtype == UIGroup)
-        id = (HMENU)(((UINT_PTR)wp->status)+1);
+        id = (HMENU)((++(UINT_PTR)wp->status));
+    w = calloc(1, sizeof(Widget));
     h = CreateWindowExW(exstyle, classname, text, WS_CHILD | WS_CLIPSIBLINGS | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type-UIWindow]), (int)luaL_optinteger(L, idx+3, height[type-UIWindow]), hParent, id, hInstance, NULL);
     free(text);
-    w = calloc(1, sizeof(Widget));
     w->handle = h;
     SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
     SetFontFromWidget(w, wp);
     if (type != UIEdit)
         w->hcursor = wp->hcursor ? wp->hcursor : LoadCursor(NULL, IDC_ARROW);
-	GetObject(wp->brush, sizeof(lbr), &lbr);
-	w->brush = CreateSolidBrush(lbr.lbColor);
+	if (GetObject(wp->brush, sizeof(lbr), &lbr))
+		w->brush = CreateSolidBrush(lbr.lbColor);
+	else w->brush = wp->brush;
     w->wtype = type;
 	w->align = -1;	
 	if ((w->autosize = autosize) && (lua_gettop(L) < 6))
@@ -532,17 +536,17 @@ extern BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam);
 LUA_METHOD(Widget, show) {
 	Widget *w = lua_self(L, 1, Widget);
 
+	SetWindowPos(w->handle, HWND_TOP, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE);
 	if (w->wtype == UIWindow) {
 		GetWindowPlacement(w->handle, &w->wp);
 		SendMessage(w->handle, WM_SETREDRAW, 1, 0);
 		DrawMenuBar(w->handle);
 		RedrawWindow(w->handle, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE | RDW_ALLCHILDREN);
+		// ShowWindow(w->handle, SW_HIDE);
 	}
-	ShowWindow(w->handle, SW_SHOWNORMAL);
-	SetWindowPos(w->handle, HWND_TOP, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE);
 	if (w->wtype == UIWindow)
 		SetForegroundWindow(w->handle);
-	else SetFocus(w->handle);
+	SetFocus(w->handle);
 	EnumChildWindows(w->handle, ResizeChilds, (LPARAM)w->handle);
 	return 0;
 }
@@ -654,6 +658,7 @@ LUA_PROPERTY_GET(Widget, enabled) {
 LUA_PROPERTY_SET(Widget, visible) {
 	Widget *w = lua_self(L, 1, Widget);
 	ShowWindow(w->handle, lua_toboolean(L, 2) ? SW_SHOWNORMAL : SW_HIDE);
+	UpdateWindow(w->handle);
 	return 0;
 }
 
@@ -663,8 +668,15 @@ LUA_PROPERTY_GET(Widget, visible) {
 }
 
 LUA_PROPERTY_GET(Widget, text) {
-	int len = GetText(L, lua_self(L, 1, Widget)->handle);
-	lua_pushlwstring(L, (const wchar_t *)lua_tostring(L, -1), len);
+	Widget *w = lua_self(L, 1, Widget);
+	int len = GetText(L, w->handle);
+	if (!len && (w->wtype == UICombo)) {		
+		COMBOBOXEXITEMW *item = __get_item(w, SendMessage(w->status, CB_GETCURSEL, 0, 0), NULL);
+		SendMessageW((HWND)w->handle, WM_SETTEXT, 0, (LPARAM)item->pszText);
+		lua_pushwstring(L, item->pszText);
+		free(item->pszText);
+		free(item);
+	} else lua_pushlwstring(L, (const wchar_t *)lua_tostring(L, -1), len);
 	return 1;
 }
 
@@ -683,6 +695,8 @@ LUA_PROPERTY_SET(Widget, hastext) {
 		SetWindowPos(w->handle, NULL, 0, 0, 24, 24, SWP_NOZORDER | SWP_NOMOVE);
 		SetWindowTextA(w->handle, "");
 	}
+	// InvalidateRect(w->handle, NULL, TRUE);
+	UpdateWindow(GetParent(w->handle));
 	return 1;		
 }
 
@@ -701,6 +715,7 @@ LUA_PROPERTY_SET(Widget, text) {
 		SendMessage(w->handle, EM_SETSEL, len, len);
 	else if (w->autosize)
 		WidgetAutosize(w);
+	UpdateWindow(w->handle);
 	free(text);
 	return 0;
 }
@@ -737,7 +752,7 @@ LUA_PROPERTY_GET(Widget, width) {
 }
 
 LUA_PROPERTY_SET(Widget, width) {
-	return size(NULL, L, offsetof(RECT, right), offsetof(RECT, left), TRUE, lua_tonumber(L, 2), TRUE);
+	return size(NULL, L, offsetof(RECT, right), offsetof(RECT, left), TRUE, luaL_checknumber(L, 2), TRUE);
 }
 
 LUA_PROPERTY_GET(Widget, height) {
@@ -745,7 +760,7 @@ LUA_PROPERTY_GET(Widget, height) {
 }
 
 LUA_PROPERTY_SET(Widget, height) {
-	return size(NULL, L, offsetof(RECT, bottom), offsetof(RECT, top), TRUE, lua_tonumber(L, 2), FALSE);
+	return size(NULL, L, offsetof(RECT, bottom), offsetof(RECT, top), TRUE, luaL_checknumber(L, 2), FALSE);
 }
 
 int position(lua_State *L, HWND h, BOOL isWindow, int offset, BOOL set, lua_Number setvalue, int flag) {
@@ -778,7 +793,7 @@ LUA_PROPERTY_GET(Widget, x) {
 
 LUA_PROPERTY_SET(Widget, x) {
 	Widget *w = lua_self(L, 1, Widget);
-	return position(L, w->handle, w->wtype == UIWindow, offsetof(RECT, left), TRUE, lua_tonumber(L, 2), SWP_NOSIZE);
+	return position(L, w->handle, w->wtype == UIWindow, offsetof(RECT, left), TRUE, luaL_checknumber(L, 2), SWP_NOSIZE);
 }
 
 LUA_PROPERTY_GET(Widget, y) {
@@ -788,7 +803,7 @@ LUA_PROPERTY_GET(Widget, y) {
 
 LUA_PROPERTY_SET(Widget, y) {
 	Widget *w = lua_self(L, 1, Widget);
-	return position(L, w->handle, w->wtype == UIWindow, offsetof(RECT, top), TRUE, lua_tonumber(L, 2), SWP_NOSIZE);
+	return position(L, w->handle, w->wtype == UIWindow, offsetof(RECT, top), TRUE, luaL_checknumber(L, 2), SWP_NOSIZE);
 }
 
 LUA_PROPERTY_GET(Widget, bgcolor) {
@@ -812,8 +827,6 @@ LUA_PROPERTY_SET(Widget, bgcolor) {
 	else {
 		DWORD32 color = luaL_checkinteger(L, 2);
 		w->brush = CreateSolidBrush(RGB(GetBValue(color), GetGValue(color), GetRValue(color)));
-		// if (w->wtype == UIWindow)
-		// 	SetClassLongPtr(w->handle, GCLP_HBRBACKGROUND, (LONG_PTR)w->brush);
 	}
 	InvalidateRect(w->handle, NULL, TRUE);
 	RedrawWindow(w->handle, NULL, NULL, RDW_UPDATENOW | RDW_ALLCHILDREN);
@@ -1145,7 +1158,7 @@ LUA_METHOD(Widget, loadicon) {
 		SetWindowPos(w->handle, NULL, 0, 0, 24, 24, SWP_NOMOVE | SWP_NOZORDER);
 		if (w->autosize)
 			WidgetAutosize(w);
-	}	
+	}
 	lua_pushboolean(L, result);
 	return 1;
 }
@@ -1344,7 +1357,9 @@ LUA_PROPERTY_GET(Checkbox, checked) {
 }
 
 LUA_PROPERTY_SET(Checkbox, checked) {
-	SendMessage(lua_self(L, 1, Widget)->handle, BM_SETCHECK, lua_toboolean(L, 2), 0);
+	Widget *w = lua_self(L, 1, Widget);
+	SendMessage(w->handle, BM_SETCHECK, lua_toboolean(L, 2), 0);
+	UpdateWindow(w->handle);
 	return 0;
 }
 
