@@ -81,7 +81,7 @@ static int luart_fsloader(lua_State *L) {
             lua_pushstring(L, fname);
             lua_concat(L, 2);
             wchar_t *tmp = lua_towstring(L, -1);
-            if (zip_entry_fread(fs, tmp) == 0) {
+            if ((zip_entry_fread(fs, tmp) == 0) || (GetFileAttributesW(tmp) != 0xFFFFFFFF)) {
               HMODULE hm;
               if ( (hm = LoadLibraryW(tmp)) ) {
                 _snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
