@@ -411,6 +411,7 @@ LUA_PROPERTY_SET(Edit, text) {
 	SendMessageW(w->handle, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)text);
 	SendMessage(w->handle, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 	free(text);
+	SendMessage(w->handle, WM_VSCROLL, SB_TOP, 0);
 	return 0;
 }
 LUA_PROPERTY_GET(Edit, text) {
