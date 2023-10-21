@@ -211,7 +211,9 @@
 		LUA_LDIR"?.lua;"  LUA_LDIR"?\\init.lua;" \
 		LUA_CDIR"?.lua;"  LUA_CDIR"?\\init.lua;" \
 		LUA_SHRDIR"?\\?.lua;" LUA_SHRDIR"?\\init.lua;" \
-		".\\?.lua;" ".\\?\\init.lua"
+		".\\?.lua;" ".\\?\\init.lua" \
+		LUA_LDIR"?.wlua;" LUA_CDIR"?.wlua;" \
+		LUA_SHRDIR"?\\?.wlua;" ".\\?.wlua;"
 #endif
 
 #if !defined(LUA_CPATH_DEFAULT)
