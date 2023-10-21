@@ -98,7 +98,7 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
 			break;			
 		case WM_CTLCOLORBTN:
-		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, w->handle);
+		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
 		default: break;
 	}
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
@@ -784,6 +784,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 	}
 	else if (w->wtype == UICombo)
 		SendMessageW(w->handle , WM_COMMAND, MAKEWPARAM(id, CBN_SELCHANGE), (LPARAM)w->handle);
+	UpdateWindow(w->handle);
 	return 0;
 }	
 
