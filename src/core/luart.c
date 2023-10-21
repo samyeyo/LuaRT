@@ -288,20 +288,18 @@ compiledscript:		t = (Task*)lua_pushinstance(L, Task, 1);
 error:			
 						{
 #ifdef RTWIN
-						wchar_t *err = lua_towstring(L, -1);
-						wchar_t *err_embed;
-
-						if (is_embeded)
-							err_embed = wcsstr(err, L": ");
-						MessageBoxW(NULL, is_embeded ? err_embed + 2 : err, L"Runtime error", MB_ICONERROR | MB_OK);
+						wchar_t *err = lua_towstring(L, -1);					
+						if (is_embeded) {
+							wchar_t *err_embed = wcsstr(err, L": ");
+							err = err_embed ? err_embed+2 : err;
+						}
+						MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK | MB_DEFAULT_DESKTOP_ONLY);						
 						free(err);
 #else
-						const char *err = lua_tostring(L, -1);
-
+						char *err = (char*)lua_tostring(L, -1);
 						if (is_embeded) {
-							char *err_embed;
-							if ( (err_embed = strstr(err, ": ")) )
-								err = err_embed + 2;
+							char *err_embed = strstr(err, ": ");
+							err = err_embed ? err_embed+2 : err;
 						}
 						fputs(err, stderr);
 						fputs("\n", stderr);
