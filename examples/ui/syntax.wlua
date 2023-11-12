@@ -42,7 +42,7 @@ function SyntaxEdit:constructor(...)
     
     self.selection.from = 1
     self.selection.to = 0
-    self.selection.color = 0x000000
+    self.selection.fgcolor = 0x000000
     
     local start = 1
     local text = self.text:gsub("\r\n", "\n")
@@ -54,7 +54,7 @@ function SyntaxEdit:constructor(...)
         if self.keywords[word] ~= nil then
           self.selection.from = s
           self.selection.to = start
-          self.selection.color = keyword_color
+          self.selection.fgcolor = keyword_color
         end
       else
         break;

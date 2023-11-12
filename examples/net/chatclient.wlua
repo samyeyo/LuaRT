@@ -10,7 +10,7 @@ edit.font = "Consolas"
 edit.fontsize = 9
 edit.readonly = true
 edit.bgcolor = 0
-edit.color = 0xAAAAAA
+edit.fgcolor = 0xAAAAAA
 edit.wordwrap = true
 
 local entry = ui.Entry(win, "", 3, 176, 313, 22)

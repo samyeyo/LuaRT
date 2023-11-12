@@ -19,7 +19,7 @@ edit.wordwrap = true
 edit.richtext = false
 edit.readonly = true
 edit.bgcolor = 0x000030
-edit.color = 0xAAAAAA
+edit.fgcolor = 0xAAAAAA
 
 win:show()
 

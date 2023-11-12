@@ -13,7 +13,7 @@ edit.readonly = true
 edit.font = "Consolas"
 edit.fonsize = 8
 edit.bgcolor = 0
-edit.color = 0xA0A0A0
+edit.fgcolor = 0xA0A0A0
 
 -- create the server listening Socket
 local server = net.Socket("127.0.0.1", 5000)
