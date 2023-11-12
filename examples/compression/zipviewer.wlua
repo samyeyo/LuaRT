@@ -5,6 +5,8 @@ local win = ui.Window("Zip file viewer", "fixed", 250, 300)
 local list = ui.List(win, {}, 0, 40, 250, 260)
 list.style = "icons"
 local button = ui.Button(win, "Open ZIP file", 80)
+button:center()
+button.y = 8
 
 local zip_archive
 local toremove = {}
