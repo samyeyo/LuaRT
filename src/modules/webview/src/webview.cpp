@@ -23,23 +23,13 @@
 static luart_type TWebview;
 HANDLE URIEvent;
 LPWSTR URI;
-UINT onResult, onReady, onMessage, onLoaded;
+UINT onReady, onMessage, onLoaded;
 
 //--- Webview procedure
 LRESULT CALLBACK WebviewProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
-  Widget *w = (Widget *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-  WebviewHandler *wv = static_cast<WebviewHandler*>(w->user);
-  int result;
-
-	switch (uMsg) {
-		case WM_SIZE:
-			wv->Resize();
-			break;
-		default:
-			if ((result = lua_widgetproc(w, uMsg, wParam, lParam, 0)) < 0)
-			    return DefWindowProc(hwnd, uMsg, wParam, lParam);
-	}
-	return 0;
+	if (uMsg == WM_SIZE)
+		(static_cast<WebviewHandler*>(((Widget *)GetWindowLongPtr(hwnd, GWLP_USERDATA))->user))->Resize();
+	return lua_widgetproc(hwnd, uMsg, wParam, lParam, 0, 0);
 }
 
 //------------------------------------ Webview constructor
@@ -55,13 +45,34 @@ LUA_CONSTRUCTOR(Webview)
     return 1;
 }
 
+static int EvalTaskContinue(lua_State* L, int status, lua_KContext ctx) {
+    ExecuteScriptCompletedCallback *cb = (ExecuteScriptCompletedCallback *)ctx;
+    
+    if (cb->done) {
+        lua_pushwstring(L, cb->result);
+		delete cb;
+        return 1;
+    }
+    return lua_yieldk(L, 0, ctx, EvalTaskContinue);
+}
+
+static int WaitTask(lua_State *L) {	
+    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), EvalTaskContinue);
+}
+
 LUA_METHOD(Webview, eval) {
    	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
 	wchar_t *js = lua_towstring(L, 2);
+	ExecuteScriptCompletedCallback *ExecCB = new ExecuteScriptCompletedCallback();
   	if (wv->webview2)
-		wv->webview2->lpVtbl->ExecuteScript(wv->webview2, js, wv); 
+		wv->webview2->lpVtbl->ExecuteScript(wv->webview2, js, ExecCB); 
+	lua_pushlightuserdata(L, ExecCB);
+	lua_pushcclosure(L, WaitTask, 1);
+	lua_pushinstance(L, Task, 1);
+	lua_pushvalue(L, -1);
+	lua_call(L, 0, 0); 
 	free(js);
-	return 0;
+	return 1;
 }
 
 LUA_METHOD(Webview, reload) {
@@ -151,7 +162,7 @@ LUA_METHOD(Webview, hostfromfolder) {
 	if (wv->webview3) {
 		wchar_t *host = lua_towstring(L, 2);
 		wchar_t *path = lua_towstring(L, 3);
-		result = SUCCEEDED(wv->webview3->lpVtbl->SetVirtualHostNameToFolderMapping(wv->webview3, host, path, COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY));
+		result = SUCCEEDED(wv->webview3->lpVtbl->SetVirtualHostNameToFolderMapping(wv->webview3, host, path, COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW));
 		free(path);
 		free(host);
 	}
@@ -244,6 +255,22 @@ LUA_PROPERTY_SET(Webview, devtools) {
 	return 0;
 }
 
+LUA_PROPERTY_GET(Webview, acceleratorkeys) {
+  	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
+	int result = FALSE;
+  	if (wv->settings)
+   		wv->settings->lpVtbl->get_AreBrowserAcceleratorKeysEnabled(wv->settings, &result);
+	lua_pushboolean(L, result);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Webview, acceleratorkeys) {
+  	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
+  	if (wv->settings)
+   		wv->settings->lpVtbl->put_AreBrowserAcceleratorKeysEnabled(wv->settings, lua_toboolean(L, 2));
+	return 0;
+}
+
 LUA_PROPERTY_GET(Webview, contextmenu) {
   	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
 	int result = FALSE;
@@ -298,6 +325,7 @@ OBJECT_MEMBERS(Webview)
   METHOD(Webview, postmessage)
   READWRITE_PROPERTY(Webview, zoom)
   READWRITE_PROPERTY(Webview, devtools)
+  READWRITE_PROPERTY(Webview, acceleratorkeys)
   READWRITE_PROPERTY(Webview, contextmenu)
   READWRITE_PROPERTY(Webview, statusbar)
   READWRITE_PROPERTY(Webview, url)
@@ -318,10 +346,6 @@ static int event_stringarg(lua_State *L, const char *eventname) {
     return 2;
   }
   return 1;
-}
-
-int event_onResult(lua_State *L) {
-  return event_stringarg(L, "onResult");
 }
 
 int event_onReady(lua_State *L) {
@@ -351,7 +375,6 @@ int event_onMessage(lua_State *L) {
 extern "C" {
 	int __declspec(dllexport) luaopen_webview(lua_State *L) {
 		onReady = lua_registerevent(L, NULL, event_onReady);
-		onResult = lua_registerevent(L, NULL, event_onResult);
 		onMessage = lua_registerevent(L, NULL, event_onMessage);
 		onLoaded = lua_registerevent(L, NULL, event_onLoaded);
 		luaL_require(L, "ui");

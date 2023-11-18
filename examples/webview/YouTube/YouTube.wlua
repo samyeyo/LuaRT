@@ -10,6 +10,7 @@ function wv:onReady()
     wv.statusbar = false
     wv.devtools = false
     wv.contextmenu = false
+    wv.acceleratorkeys = false
 end
 
 win:center()

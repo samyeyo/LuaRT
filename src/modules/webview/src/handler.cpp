@@ -20,21 +20,6 @@ wchar_t *toUTF16(const char *s) {
 	return ws;
 }
 
-template <typename T>
-static HRESULT STDMETHODCALLTYPE Null_QueryInterface(T* This, REFIID riid, void** ppvObject) {
-	return E_NOINTERFACE;
-}
-
-template <typename T>
-static ULONG STDMETHODCALLTYPE Null_AddRef(T* This) {
-	return 1;
-}
-
-template <typename T>
-static ULONG STDMETHODCALLTYPE Null_Release(T* This) {
-	return 1;
-}
-
 static HRESULT STDMETHODCALLTYPE EventInterfaces_EnvironmentCompleted_Invoke(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, HRESULT result, ICoreWebView2Environment* created_environment) {
 	if (FAILED(result))
 		return E_FAIL;
@@ -69,7 +54,7 @@ static HRESULT STDMETHODCALLTYPE EventInterfaces_ControllerCompleted_Invoke(ICor
 	self->webview2->lpVtbl->add_NavigationCompleted(self->webview2, self, &navigtoken);
   	self->webview2->lpVtbl->add_WebResourceRequested(self->webview2, self, &uritoken);	
 	self->webview2->lpVtbl->Navigate(self->webview2, self->url.c_str());
-  	self->webview2->lpVtbl->get_Settings(self->webview2, &self->settings);	
+  	self->webview2->lpVtbl->get_Settings(self->webview2, (ICoreWebView2Settings**)&self->settings);	
 	PostMessage(self->hwnd, onReady, 0, 0);
 	self->Resize();
 	return S_OK;
@@ -139,10 +124,12 @@ static ICoreWebView2NavigationCompletedEventHandlerVtbl EventInterfaces_Navigati
 	EventInterfaces_NavigationCompleted_Invoke
 };
 
-static HRESULT STDMETHODCALLTYPE EventInterfaces_ExecScriptCompleted_Invoke(ICoreWebView2ExecuteScriptCompletedHandler *This, HRESULT errorCode, LPCWSTR resultObjectAsJson) {
-	WebviewHandler *self = static_cast<WebviewHandler*>(This);	
+static HRESULT STDMETHODCALLTYPE EventInterfaces_ExecScriptCompleted_Invoke(ICoreWebView2ExecuteScriptCompletedHandler *This, HRESULT hr, LPCWSTR resultObjectAsJson) {
+	ExecuteScriptCompletedCallback *self = static_cast<ExecuteScriptCompletedCallback*>(This);	
 
-	PostMessage(self->hwnd, onResult, (WPARAM)_wcsdup(resultObjectAsJson), 0);
+	if (SUCCEEDED(hr))
+		self->result = _wcsdup(resultObjectAsJson);
+	self->done = TRUE;
 	return S_OK;
 }
 
@@ -150,7 +137,7 @@ static ICoreWebView2ExecuteScriptCompletedHandlerVtbl EventInterfaces_ExecuteScr
 	Null_QueryInterface,
 	Null_AddRef,
 	Null_Release,
-	EventInterfaces_ExecScriptCompleted_Invoke
+	EventInterfaces_ExecScriptCompleted_Invoke	
 };
 
 static HRESULT STDMETHODCALLTYPE EventInterfaces_AddScriptToExecuteOnDocumentCreatedCompleted_Invoke(ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler *This, HRESULT error, PCWSTR i) {
@@ -170,7 +157,6 @@ WebviewHandler::WebviewHandler() :
 	ICoreWebView2WebResourceRequestedEventHandler					{&EventInterfaces_WebResourceRequestedHandlerVtbl},
 	ICoreWebView2WebMessageReceivedEventHandler						{&EventInterfaces_WebMessageReceivedEventHandlerVtbl},
 	ICoreWebView2NavigationCompletedEventHandler					{&EventInterfaces_NavigationCompletedEventHandlerVtbl},
-	ICoreWebView2ExecuteScriptCompletedHandler						{&EventInterfaces_ExecuteScriptCompletedHandlerVtbl},
 	ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler{&EventInterfaces_AddScriptToExecuteOnDocumentCreatedCompletedHandlerVtbl}
 {
 }
@@ -208,4 +194,14 @@ void WebviewHandler::Resize() {
 	RECT bounds;
 	GetClientRect(this->hwnd, &bounds);
 	controller->lpVtbl->put_Bounds(controller, bounds);
+}
+
+ExecuteScriptCompletedCallback::ExecuteScriptCompletedCallback() : ICoreWebView2ExecuteScriptCompletedHandler {&EventInterfaces_ExecuteScriptCompletedHandlerVtbl}
+{	
+}
+
+ExecuteScriptCompletedCallback::~ExecuteScriptCompletedCallback()
+{	
+	if (this->result)
+		free(result);
 }

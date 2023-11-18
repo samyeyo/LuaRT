@@ -23,6 +23,7 @@ function wv:onReady()
     wv.statusbar = false
     wv.devtools = false
     wv.contextmenu = false
+    wv.acceleratorkeys = false
     -- Add initialization JS script before any loaded page
     -- This JS script processes posted messages from Lua script
     wv:addinitscript([[

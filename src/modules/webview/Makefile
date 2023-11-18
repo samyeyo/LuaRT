@@ -15,7 +15,7 @@
 LUART_PATH=..\..\..
 
 MODULE=		webview
-VERSION=	0.6
+VERSION=	0.7
 SRC= 		src\handler.obj src\webview.obj
 
 !if "$(BUILD)" == "debug"
