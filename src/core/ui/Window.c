@@ -208,6 +208,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				if (!(((WINDOWPOS*)lParam)->flags & SWP_NOSIZE))					
 					lua_callevent(w, onResize);
 				break;
+
 			case WM_WINDOWPOSCHANGED:
 				if (w->status) {
 					RECT r;
@@ -222,7 +223,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				if (!(flags & SWP_NOSIZE)) {
 					if (w->status)
 						SendMessage(w->status, WM_SIZE, 0, 0);
-					EnumChildWindows(hWnd, ResizeChilds, (LPARAM)hWnd);
+					EnumChildWindows(hWnd, ResizeChilds, (LPARAM)hWnd);	
 					lua_callevent(w, onResize);
 				}
 				break;
@@ -274,21 +275,16 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 					sbheight = sbRect.bottom - sbRect.top;
 					SetWindowPos(w->status, HWND_TOP, 0, HIWORD(lParam)-sbheight, LOWORD(lParam), sbheight, SWP_SHOWWINDOW);
 				}
-				lua_callevent(w, onResize);
 				return 0;
              }
+
 			case WM_SIZING:
 			    EnumChildWindows(hWnd, ResizeChilds, (LPARAM)hWnd);
 				break;
             case WM_SETCURSOR:
 				if (LOWORD(lParam) == HTCLIENT) {
-					POINT p;
-					GetCursorPos(&p);
-					ScreenToClient(w->handle, &p);
-					if (w->handle == ChildWindowFromPoint(w->handle, p)) {
 						SetCursor(w->hcursor);
 						return TRUE;
-					}
 				}
 				break;
 			case WM_APP:
