@@ -4,6 +4,7 @@ local win = ui.Window("Zoom example", 512, 380)
 local img = ui.Picture(win, "")
 local button = ui.Button(win, "Replay")
 local factor = 0
+win.bgcolor = 0xFFFFFF
 
 function button:onClick()
     self:hide()
