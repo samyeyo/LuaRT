@@ -251,6 +251,19 @@ LUA_PROPERTY_SET(MenuItem, submenu) {
 	return 0;
 }
 
+
+LUA_PROPERTY_GET(MenuItem, onClick) {
+	Widget *w = lua_self(L, 1, Widget);
+	MENUITEMINFOW mi = {0};
+	
+	mi.cbSize = sizeof(MENUITEMINFOW);
+	mi.fMask = MIIM_ID;
+	GetMenuItemInfoW(w->handle, w->index, TRUE, &mi);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, mi.wID);
+	lua_getfield(L, -1, "onClick");
+	return 1;
+}
+
 LUA_PROPERTY_SET(MenuItem, onClick) {
 	Widget *w = lua_self(L, 1, Widget);
 	MENUITEMINFOW mi = {0};
@@ -543,6 +556,7 @@ luaL_Reg MenuItem_methods[] = {
 	{"loadicon",	MenuItem_loadicon},
 	{"remove",		MenuItem_remove},
 	{"set_onClick",	MenuItem_setonClick},
+	{"get_onClick",	MenuItem_getonClick},
 	{"get_index",	MenuItem_getindex},
 	{"set_index",	MenuItem_setindex},
 	{"get_text",	MenuItem_gettext},
