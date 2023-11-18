@@ -82,7 +82,9 @@ LUA_CONSTRUCTOR(File) {
 }
 
 LUA_API wchar_t *luaL_checkFilename(lua_State *L, int idx) {
-	return (wchar_t*)(lua_type(L, idx) == LUA_TSTRING ? lua_towstring(L, idx) : wcsdup(((File*)lua_checkcinstance(L, idx, TFile))->fullpath)); 
+	if (lua_type(L, idx) == LUA_TSTRING)
+		return lua_towstring(L, idx);
+	return wcsdup(((File*)lua_checkcinstance(L, idx, TFile))->fullpath);
 }
 
 LUA_API Encoding detectBOM(FILE *f) {
