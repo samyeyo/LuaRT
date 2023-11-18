@@ -107,33 +107,79 @@ DWORD CALLBACK WriteStreamCB(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG p
 	return (*pcb = (LONG)fwrite(lpBuff, 1, cb, (FILE *)dwCookie)) == 0;
 }
 
-extern Encoding detectBOM(FILE *f);
+typedef struct {
+	LONG 		pos;
+	size_t 		length;
+	char *value;
+} streaminfo;
 
-static int do_file_operation(lua_State *L, const char *action) {
+DWORD CALLBACK ReadStringCB(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
+{	
+	streaminfo *si = (streaminfo*)dwCookie;
+	LONG count = (si->length - si->pos);
+	if( count > cb )
+		count = cb;
+	memcpy(lpBuff, &(si->value[si->pos]), count);
+	si->pos += count;
+	if (pcb) 
+		*pcb = count;
+	return 0;
+}
+
+DWORD CALLBACK WriteStringCB(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
+{	
+	streaminfo *si = (streaminfo*)dwCookie;
+	si->value = si->value ? realloc(si->value, si->length+cb) : malloc(cb);
+	memcpy(si->value+si->length, lpBuff, cb);
+	si->length += cb;	
+	*pcb = cb;
+	return 0;
+}
+
+static Encoding detectBOM(FILE *f) {
+	static unsigned char b[2] = {0};
+	
+	_fseeki64(f, 0, SEEK_SET);
+	fread(b, 1, 2, f);
+	if( b[0] == 0xFF && b[1] == 0xFE)
+		return UNICODE;
+	if (b[0] == 0xEF && b[1] == 0xBB) {
+		fread(b, 1, 1, f);
+		if (b[0] == 0xBF)
+			return UTF8;
+	}
+	_fseeki64(f, 0, SEEK_SET);
+	return ASCII;;
+}
+
+#ifdef __GNUC__
+_Pragma("GCC diagnostic ignored \"-Wint-in-bool-context\"")
+#endif
+
+static int do_file_operation(lua_State *L, const wchar_t *mode) {
 	HANDLE handle = lua_self(L, 1, Widget)->handle;
 	BOOL result = FALSE;
 	FILE *f;
   	EDITSTREAM es = { 0 };
 	DWORD type;
-	BOOL iswrite = (*action == 'w');
+	BOOL iswrite = (*mode == L'w');
 	wchar_t *fname = luaL_checkFilename(L, 2);
 
-	f = _wfopen(fname, iswrite ? L"wb" : L"rb");
-	free(fname);
-
-	if (!f)
+	if (!(f = _wfopen(fname, mode)))
 		luaL_error(L, "error while accessing '%s'", lua_tostring(L, 2));
-	
+
 	es.dwCookie = (DWORD_PTR)f;
 	es.pfnCallback = iswrite ? WriteStreamCB : ReadStreamCB;
-	if (lua_toboolean(L, 3))
-		type = SF_RTF;
+	if (((lua_gettop(L) == 3) && lua_toboolean(L, 3)) || (SendMessage(handle, EM_GETTEXTMODE, 0, 0) & TM_RICHTEXT))
+		type = SF_RTF | (!iswrite && (detectBOM(f) == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16))));
 	else 
-		type = SF_TEXT | (detectBOM(f) == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16)));
+		type = SF_TEXT | (!iswrite && (detectBOM(f) == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16))));
 	if ( (result = SendMessageW(handle, iswrite ? EM_STREAMOUT : EM_STREAMIN, type, (LPARAM)&es)) && es.dwError == 0) 
 		SendMessage(handle, EM_SETMODIFY, !iswrite, 0);
  	SetFocus(handle);
 	lua_pushboolean(L, result); 
+	fclose(f);
+	free(fname);
 	return 1;
 }
 
@@ -175,22 +221,33 @@ LUA_METHOD(Edit, searchdown) {
 
 LUA_METHOD(Edit, loadfrom)
 {
-	return do_file_operation(L, "read");
+	return do_file_operation(L, L"rb");
 }
 
 LUA_METHOD(Edit, saveto)
 {
-	return do_file_operation(L, "write");
+	return do_file_operation(L, L"wb");
 }
 
-LUA_PROPERTY_GET(Edit, richtext) {
+LUA_PROPERTY_GET(Edit, rtf) {
 	lua_pushboolean(L, SendMessage(lua_self(L, 1, Widget)->handle, EM_GETTEXTMODE, 0, 0) & TM_RICHTEXT);
 	return 1;
 }
+ 
+LUA_PROPERTY_SET(Edit, text);
+LUA_PROPERTY_GET(Edit, text);
 
-LUA_PROPERTY_SET(Edit, richtext) {
-	SendMessage(lua_self(L, 1, Widget)->handle, EM_SETTEXTMODE, lua_toboolean(L, 2) ? TM_RICHTEXT : TM_PLAINTEXT, 0);
-	return 1;
+LUA_PROPERTY_SET(Edit, rtf) {
+	HWND h = lua_self(L, 1, Widget)->handle;	
+	lua_pushcfunction(L, Edit_settext);
+	lua_pushvalue(L, 1);
+	lua_pushcfunction(L, Edit_gettext);
+	lua_pushvalue(L, 1);
+	lua_call(L, 1, 1);	
+	SendMessage(h, WM_SETTEXT, (WPARAM)"", (LPARAM)0);
+	SendMessage(h, EM_SETTEXTMODE, lua_toboolean(L, 2) ? TM_RICHTEXT : TM_PLAINTEXT, 0);
+	lua_call(L, 2, 0);
+	return 0;
 }
 
 LUA_PROPERTY_GET(Edit, column) {
@@ -389,7 +446,7 @@ LUA_PROPERTY_SET(Edit, readonly) {
 	return 0;
 }
 
-static lua_Integer get_length(HWND h, DWORD flags) {
+lua_Integer get_length(HWND h, DWORD flags) {
 	GETTEXTLENGTHEX gtl = {0};
 	gtl.codepage = CP_WINUNICODE;
 	gtl.flags = flags;
@@ -414,6 +471,7 @@ LUA_PROPERTY_SET(Edit, text) {
 	SendMessage(w->handle, WM_VSCROLL, SB_TOP, 0);
 	return 0;
 }
+
 LUA_PROPERTY_GET(Edit, text) {
 	HWND h = lua_self(L, 1, Widget)->handle;
 	GETTEXTEX gt;
@@ -426,6 +484,43 @@ LUA_PROPERTY_GET(Edit, text) {
 	SendMessageW(h, EM_GETTEXTEX, (WPARAM)&gt, (LPARAM)buff);
 	lua_pushwstring(L, buff);
 	free(buff);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Edit, richtext) {
+	Widget *w = lua_self(L, 1, Widget);
+	EDITSTREAM es = { 0 };
+	streaminfo si = { 0 };
+	WPARAM type;
+	
+	si.value = (char *)lua_tolstring(L, 2, &si.length);
+	es.dwCookie = (DWORD_PTR)&si;
+	es.pfnCallback = ReadStringCB;
+	if (SendMessage(w->handle, EM_GETTEXTMODE, 0, 0) & TM_RICHTEXT)
+		type = SF_RTF | (SF_USECODEPAGE | (CP_UTF8 << 16));
+	else 
+		type = SF_TEXT | (SF_USECODEPAGE | (CP_UTF8 << 16));
+	if ( SendMessage(w->handle, EM_STREAMIN, type, (LPARAM)&es) && (es.dwError == 0))
+		SendMessage(w->handle, EM_SETMODIFY, FALSE, 0);
+	SendMessage(w->handle, WM_VSCROLL, SB_TOP, 0);
+	SendMessage(w->handle, WM_HSCROLL, SB_LEFT, 0);
+	return 0;
+}
+LUA_PROPERTY_GET(Edit, richtext) {
+	Widget *w = lua_self(L, 1, Widget);
+	EDITSTREAM es = { 0 };
+	streaminfo si = { 0 };
+	WPARAM type;
+	
+	es.dwCookie = (DWORD_PTR)&si;
+	es.pfnCallback = WriteStringCB;
+	if (SendMessage(w->handle, EM_GETTEXTMODE, 0, 0) & TM_RICHTEXT)
+		type = SF_RTF | (SF_USECODEPAGE | (CP_UTF8 << 16));
+	else 
+		type = SF_TEXT | (SF_USECODEPAGE | (CP_UTF8 << 16));
+	if (SendMessage(w->handle, EM_STREAMOUT, type, (LPARAM)&es) && (es.dwError == 0))
+		lua_pushlstring(L, si.value, si.length);
+	else lua_pushliteral(L, "");
 	return 1;
 }
 
@@ -811,6 +906,10 @@ luaL_Reg Edit_methods[] = {
 	{"copy",			Entry_copy},
 	{"set_text",		Edit_settext},
 	{"get_text",		Edit_gettext},
+	{"set_richtext",	Edit_setrichtext},
+	{"get_richtext",	Edit_getrichtext},
+	{"set_rtf",			Edit_setrtf},
+	{"get_rtf",			Edit_getrtf},
 	{"get_canundo",		Entry_getcanundo},
 	{"get_canredo",		Entry_getcanredo},
 	{NULL, NULL}
