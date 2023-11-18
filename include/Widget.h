@@ -28,6 +28,7 @@ extern int UITree;
 extern int UIEdit;
 extern int UIItem;
 extern int UIProgressbar;
+extern int UIPanel;
 
 //--------------------------------------------------| Widget object definition
 
@@ -96,7 +97,7 @@ LUA_API void *lua_getevent(lua_State *L, lua_Integer eventid, int *type);
 typedef void *(*WIDGET_INIT)(lua_State *L, Widget **wp);
 typedef Widget *(*WIDGET_CONSTRUCTOR)(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc);
 typedef Widget *(*WIDGET_DESTRUCTOR)(lua_State *L);
-typedef int (*WIDGET_PROC)(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uIdSubclass);
+typedef LRESULT (*WIDGET_PROC)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 
 LUA_API  lua_Integer			WM_LUAMAX;
 LUA_API  WIDGET_INIT 			lua_widgetinitialize;
