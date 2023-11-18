@@ -55,6 +55,7 @@ int UITree;
 int UIEdit;
 int UIItem;
 int UIProgressbar;
+int UIPanel;
 
 DWORD uiLayout = 0;
 
@@ -135,7 +136,7 @@ HBITMAP LoadImg(wchar_t *filename) {
     IWICBitmapFrameDecode *pSource = NULL;
 	HBITMAP result = NULL;
 
-	if (SUCCEEDED(ui_factory->lpVtbl->CreateDecoderFromFilename(ui_factory, filename, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder)))
+	if (ui_factory->lpVtbl->CreateDecoderFromFilename(ui_factory, filename, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder) == S_OK)
 		{
 		if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pSource)))
 		{	
@@ -300,11 +301,11 @@ static int dialog(lua_State *L, BOOL save, DWORD flags) {
 }
 
 LUA_METHOD(ui, opendialog) {
-	return dialog(L, FALSE, OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST);
+	return dialog(L, FALSE, OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_NOCHANGEDIR);
 }
 
 LUA_METHOD(ui, savedialog) {
-	return dialog(L, TRUE, OFN_PATHMUSTEXIST);
+	return dialog(L, TRUE, OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR);
 }
 
 LUA_METHOD(ui, dirdialog) {
@@ -440,7 +441,7 @@ int do_update(lua_State *L) {
 						lua_pushinstance(L, MenuItem, 2);
 						lua_remove(L, -2);
 					}
-				} 
+				} else goto do_msg;
 			} else goto do_msg;
 			if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
 				Task *t = search_task(L);
@@ -586,20 +587,13 @@ LUA_METHOD(ui, fontdialog) {
 }
 
 LUA_CONSTRUCTOR(Button) {
-	static const luaL_Reg funcs[] = {
-		{"get_hastext", Widget_gethastext},
-		{"set_hastext", Widget_sethastext},
-		{NULL, NULL}
-	};
 	Widget_create(L, UIButton, 0, WC_BUTTONW, WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER, TRUE, TRUE);
-	luaL_setrawfuncs(L, funcs);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Label) {
 	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, WS_VISIBLE | SS_NOTIFY | SS_LEFT, TRUE, TRUE);
 	SetWindowTheme(w->handle, L"", L"");
-	luaL_setrawfuncs(L, color_methods);
 	return 1;
 }
 
@@ -622,8 +616,17 @@ LUA_CONSTRUCTOR(Picture) {
 
 LUA_CONSTRUCTOR(Progressbar)
 {   
-    Widget *w = Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, FALSE, TRUE);
-	ShowWindow(w->handle, SW_SHOWNORMAL);
+    Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, FALSE, TRUE);
+    return 1;
+}
+
+extern LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+
+LUA_CONSTRUCTOR(Panel)
+{   
+    Widget *w = Widget_create(L, UIPanel, 0, L"Window", WS_CHILD, FALSE, FALSE);
+	SetWindowLongPtr(w->handle, GWLP_WNDPROC, (LONG_PTR)PageProc);
+	w->brush = GetSysColorBrush(COLOR_BTNFACE);
     return 1;
 }
 
@@ -645,9 +648,7 @@ LUA_CONSTRUCTOR(Radiobutton) {
 }
 
 LUA_CONSTRUCTOR(Groupbox) {
-	Widget *w = Widget_create(L, UIGroup, 0, WC_BUTTONW, WS_VISIBLE | ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE);
-	Widget *wp = ((Widget*)GetWindowLongPtr(GetParent(w->handle), GWLP_USERDATA));
-	w->brush = wp->brush ? wp->brush : GetSysColorBrush(COLOR_BTNFACE);
+	Widget_create(L, UIGroup, 0, WC_BUTTONW, WS_VISIBLE | ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE);
 	return 1;
 }
 
@@ -677,16 +678,12 @@ LUA_CONSTRUCTOR(Listbox) {
 	HIMAGELIST imglist = ImageList_Create(1, 1, ILC_COLOR32|ILC_MASK, ImageList_GetImageCount(w->imglist), 1);
 	ListView_SetExtendedListViewStyleEx(w->handle, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
 	ListView_SetImageList(w->handle, imglist, LVSIL_SMALL);
-	lua_pushcfunction(L, Listbox_sort);
-	lua_setfield(L, 1, "sort");
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Tree) {
 	luaL_checktype(L, 3, LUA_TTABLE);
 	Widget_create(L, UITree, WS_EX_STATICEDGE, WC_TREEVIEWW, WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | TVS_LINESATROOT | TVS_HASLINES | TVS_EDITLABELS, TRUE, FALSE);
-	lua_pushcfunction(L, Item_sort); 
-	lua_setfield(L, 1, "sort");
 	return 1;
 }
 
@@ -708,11 +705,13 @@ LUA_CONSTRUCTOR(Combobox) {
 	w->status = (HANDLE)SendMessageW(w->handle, CBEM_GETCOMBOCONTROL, 0, 0);
 	return 1;
 }
-
+	
 LUA_CONSTRUCTOR(Edit) {
 	Widget *w = Widget_create(L, UIEdit, WS_EX_STATICEDGE, RICHEDIT_CLASSW, WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_LEFT | ES_AUTOHSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | ES_NOHIDESEL | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, TRUE, FALSE);
+	wchar_t *str = lua_towstring(L, 3);
 	SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
 	SendMessage(w->handle, EM_EXLIMITTEXT, 0, 0x7FFFFFF0);
+	SendMessageW(w->handle, WM_SETTEXT, 0, (LPARAM)str);
 	return 1;
 }
 
@@ -781,8 +780,8 @@ int luaopen_ui(lua_State *L) {
 		lua_registerevent(L, events[i], NULL);
 	lua_regmodulefinalize(L, ui); 
 	widget_type_new(L, &UIWindow, "Window", Window_constructor, Window_methods, Window_metafields, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE);
-	widget_type_new(L, &UIButton, "Button", Button_constructor, NULL, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
-	widget_type_new(L, &UILabel, "Label", Label_constructor, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
+	widget_type_new(L, &UIButton, "Button", Button_constructor, hastext_methods, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
+	widget_type_new(L, &UILabel, "Label", Label_constructor, color_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	widget_type_new(L, &UIEntry, "Entry", Entry_constructor, Entry_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	if ( (richeditlib = LoadLibraryA("Riched20.dll")) )
 		widget_type_new(L, &UIEdit, "Edit", Edit_constructor, Edit_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
@@ -797,6 +796,7 @@ int luaopen_ui(lua_State *L) {
 	widget_type_new(L, &UITab, "Tab", Tab_constructor, ItemWidget_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UIPicture, "Picture", Picture_constructor, Picture_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_type_new(L, &UIProgressbar, "Progressbar", Progressbar_constructor, Progressbar_methods, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE);
+	widget_type_new(L, &UIPanel, "Panel", Panel_constructor, Panel_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE);
 	lua_registerobject(L, NULL, "ListItem", Item_constructor, Item_methods, Item_metafields);
 	lua_setfield(L, LUA_REGISTRYINDEX, "ListItem");
 	lua_registerobject(L, NULL, "ComboItem", Item_constructor, Item_methods, Item_metafields);
@@ -813,7 +813,7 @@ int luaopen_ui(lua_State *L) {
 	lua_widgetconstructor = Widget__constructor;
 	lua_widgetinitialize = Widget_init;
 	lua_widgetdestructor = Widget_destructor;
-	lua_widgetproc = ProcessUIMessage;
+	lua_widgetproc = WidgetProc;
 	WIDGET_METHODS = Widget_methods;
 	update = do_update;
 	return 1;

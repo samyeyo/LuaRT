@@ -50,6 +50,7 @@ void *__push_item(lua_State *L, Widget *w, int idx, HTREEITEM hti);
 void __free_item(Widget *w, size_t idx, HTREEITEM hti);
 size_t get_count(Widget *w);
 void add_column(Widget *w);
+BOOL CALLBACK ResizeChilds(HWND h, LPARAM lParam);
 
 void copy_menuitems(lua_State *L, HMENU from, HMENU to);
 
@@ -61,7 +62,7 @@ LUA_API int fontsize_fromheight(int height);
 LOGFONTW *Font(Widget *w);
 void UpdateFont(Widget *w, LOGFONTW *l);
 void SetFontFromWidget(Widget *w, Widget *wp);
-int ProcessUIMessage(Widget *w, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT uIdSubclass);
+LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 
 LUA_METHOD(Widget, __metanewindex); //----- for event registration
 LUA_METHOD(Widget, show);
@@ -135,8 +136,9 @@ extern luaL_Reg MenuItem_metafields[];
 extern luaL_Reg Picture_methods[];
 extern luaL_Reg color_methods[];
 extern luaL_Reg Progressbar_methods[];
-LUA_METHOD(Listbox, sort);
-LUA_METHOD(Item, sort);
+extern luaL_Reg Panel_methods[];
+extern luaL_Reg hastext_methods[];
+extern luaL_Reg sort_methods[];
 
 extern DWORD uiLayout;
 
@@ -155,10 +157,10 @@ Widget *format(lua_State *L, Widget *w, DWORD mask, CHARFORMAT2W *cf, int scf, B
 Widget *get_fontstyle(lua_State *L, Widget *w, LOGFONTW *lf);
 LOGFONTW *Font(Widget *w);
 int GetText(lua_State *L, HANDLE h);
-int AdjustTab_height(HWND h);
 void FreeMenu(lua_State *L, Widget *w);
 void remove_menuitem(lua_State *L, Widget *w, int idx);
 int adjust_listvscroll(Widget *w, int start, int end);
+void page_resize(Widget *w, BOOL isfocused);
 
 LUA_CONSTRUCTOR(Item);
 LUA_CONSTRUCTOR(Menu);
