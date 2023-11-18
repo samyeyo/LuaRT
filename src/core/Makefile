@@ -48,8 +48,8 @@ _ARCH = x86
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 5
-LUART_RELEASE= 2
+LUART_MINOR= 6
+LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 DEFINES_RES= /d LUART_MINOR="$(LUART_MINOR)" /d LUART_MAJOR="$(LUART_MAJOR)" /d LUART_RELEASE="$(LUART_RELEASE)"
 
@@ -64,7 +64,7 @@ LDFLAGS= /nologo /OPT:REF /OPT:ICF
 DLL_LIBS =	shlwapi.lib advapi32.lib gdi32.lib comctl32.lib kernel32.lib user32.lib oleaut32.lib ole32.lib credui.lib crypt32.lib wininet.lib
 
 LIBS	= 	lua54.lib ole32.lib comctl32.lib
-UI_LIBS = 	gdi32.lib uxtheme.lib shell32.lib user32.lib kernel32.lib dwmapi.lib windowscodecs.lib comdlg32.lib
+UI_LIBS = 	gdi32.lib uxtheme.lib shell32.lib user32.lib kernel32.lib dwmapi.lib windowscodecs.lib comdlg32.lib ole32.lib shlwapi.lib oleaut32.lib
 STATIC_LIBS=ole32.lib comctl32.lib crypt32.lib credui.lib wininet.lib ws2_32.lib Secur32.lib dnsapi.lib iphlpapi.lib urlmon.lib sensapi.lib $(DLL_LIBS)
 
 
@@ -128,7 +128,7 @@ lua: infolua $(LUA_O)
 
 core: infocore $(REQ) $(LIB_O) $(UI_O)
 
-toolchain: lua core $(LUA_A) infotoolchain $(LUART_T) $(LUAWRT_T) static rtc
+toolchain: lua core $(LUA_A) infotoolchain $(LUART_T) $(LUAWRT_T)
 	@cmd /c echo.
 
 lua\lvm.obj: 
@@ -146,7 +146,7 @@ static:
 	@echo|set /p dummy="▸  Building static executables    "
 	@$(MAKE) /nologo luart-static "STATIC=TRUE"
 
-tools: infotoolchain toolchain
+tools: infotoolchain toolchain static rtc
 	@echo|set /p dummy=" "
 
 $(LUA_A): $(BASE_O)
@@ -209,7 +209,7 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static ..\..\tools\rtc\src\rtc.lua
 
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-buildtools: infotools rtc
+buildtools: infotools static rtc
 	@$(CC) /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll >nul 2>&1
@@ -239,7 +239,7 @@ buildtools: infotools rtc
 	@echo|set /p dummy="■"
 	@cmd /c echo.
 
-setup: toolchain tools buildtools infosetup
+setup: toolchain static tools buildtools infosetup
 	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@echo|set /p dummy="■"
 	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).zip ..\..\LuaRT-$(VERSION)-$(PLATFORM).zip >nul
