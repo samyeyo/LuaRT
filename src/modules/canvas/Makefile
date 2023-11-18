@@ -19,7 +19,7 @@ VERSION=	0.5
 SRC= 		src\Canvas.obj src\Direct2D.obj src\Image.obj src\Gradient.obj
 
 !if "$(BUILD)" == "debug"
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /I"$(LUART_PATH)\include" /Z7
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /I"$(LUART_PATH)\include" /Z7 /EHsc
 LDFLAGS= /nologo /DEBUG
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /I"$(LUART_PATH)\include" /MD /Gy /GF /GA /GR- /GS- /Oi /O1 /EHsc

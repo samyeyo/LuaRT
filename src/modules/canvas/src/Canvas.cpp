@@ -26,7 +26,6 @@ const char *style_values[] = { "normal", "oblique","italic" };
 LRESULT CALLBACK CanvasProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
   Widget *w = (Widget *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
   Direct2D *d = (Direct2D *)w->user;
-  LRESULT result;
 
   switch(uMsg) {
     case WM_PAINT:
@@ -51,30 +50,28 @@ LRESULT CALLBACK CanvasProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
       PostMessage(hwnd, onMouseRelease, 0, 0);
       break;
   case WM_SIZE:
-	{
-		RECT r = {0, 0, LOWORD(lParam), HIWORD(lParam)};
-    ID2D1Bitmap *oldbitmap;
-    
-    d->Render->GetBitmap(&oldbitmap);
-    d->Render->Release();
-		d->DCRender->BindDC(GetDC(hwnd), &r);
-    d->DCRender->CreateCompatibleRenderTarget(&d->Render);
-    d->Render->BeginDraw();
-    d->Render->Clear(d->bgcolor);
-    d->Render->DrawBitmap(oldbitmap);
-    d->Render->EndDraw();
-    oldbitmap->Release();
-    InvalidateRect(hwnd, NULL, TRUE);
-		break;
-	}
+      {
+        RECT r = {0, 0, LOWORD(lParam), HIWORD(lParam)};
+        ID2D1Bitmap *oldbitmap;
+        
+        d->Render->GetBitmap(&oldbitmap);
+        d->Render->Release();
+        d->DCRender->BindDC(GetDC(hwnd), &r);
+        d->DCRender->CreateCompatibleRenderTarget(&d->Render);
+        d->Render->BeginDraw();
+        d->Render->Clear(d->bgcolor);
+        d->Render->DrawBitmap(oldbitmap);
+        d->Render->EndDraw();
+        oldbitmap->Release();
+        InvalidateRect(hwnd, NULL, TRUE);
+        break;
+      }
     case WM_TIMER:
       PostMessage(hwnd, onPaint, 0, 0);
       return 0;
   }
 
-  if ((result = lua_widgetproc(w, uMsg, wParam, lParam, 0)) < 0)
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
-  return result;
+  return lua_widgetproc(hwnd, uMsg, wParam, lParam, 0, 0);
 }
 
 //------------------------------------ Canvas constructor
