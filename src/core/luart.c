@@ -288,12 +288,15 @@ compiledscript:		t = (Task*)lua_pushinstance(L, Task, 1);
 error:			
 						{
 #ifdef RTWIN
-						wchar_t *err = lua_towstring(L, -1);					
-						if (is_embeded) {
-							wchar_t *err_embed = wcsstr(err, L": ");
-							err = err_embed ? err_embed+2 : err;
+						int len;
+						wchar_t *err = lua_tolwstring(L, -1, &len);	
+						if (len)	{			
+							if (is_embeded) {
+								wchar_t *err_embed = wcsstr(err, L": ");
+								err = err_embed ? err_embed+2 : err;
+							}
+							MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK | MB_DEFAULT_DESKTOP_ONLY);						
 						}
-						MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK | MB_DEFAULT_DESKTOP_ONLY);						
 						free(err);
 #else
 						char *err = (char*)lua_tostring(L, -1);
