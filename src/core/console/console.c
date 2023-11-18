@@ -363,6 +363,10 @@ LUA_METHOD(console, inverse) {
 }
 
 LUA_METHOD(console, reset) {
+	CONSOLE_CURSOR_INFO info;
+   	info.dwSize = 20;
+   	info.bVisible = TRUE;
+   	SetConsoleCursorInfo(GetStdHandle(STD_INPUT_HANDLE), &info);
 	SetConsoleTextAttribute(std, reset);
 	return 0;
 }
