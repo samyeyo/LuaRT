@@ -19,7 +19,7 @@ ifneq ("$(wildcard $(PATH_TO_FILE))","")
 endif
 
 MODULE=json
-VERSION=0.5
+VERSION=0.6
 SRC=src\json.o
 
 ifeq ($(filter clean,$(MAKECMDGOALS)),)

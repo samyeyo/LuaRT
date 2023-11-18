@@ -15,7 +15,7 @@
 LUART_PATH=..\..\..
 
 MODULE=		json
-VERSION=	0.5
+VERSION=	0.6
 SRC= 		src\json.obj
 
 
