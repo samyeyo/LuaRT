@@ -10,6 +10,7 @@ win:loadicon(sys.env.windir.."\\notepad.exe")
 local Edit = ui.Edit(win, "", 0, 0)
 Edit.font = "Consolas"
 Edit.fontsize = 8
+Edit.rtf = false
 
 -- global state variables
 encoding = "UTF8" 	-- current edited file encoding
@@ -51,21 +52,21 @@ end
 local FileOpen = FileMenu:add("&Open...\tCtrl+O")
 function FileOpen:onClick()
 	if not Edit.modified or (Edit.modified and ui.confirm("Current file is not saved. Any changes will be discarded. Continue without saving ?") == "yes") then
-		file = ui.opendialog("Open file...")
+		file = ui.opendialog("Open file...", false, "All files (*.*)|*.*|Text files (*.txt)|*.txt|Rich Text files (*.rtf)|*.rtf")
 		if file ~= nil then
 			file:open()
-			local isRTF = false
 			if file.extension == ".rtf" then 
 				encoding = "UTF8"
-				isRTF = true
+				Edit.rtf = true		
 			else
 				encoding = file.encoding:upper()
 				if encoding == "Binary" then 
 					encoding = "ASCII"
 				end
+				Edit.rtf = false
 			end
 			file:close()
-			Edit:load(file, isRTF)
+			Edit:load(file)
 			title = file.name
 			Edit.modified = false
 			update_status()
