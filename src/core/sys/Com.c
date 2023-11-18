@@ -97,11 +97,12 @@ static int COM_method_call(lua_State *L) {
 		idx = 1;
 	}
 
-	if (hreftype && SUCCEEDED(ITypeInfo_GetRefTypeInfo(obj->typeinfo, hreftype, &t)))
+	if (hreftype && SUCCEEDED(ITypeInfo_GetRefTypeInfo(obj->typeinfo, hreftype, &t))) {
 		if (SUCCEEDED(ITypeInfo_GetTypeAttr(t, &attr)))
 			restype = attr->typekind;
 		else
 			restype = -1;
+	}
 	params.cArgs = n;
 	args = calloc(n+1, sizeof(VARIANT));
 	for (i = (n - 1); i >= 0; i--) {
