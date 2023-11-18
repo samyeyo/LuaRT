@@ -40,10 +40,13 @@ static int CALLBACK sort_func(LPARAM lp1, LPARAM lp2, LPARAM data)
 	return result;
 }
 
-int AdjustTab_height(HWND h) {
-	RECT r;
-	TabCtrl_GetItemRect(h, 0, &r);
-	return r.bottom-r.top+1;
+int AdjustTab_height(Widget *w) {
+	if (w->wtype == UITab) {
+		RECT r;
+		TabCtrl_GetItemRect(w->handle, 0, &r);
+		return r.bottom-r.top+10;
+	}
+	return 0;
 }
 
 HTREEITEM treeview_iter(HWND handle, HTREEITEM hChild, HTREEITEM *hPrev, BOOL remove)
@@ -58,6 +61,7 @@ HTREEITEM treeview_iter(HWND handle, HTREEITEM hChild, HTREEITEM *hPrev, BOOL re
 		TreeView_DeleteItem(handle, *hPrev);
 	return hChild;
 }
+extern LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 
 LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 	Widget *w = (Widget*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
@@ -65,21 +69,22 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 		case WM_ERASEBKGND:	{
 			RECT rect;
 			GetClientRect(hWnd, &rect);
-			FillRect((HDC)wParam, &rect, w->brush);
+			FillRect((HDC)wParam, &rect,w->brush);
+			SendMessage(GetParent(w->handle), WM_ERASEBKGND, wParam, lParam);
 			return TRUE;
 		}
-		case WM_LBUTTONDOWN:lua_paramevent(w, onMouseDown, 0, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)));
-							lua_paramevent(w, onClick, GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam));
-							break;
+		case WM_LBUTTONDOWN:lua_paramevent(w, onMouseDown, 0, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam)));
+							lua_paramevent(w, onClick, GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam));
+							return FALSE;
 		case WM_LBUTTONUP:
 		case WM_MBUTTONUP:
 		case WM_RBUTTONUP:
-			lua_paramevent(w, onMouseUp, (Msg-WM_LBUTTONUP)/3, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)));
-			break;
+			lua_paramevent(w, onMouseUp, (Msg-WM_LBUTTONUP)/3, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam)));
+			return FALSE;
 
 		case WM_MBUTTONDOWN:
 		case WM_RBUTTONDOWN:
-			lua_paramevent(w, onMouseDown, (Msg-WM_LBUTTONDOWN)/3, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam)));
+			lua_paramevent(w, onMouseDown, (Msg-WM_LBUTTONDOWN)/3, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam)));
 			break;
 
 		case WM_NOTIFY: 
@@ -88,20 +93,17 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			return SendMessage((HWND)lParam, Msg, wParam, lParam);
 		case WM_CONTEXTMENU: 
 		case WM_MOUSEMOVE:
-			lParam = MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w->handle)+GET_Y_LPARAM(lParam));		
+			lParam = MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam));		
 		case WM_MOUSELEAVE:
-			return WidgetProc(hWnd, Msg, 0, lParam, 0, 0);
+			return WindowProc(hWnd, Msg, 0, lParam);
 		case WM_KEYDOWN:
 			SendMessage(GetParent(w->handle), WM_KEYDOWN, wParam, lParam);
-			break;
+			return FALSE;
 		case WM_SYSKEYDOWN:
 			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
-			break;			
-		case WM_CTLCOLORBTN:
-		case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
-		default: break;
+			return FALSE;			
 	}
-	return DefWindowProc(hWnd, Msg, wParam, lParam);
+	return WindowProc(hWnd, Msg, wParam, lParam);
 }
 
 //---- utility functions for Windows control with items
@@ -253,7 +255,7 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 		item = calloc(1, sizeof(TCITEMW));
 		RECT r; 
 		GetClientRect(w->handle, &r);
-		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 26, r.right-r.left-4, r.bottom-r.top-30, h, NULL, GetModuleHandle(NULL), NULL);
+		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 26, 0, 0, h, NULL, GetModuleHandle(NULL), NULL);
 		SetWindowLongPtr(hh, GWLP_WNDPROC, (ULONG_PTR)PageProc);
 		SetWindowLongPtr(hh, GWLP_USERDATA, (ULONG_PTR)w);
 		BringWindowToTop(hh);
@@ -272,8 +274,8 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 		((LVITEMW*)item)->iImage = -1;
 		((LVITEMW*)item)->iSubItem = 0;
 		((LVITEMW*)item)->iItem = count;
-		((LVITEMW*)item)->state = LVIS_FOCUSED;
-		((LVITEMW*)item)->stateMask = LVIS_FOCUSED;
+		// ((LVITEMW*)item)->state = LVIS_FOCUSED;
+		// ((LVITEMW*)item)->stateMask = LVIS_FOCUSED;
 		msg = LVM_INSERTITEMW;
 	}
 	else if (w->wtype == UICombo) {
@@ -290,6 +292,13 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 	result = SendMessageW(h, msg, idx, (LPARAM)item);
 	if (w->wtype == UIList)
 		adjust_listvscroll(w, count, count);
+	else if (w->wtype == UITab) {
+		if (w->user) {
+			DestroyWindow(w->user);
+			w->user = NULL;
+		}
+		page_resize(w, TRUE);
+	}
 	free(str);
 	free(item);
 	return result;
@@ -333,6 +342,15 @@ void __free_item(Widget *w, size_t idx, HTREEITEM hti) {
 			sort_info si;
 			ListView_DeleteItem(w->handle, idx);
 			ImageList_Remove(w->imglist, idx);
+			int count = get_count(w);
+			for (int i = idx; i < count; i++) {
+				LVITEMW *item = (LVITEMW*)__get_item(w, i, NULL);
+				item->mask = LVIF_IMAGE;
+				item->iImage--;
+				ListView_SetItem(w->handle, item);
+				free(item->pszText);
+				free(item);
+			}
 			si.w = w;
 			si.mode = -1;
 			ListView_SortItemsEx(w->handle, sort_func, &si);
@@ -344,6 +362,32 @@ void __free_item(Widget *w, size_t idx, HTREEITEM hti) {
 		}	
 	}
 }
+
+LUA_PROPERTY_GET(Item, previous) {
+	Widget *w = lua_self(L, 1, Widget);
+	HTREEITEM hitem = w->item.treeitem->hItem;
+
+	if ((hitem = TreeView_GetPrevSibling(w->handle, hitem)))
+		__push_item(L, w, 0, hitem);	
+	else lua_pushnil(L);
+	return 1;
+}
+
+LUA_PROPERTY_GET(Item, next) {
+	Widget *w = lua_self(L, 1, Widget);
+	HTREEITEM hitem = w->item.treeitem->hItem;
+
+	if ((hitem = TreeView_GetNextSibling(w->handle, hitem)))
+		__push_item(L, w, 0, hitem);	
+	else lua_pushnil(L);
+	return 1;
+}
+
+luaL_Reg TreeItemFuncs[] = {
+	{"get_previous",	Item_getprevious},
+	{"get_next",		Item_getnext},
+	{NULL, NULL}
+};
 
 LUA_CONSTRUCTOR(Item) {
     Widget *wp, *w = (Widget*)calloc(1, sizeof(Widget));
@@ -375,6 +419,8 @@ LUA_CONSTRUCTOR(Item) {
 	lua_newinstance(L, w, Widget);
 	lua_pop(L, 1);
 	lua_pushvalue(L, 1);
+	if (w->item.itemtype == UITree)
+		luaL_setrawfuncs(L, TreeItemFuncs);
 	return 1;
 }
 
@@ -444,7 +490,6 @@ start:
 }
 
 static void set_newitems(lua_State *L, Widget *w, int idx, HTREEITEM subitem) {
- 
     if (lua_isstring(L, idx))
         __add_item(w, lua_towstring(L, idx), subitem);
     else if (!lua_istable(L, idx))
@@ -556,7 +601,7 @@ done:		lua_replace(L, lua_upvalueindex(2));
 
 LUA_METHOD(Items, __iterate) {
 	luaL_getmetafield(L, 1, "__widget");
-	lua_pushinteger(L, 0);
+	lua_pushlightuserdata(L, NULL);
 	lua_pushcclosure(L, Item_iter, 2);
 	return 1;
 }
@@ -565,7 +610,7 @@ luaL_Reg Items_metafields[] = {
 	{"__len",		Items___len},
 	{"__index",		Items___index},
 	{"__newindex",	Items___newindex},
-	// {"__iterate", Items___iterate},
+	{"__iterate",  Items___iterate},
 	{NULL, NULL}
 };
 
@@ -679,7 +724,6 @@ LUA_PROPERTY_SET(Listbox, style) {
 		else {
 			int count = ImageList_GetImageCount(w->imglist);
 			if (style) {
-				ImageList_Destroy((HIMAGELIST)SendMessage(w->handle, LVM_GETIMAGELIST, LVSIL_SMALL, 0));
 				ImageList_SetImageCount(w->imglist, count+1);
 				imglist = w->imglist;
 			} else imglist = ImageList_Create(1, 1, ILC_COLOR32|ILC_MASK, count+1, 1);
@@ -711,11 +755,21 @@ LUA_PROPERTY_SET(Listbox, items) {
 
 	SendMessageW(w->handle, resetmsg[w->wtype-UIList], 0, (LPARAM)TVI_ROOT);
     set_newitems(L, w, 2, w->item.itemtype == UITree ? w->item.treeitem->hItem : NULL);
-    if (w->wtype == UITab && get_count(w)) {
-        TCITEMW *item = get_item(w, 0);
-        BringWindowToTop((HWND)item->lParam);
-        free(item->pszText);
-        free(item);
+    if (w->wtype == UITab) {
+		if (get_count(w)) {
+			TCITEMW *item = get_item(w, 0);
+			BringWindowToTop((HWND)item->lParam);
+			free(item->pszText);
+			free(item);
+		} else {
+			RECT r; 
+			GetClientRect(w->handle, &r);
+			w->user = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 2, 4, r.right-5, r.bottom-6, w->handle, NULL, GetModuleHandle(NULL), NULL);
+			SetWindowLongPtr(w->user, GWLP_WNDPROC, (ULONG_PTR)PageProc);
+			SetWindowLongPtr(w->user, GWLP_USERDATA, (ULONG_PTR)w);		
+			page_resize(w, FALSE);
+			BringWindowToTop(w->user);
+		}
     }
     InvalidateRect(w->handle, NULL, FALSE);
     return 0;
@@ -742,7 +796,7 @@ LUA_PROPERTY_GET(Listbox, selected) {
 	else if (w->wtype == UITab)		
 		i = SendMessageW(w->handle, TCM_GETCURSEL, 0, 0);
 	else if (w->wtype == UIList)
-		i = SendMessage(w->handle, LVM_GETNEXTITEM, -1,  LVNI_SELECTED | LVNI_FOCUSED);
+		i = SendMessage(w->handle, LVM_GETNEXTITEM, -1,  LVNI_ALL | LVNI_SELECTED );
 	else if (w->wtype == UICombo)
 		i = SendMessage(w->status, CB_GETCURSEL, 0, 0);
 	if ( hti || (i != -1 && (LONG)get_count(w) >= i))
@@ -753,9 +807,21 @@ LUA_PROPERTY_GET(Listbox, selected) {
 LUA_PROPERTY_SET(Listbox, selected) {
 	Widget *w = lua_self(L, 1, Widget);
 	HANDLE h = GetParent(w->handle);
-	Widget *sel = lua_self(L, 2, Widget);
+	Widget *sel;
 	UINT_PTR id = GetDlgCtrlID(w->handle);
 	
+	if (lua_isnil(L, 2)) {
+		if (w->wtype == UITree)
+				TreeView_SelectItem(w->handle, NULL);
+		else if (w->wtype == UIList) {
+			ListView_SetItemState(w->handle, SendMessage(w->handle, LVM_GETNEXTITEM, -1,  LVNI_SELECTED), 0, 0);
+		} else if (w->wtype == UICombo) {
+			SendMessageW(w->status ? w->status : w->handle, CB_SETCURSEL, -1, 1);
+			SetWindowTextW(w->handle, L"");
+		}
+		goto done;
+	}
+	sel = lua_self(L, 2, Widget);
 	if (w->wtype != sel->item.itemtype)
 		luaL_typeerror(L, 2, w->wtype == UITab ? "TabItem" : (w->wtype == UICombo ? "ComboItem" : "ListItem"));
 	if ((w->handle == sel->handle || w->handle == GetParent(sel->handle)) && (sel->index >= 0 && sel->index <= (int)get_count(w))) {
@@ -764,7 +830,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		else if (w->wtype == UIList) {
 			SetFocus(w->handle);
 			ListView_EnsureVisible(w->handle, sel->index, FALSE);
-			ListView_SetItemState(w->handle, sel->index, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
+			ListView_SetItemState(w->handle, sel->index, LVIS_SELECTED, LVIS_SELECTED);
 		}
 		else if (w->wtype == UITab)
 			SendMessageW(w->handle, TCM_SETCURFOCUS, sel->index, 0);
@@ -772,8 +838,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 			SendMessageW(w->status ? w->status : w->handle, CB_SETCURSEL, sel->index, 1);
 			SetWindowTextW(w->handle, sel->item.cbitem->pszText);
 		}
-	}
-	else 
+	} else 
 		luaL_error(L, "cannot select an item that don't belong to this %s object", luaL_typename(L, 1));
 	if (w->wtype == UITab) {
 		NMHDR lparam = {0};
@@ -781,9 +846,9 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		lparam.idFrom = id;
 		lparam.hwndFrom = w->handle;
 		SendMessageW(h, WM_NOTIFY, (WPARAM)lparam.hwndFrom, (LPARAM)&lparam );
-	}
-	else if (w->wtype == UICombo)
+	} else if (w->wtype == UICombo)
 		SendMessageW(w->handle , WM_COMMAND, MAKEWPARAM(id, CBN_SELCHANGE), (LPARAM)w->handle);
+done: 
 	UpdateWindow(w->handle);
 	return 0;
 }	
@@ -814,49 +879,51 @@ LUA_METHOD(Item, loadicon) {
 	UINT msg = 0;
 	int idx = w->index;
 	
-	if (icon) {
-		if (w->icon)
-			DestroyIcon(w->icon);
-		if(w->item.itemtype == UITree) {
-			msg = TVM_SETITEMW;
-			item = w->item.treeitem;
-			w->item.treeitem->mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+	if(w->item.itemtype == UITree) {
+		msg = TVM_SETITEMW;
+		item = w->item.treeitem;
+		w->item.treeitem->mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+		if (!icon) {
+			w->index = INT16_MAX;
+			w->item.treeitem->iImage = w->index;
+		}
+		else {
 			if (w->item.treeitem->iImage == INT16_MAX) {
 				w->index = ((Widget*)GetWindowLongPtr(h, GWLP_USERDATA))->index++;
 				w->item.treeitem->iImage = w->index;
 			} else 
 				w->index = w->item.treeitem->iImage;
-			w->item.treeitem->iSelectedImage = w->index;
-			idx = 0;
 		}
-		else if(w->item.itemtype == UITab) {
-			msg = TCM_SETITEMW;
-			w->item.tabitem->iImage = w->index;
-			item = w->item.tabitem;
-			h = GetParent(h);
-		}
-		else if(w->item.itemtype == UIList) {
-			msg = LVM_SETITEMW;
-			w->item.listitem->iImage = w->index;
-			idx = 0;
-			item = w->item.listitem;
-		}
-		else if(w->item.itemtype == UICombo) {
-			msg = CBEM_SETITEMW;
-			w->item.cbitem->iImage = w->index;
-			w->item.cbitem->iSelectedImage = w->index;
-			idx = 0;
-			item = w->item.cbitem;
-		}
-		SendMessageW(h, msg, (WPARAM)idx, (LPARAM) item);
-		if (ImageList_ReplaceIcon(w->imglist, w->index, icon) == -1) {
-			DestroyIcon(icon);
-			w->icon = NULL;
-		} else {
-			if (w->item.itemtype == UICombo)
-				SendMessage(w->handle, CBEM_SETIMAGELIST, 0, (LPARAM)w->imglist);
-			w->icon = icon;
-		}
+		w->item.treeitem->iSelectedImage = w->index;
+		idx = 0;
+	}
+	else if(w->item.itemtype == UITab) {
+		msg = TCM_SETITEMW;
+		w->item.tabitem->iImage = icon ? w->index : -1;
+		item = w->item.tabitem;
+		h = GetParent(h);
+	}
+	else if(w->item.itemtype == UIList) {
+		msg = LVM_SETITEMW;
+		w->item.listitem->iImage = icon ? w->index : -1;
+		idx = 0;
+		item = w->item.listitem;
+	}
+	else if(w->item.itemtype == UICombo) {
+		msg = CBEM_SETITEMW;
+		w->item.cbitem->iImage = icon ? w->index : -1;
+		w->item.cbitem->iSelectedImage = icon ? w->index : -1;
+		idx = 0;
+		item = w->item.cbitem;
+	}
+	SendMessageW(h, msg, (WPARAM)idx, (LPARAM) item);
+	if (ImageList_ReplaceIcon(w->imglist, w->index, icon) == -1) {
+		DestroyIcon(icon);
+		w->icon = NULL;
+	} else {
+		if (w->item.itemtype == UICombo)
+			SendMessage(w->handle, CBEM_SETIMAGELIST, 0, (LPARAM)w->imglist);
+		w->icon = icon;
 	}
 	lua_pushboolean(L, icon && w->icon);
 	return 1;
@@ -883,7 +950,7 @@ LUA_PROPERTY_SET(Item, index) {
 			si.w = w;
 			si.mode = -1;
 			ListView_SortItemsEx(w->handle, sort_func, &si);
-			ListView_SetItemState(w->handle, idx, LVIS_FOCUSED | LVIS_SELECTED,LVIS_FOCUSED | LVIS_SELECTED);
+			ListView_SetItemState(w->handle, idx, LVIS_SELECTED, LVIS_SELECTED);
 			SetFocus(w->handle);	
 		}
 		else if(w->item.itemtype == UICombo) {
@@ -1056,6 +1123,12 @@ luaL_Reg TreeItem_methods[] = {
 	{"set_subitems",	Listbox_setitems},
 	{NULL, NULL}
 };
+
+luaL_Reg sort_methods[] = {
+	{"sort",		Listbox_sort},
+	{NULL, NULL}
+};
+
 
 luaL_Reg Page_methods[] = {
 	{"get_enabled",		Widget_getenabled},
