@@ -1,6 +1,7 @@
 local net = require "net"
 local console = require "console"
 
+console.cursor = false
 
 ----- HTTP download function to show progress
 local function download(host, uri)
@@ -12,9 +13,9 @@ local function download(host, uri)
 		sleep()
 		length = length or (request.headers["Content-length"] or false)
 		if length then
-			size = string.format(" %0.0f%%    ", request.received/length*100)
+			size = string.format("%0.0f%%    ", request.received/length*100)
 		else
-			size = string.format(" %0.2fMb", request.received/1000000)
+			size = string.format("%0.2fMb", request.received/1000000)
 		end
 		console.writecolor("yellow", size)
 		console.write(string.rep("\b", #size))
