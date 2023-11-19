@@ -4,7 +4,9 @@
 *.exp
 *.ilk
 *.obj
-*.lib
+**src/core/*.lib
+lib/*.lib
+**src/modules/**/*.lib
 *.pdb
 *.res
 *.a
