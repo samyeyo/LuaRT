@@ -705,13 +705,19 @@ LUA_CONSTRUCTOR(Combobox) {
 	w->status = (HANDLE)SendMessageW(w->handle, CBEM_GETCOMBOCONTROL, 0, 0);
 	return 1;
 }
+
+extern LUA_PROPERTY_SET(Edit, richtext);
 	
 LUA_CONSTRUCTOR(Edit) {
 	Widget *w = Widget_create(L, UIEdit, WS_EX_STATICEDGE, RICHEDIT_CLASSW, WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_LEFT | ES_AUTOHSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | ES_NOHIDESEL | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, TRUE, FALSE);
-	wchar_t *str = lua_towstring(L, 3);
+	// wchar_t *str = lua_towstring(L, 3);
 	SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
 	SendMessage(w->handle, EM_EXLIMITTEXT, 0, 0x7FFFFFF0);
-	SendMessageW(w->handle, WM_SETTEXT, 0, (LPARAM)str);
+	SendMessage(w->handle, EM_SETTEXTMODE, TM_RICHTEXT, 0);
+	lua_pushcfunction(L, Edit_setrichtext);
+	lua_pushvalue(L, -2);
+	lua_pushvalue(L, 3);
+	lua_call(L, 2, 0);
 	return 1;
 }
 
