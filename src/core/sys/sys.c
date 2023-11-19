@@ -62,16 +62,24 @@ LUA_METHOD(sys, cmd) {
 	wchar_t *buff = malloc(sizeof(wchar_t)*count);
 	STARTUPINFOW info = {0};
     PROCESS_INFORMATION procInfo = {0};
+	HANDLE hJob;
+	JOBOBJECT_EXTENDED_LIMIT_INFORMATION job = {0};
+
+	hJob = CreateJobObject(NULL, NULL);
+    job.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &job, sizeof(job));
 
 	_snwprintf(buff, count, L"cmd.exe /C %s", exec);
     info.cb = sizeof(info);
 	info.dwFlags = STARTF_USESHOWWINDOW;
     info.wShowWindow = SW_HIDE;
-    if (CreateProcessW(NULL, buff, NULL, NULL, TRUE, lua_toboolean(L, 2) ? CREATE_NO_WINDOW : 0, NULL, NULL, &info, &procInfo)) {
+    if (CreateProcessW(NULL, buff, NULL, NULL, TRUE, lua_toboolean(L, 2) ? CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB : CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &info, &procInfo)) {
+		AssignProcessToJobObject(hJob, procInfo.hProcess);
 		WaitForSingleObject(procInfo.hProcess, INFINITE);
 		GetExitCodeProcess(procInfo.hProcess,&procInfo.dwProcessId);
 		CloseHandle(procInfo.hProcess);
 		CloseHandle(procInfo.hThread);
+		CloseHandle(hJob);
 		lua_pushboolean(L, TRUE);
 	} else lua_pushboolean(L, FALSE);
 	free(buff);
