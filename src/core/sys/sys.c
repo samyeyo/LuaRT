@@ -74,7 +74,8 @@ LUA_METHOD(sys, cmd) {
 	info.dwFlags = STARTF_USESHOWWINDOW;
     info.wShowWindow = SW_HIDE;
     if (CreateProcessW(NULL, buff, NULL, NULL, TRUE, lua_toboolean(L, 2) ? CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB : CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &info, &procInfo)) {
-		AssignProcessToJobObject(hJob, procInfo.hProcess);
+		if (!lua_toboolean(L, 3))
+			AssignProcessToJobObject(hJob, procInfo.hProcess);
 		WaitForSingleObject(procInfo.hProcess, INFINITE);
 		GetExitCodeProcess(procInfo.hProcess,&procInfo.dwProcessId);
 		CloseHandle(procInfo.hProcess);
