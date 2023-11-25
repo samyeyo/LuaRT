@@ -242,6 +242,7 @@ buildtools: infotools rtc
 	@xcopy "..\..\modules"  "..\..\tools\LuaRT-Studio\modules\" /s /e /y >nul
 	@echo|set /p dummy="■"
 	@..\..\bin\rtc.exe -s -w -i ..\..\setup\img\update.ico ..\..\setup\update.lua ..\..\setup\img\ 2>&1 >nul
+	@-copy /Y update.exe "..\..\tools\LuaRT-Studio\bin\update.exe" 2>&1 >nul
 	@-move /Y update.exe ..\..\bin 2>&1 >nul
 	@echo|set /p dummy="■"
 
