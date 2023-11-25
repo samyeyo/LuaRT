@@ -86,7 +86,7 @@ ALL_T= 		$(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe $(DE
 !message ━━━━━━━━━━━━━━━━━━━━  Building LuaRT $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE) for $(PLATFORM)  ━━━━━━━━━━━━━━━━━━━━
 !endif
 
-all: toolchain
+all: rtc toolchain
 
 debug:
 	@$(MAKE) /nologo "BUILD=debug"
@@ -104,13 +104,17 @@ infocore:
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building LuaRT core framework  "
 
+infostatic:
+	@cmd /c echo.
+	@echo|set /p dummy="▸  Building static executables    "
+
 infotoolchain:
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building LuaRT toolchain       "
 
 infotools: utf8
 	@cmd /c echo.
-	@echo|set /p dummy="▸  Building QuickRT and LuaRT Studio library  "
+	@echo|set /p dummy="▸  Building QuickRT/LuaRT Studio  "
 
 infosetup: utf8
 	@cmd /c echo.
@@ -129,7 +133,6 @@ lua: infolua $(LUA_O)
 core: infocore $(REQ) $(LIB_O) $(UI_O)
 
 toolchain: lua core $(LUA_A) infotoolchain $(LUART_T) $(LUAWRT_T)
-	@cmd /c echo.
 
 lua\lvm.obj: 
 !if "$(BUILD)" == "debug"
@@ -144,9 +147,9 @@ static:
 	@$(RM) $(UI_O)  >nul 2>&1
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building static executables    "
-	@$(MAKE) /nologo luart-static "STATIC=TRUE"
+	@$(MAKE) /nologo luart-static "BUILD=$(BUILD)" "STATIC=TRUE"
 
-tools: infotoolchain toolchain static rtc
+tools: infotoolchain toolchain rtc
 	@echo|set /p dummy=" "
 
 $(LUA_A): $(BASE_O)
@@ -170,23 +173,24 @@ $(LUAWRT_T): $(BASE_O) $(UI_O)
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
-luart-static: $(BASE_O) $(UI_O) $(STATIC_O)
+luart-static: $(BASE_O) $(UI_O) $(STATIC_O) infostatic
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul
 	@echo|set /p dummy="■"
-	@$(CC) /c /DRTWIN $(CFLAGS) luart.c /Fowluart-static.obj >nul 2>&1
+	@$(CC) /c /DRTWIN /DLUART_STATIC $(CFLAGS) luart.c /Fowluart-static.obj >nul 2>&1
 	@$(LD) $(LDFLAGS) resource.res wluart-static.obj $(BASE_O) $(STATIC_O) $(UI_O) $(UI_LIBS) $(STATIC_LIBS) /OUT:wluart-static.exe /SUBSYSTEM:windows >nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y wluart-static.exe $(DEST)\wluart-static.exe >nul
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /i "lua/" resources/resource.rc >nul
 	@echo|set /p dummy="■"
-	@$(CC) /c $(CFLAGS) luart.c /Foluart-static.obj  >nul 2>&1
+	@$(CC) /c $(CFLAGS) /DLUART_STATIC luart.c /Foluart-static.obj  >nul 2>&1
 	@$(LD) $(LDFLAGS) resource.res luart-static.obj $(BASE_O) $(STATIC_O) $(STATIC_LIBS) /OUT:luart-static.exe >nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y luart-static.exe $(DEST)\luart-static.exe >nul
 
-rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static ..\..\tools\rtc\src\rtc.lua
+rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
+	@$(RM) $(DEST)\update.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\..\tools\rtc\src >nul
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building rtc compiler          "
@@ -209,7 +213,7 @@ rtc: $(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static ..\..\tools\rtc\src\rtc.lua
 
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-buildtools: infotools static rtc
+buildtools: infotools rtc
 	@$(CC) /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll >nul 2>&1
@@ -237,9 +241,11 @@ buildtools: infotools static rtc
 	@echo|set /p dummy="■"
 	@xcopy "..\..\modules"  "..\..\tools\LuaRT-Studio\modules\" /s /e /y >nul
 	@echo|set /p dummy="■"
-	@cmd /c echo.
+	@..\..\bin\rtc.exe -s -w -i ..\..\setup\img\update.ico ..\..\setup\update.lua ..\..\setup\img\ 2>&1 >nul
+	@-move /Y update.exe ..\..\bin 2>&1 >nul
+	@echo|set /p dummy="■"
 
-setup: toolchain static tools buildtools infosetup
+setup: toolchain tools buildtools infosetup
 	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@echo|set /p dummy="■"
 	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).zip ..\..\LuaRT-$(VERSION)-$(PLATFORM).zip >nul
@@ -264,11 +270,7 @@ clean: utf8
 	@$(RM) $(UI_O) >nul 2>&1
 	@echo ✓
 	@echo|set /p dummy="▸  Cleaning LuaRT toolchain... "
-	@$(RM) $(DEST)\luart*.exe >nul 2>&1
-	@$(RM) $(DEST)\wluart*.exe >nul 2>&1
-	@$(RM) $(DEST)\lua54*.dll >nul 2>&1
-	@$(RM) $(DEST)\rtc.exe >nul 2>&1
-	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
+	@$(RM) $(DEST)\*.exe >nul 2>&1
 	@$(RM) rtc.exe >nul 2>&1
 	@$(RM) wrtc.exe >nul 2>&1
 	@$(RM) luart*.exe >nul 2>&1

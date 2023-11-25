@@ -1,4 +1,4 @@
-﻿local VERSION = '1.5.2'
+﻿local VERSION = '1.6.0'
 
 --[[
     | LuaRT - A Windows programming framework for Lua
@@ -93,10 +93,9 @@ function button:onClick()
     local dir = update and sys.Directory(update) or ui.dirdialog("Select a directory to install LuaRT")
     if dir ~= nil then
         win.installation = true
-        local label = ui.Label(win, "", 40, 190)
+        local label = ui.Label(win, "", 40, 190, 312)
         label.autosize = false        
         label.fontsize = 8
-        label.width = 312
         label.textalign = "left"
         label.fgcolor = 0x002A5A
         local bar = ui.Progressbar(win, 40, 170, 306)
@@ -147,11 +146,12 @@ function button:onClick()
             startmenu_dir:make()
         end
         shortcut("QuickRT", dir.fullpath.."\\QuickRT\\QuickRT.exe")
+        shortcut("LuaRT Update", dir.fullpath.."\\bin\\update.exe")
         shortcut("LuaRT Studio", dir.fullpath.."\\LuaRT-Studio\\LuaRT Studio.exe")
         shortcut("LuaRT Documentation", "https://luart.org/doc/index.html", sys.env.windir.."\\system32\\shell32.dll, 13")
         win.installation = false
-        label.textalign = "center"
         label.text = "LuaRT "..VERSION.." has been successfully installed"
+        label.textalign = "center"
     end
 end
 

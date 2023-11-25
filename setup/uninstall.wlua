@@ -1,4 +1,4 @@
-﻿local VERSION = '1.5.2'
+﻿local VERSION = '1.6.0'
 --[[
  | LuaRT - A Windows programming framework for Lua
  | Luart.org, Copyright (c) Tine Samir 2023.
@@ -11,7 +11,7 @@
 
 local ui = require "ui"
 
-local File = embed.File
+local File = embed and embed.File or sys.File
 
 local exe = sys.File(arg[0])
 local tmpexe = sys.File(sys.env.TEMP..'\\'..exe.name)
@@ -19,7 +19,7 @@ local tmpexe = sys.File(sys.env.TEMP..'\\'..exe.name)
 if exe.fullpath ~= tmpexe.fullpath then
     tmpexe:remove()
     exe:copy(tmpexe.fullpath)
-    sys.cmd('start '..tmpexe.fullpath)
+    sys.cmd('start '..tmpexe.fullpath, true, true)
     sys.exit()
 end
 
