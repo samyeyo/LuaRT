@@ -190,7 +190,7 @@ luart-static: $(BASE_O) $(UI_O) $(STATIC_O) infostatic
 rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
-	@$(RM) $(DEST)\update.exe >nul 2>&1
+	@$(RM) $(DEST)\rtcheck.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\..\tools\rtc\src >nul
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building rtc compiler          "
@@ -241,9 +241,9 @@ buildtools: infotools rtc
 	@echo|set /p dummy="■"
 	@xcopy "..\..\modules"  "..\..\tools\LuaRT-Studio\modules\" /s /e /y >nul
 	@echo|set /p dummy="■"
-	@..\..\bin\rtc.exe -s -w -i ..\..\setup\img\update.ico ..\..\setup\update.lua ..\..\setup\img\ 2>&1 >nul
-	@-copy /Y update.exe "..\..\tools\LuaRT-Studio\bin\update.exe" 2>&1 >nul
-	@-move /Y update.exe ..\..\bin 2>&1 >nul
+	@..\..\bin\rtc.exe -s -w -o rtcheck.exe -i ..\..\setup\img\update.ico ..\..\setup\update.lua ..\..\setup\img\ 2>&1 >nul
+	@-copy /Y rtcheck.exe "..\..\tools\LuaRT-Studio\bin\rtcheck.exe" 2>&1 >nul
+	@-move /Y rtcheck.exe ..\..\bin 2>&1 >nul
 	@echo|set /p dummy="■"
 
 setup: toolchain tools buildtools infosetup

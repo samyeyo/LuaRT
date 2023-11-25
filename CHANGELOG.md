@@ -8,7 +8,7 @@
 
 #### LuaRT toolchain
 - Updated: Using ``require()`` to load ``.wlua`` files is now possible
-- New: New tool `update.exe` to check/install LuaRT updates
+- New: New tool `rtcheck.exe` to check/install LuaRT updates
 - Fixed: `rtc` compiled executables with embedded modules can have now multiple running instances (Fixes #124)
 - Fixed: `QuickRT` now pretty prints correctly `Object` values (Fixes #9).
 - Fixed: `wluart.exe` don't crash anymore in case of error (Fixes #121)
