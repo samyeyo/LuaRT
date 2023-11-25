@@ -458,6 +458,7 @@ static void WidgetAutosize(Widget *w) {
 done:
 	if (w->wtype == UIEntry)
 	 	Edit_SetSel(w->handle, 0, 0);
+	InvalidateRect(w->handle, NULL, TRUE);
 	UpdateWindow(w->handle);
     free(str);
 }
@@ -557,8 +558,12 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
         w->hcursor = wp->hcursor ? wp->hcursor : LoadCursor(NULL, IDC_ARROW);
     w->wtype = type;
 	w->align = -1;	
-	if ((w->autosize = autosize) && (lua_gettop(L) < idx+2))
-        WidgetAutosize(w);
+	if ((w->autosize = autosize)) {
+		if (lua_gettop(L) < idx+2)
+        	WidgetAutosize(w);
+		else
+			w->autosize = FALSE;
+	}
 	GetWindowPlacement(h, &w->wp);
     lua_newinstance(L, w, Widget);
     lua_pushvalue(L, 1);
@@ -783,7 +788,8 @@ int size(Widget *widget, lua_State *L, int offset_from, int offset_to, BOOL set,
 				r.bottom = floor(value);
 			AdjustWindowRectEx(&r, GetWindowLongPtr(h, GWL_STYLE), FALSE, GetWindowLongPtr(h, GWL_EXSTYLE));
 			len = (*(LONG*)(((char*)&r)+offset_from))-(*(LONG*)(((char*)&r)+offset_to));
-		}
+		} else if (w->autosize)
+			w->autosize = FALSE;
 		SetWindowPos(h, NULL, 0, 0, iswidth ? len : r.right-r.left, iswidth ? r.bottom-r.top : len, SWP_NOMOVE | SWP_NOZORDER);
 		RedrawWindow(GetParent(h), NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 		GetWindowPlacement(h, &w->wp);
