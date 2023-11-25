@@ -52,9 +52,11 @@ endif
 ifeq ($(STATIC), TRUE)
  LUA_API = 
 else
+ LUA_API = -DLUA_BUILD_AS_DLL
+ifneq ($(NOMSG), TRUE)
 $(info)
 $(info ━━━━━━━━━━━━━━━━━━━━  Building LuaRT $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE) for $(PLATFORM)  ━━━━━━━━━━━━━━━━━━━━)
- LUA_API = -DLUA_BUILD_AS_DLL
+endif
 endif
 DEFINES= -DLUART_MINOR=$(LUART_MINOR) -DLUART_MAJOR=$(LUART_MAJOR) -DLUART_RELEASE=$(LUART_RELEASE)
 DEFINES_RES= --target=$(TARGET) -D LUART_MINOR=$(LUART_MINOR) -D LUART_MAJOR=$(LUART_MAJOR) -D LUART_RELEASE=$(LUART_RELEASE)
@@ -64,7 +66,7 @@ BUILD := release
 DEST= ..\..\bin
 cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -O2 -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" $(LUA_API) -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\include" -Wall -Wextra -I"." -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
 ldflags.release= -static-libgcc -lm -Wl,--no-insert-timestamp -lgdi32 -L"." 
-cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\include" -I"." 
+cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" $(LUA_API) -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\include" -I"." 
 ldflags.debug= -g -static-libgcc -lm -lgdi32 -L"."
 
 CC= gcc
@@ -109,7 +111,7 @@ infotoolchain:
 
 infotools:
 	@cmd /c echo.
-	@echo|set /p dummy="▸  Building QuickRT and LuaRT Studio library  "
+	@echo|set /p dummy="▸  Building QuickRT/LuaRT Studio  "
 
 infosetup:
 	@cmd /c echo.
@@ -125,9 +127,15 @@ static:
 	@$(RM) $(UI_O)  >nul 2>&1
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building static executables    "
-	@$(MAKE) --no-print-directory luart-static STATIC=TRUE
+	@$(MAKE) --no-print-directory luart-static BUILD=$(BUILD) STATIC=TRUE NOMSG=TRUE
 
-toolchain: lua core $(LUA_A) infotoolchain $(LUART_T) $(LUAWRT_T) static $(DEST)\rtc.exe $(DEST)\wrtc.exe
+toolchain: static
+	@$(RM) $(BASE_O)  >nul 2>&1
+	@$(RM) $(STATIC_O) >nul 2>&1
+	@$(RM) $(UI_O)  >nul 2>&1
+	@$(MAKE) --no-print-directory nexttoolchain BUILD=$(BUILD) STATIC=FALSE NOMSG=TRUE
+
+nexttoolchain: lua core $(LUA_A) infotoolchain $(LUART_T) $(LUAWRT_T) $(DEST)\rtc.exe $(DEST)\wrtc.exe
 	@cmd /c echo.
 
 all: clean toolchain tools
@@ -152,20 +160,19 @@ libsensapi.a:
 	@$(RM) SensApi.def
 
 debug:
-	$(MAKE) "BUILD=debug"
+	@$(MAKE) --no-print-directory "BUILD=debug" NOMSG=TRUE
 
 x64: clean
-	@$(MAKE) "PLATFORM=x64"
+	@$(MAKE) --no-print-directory "PLATFORM=x64" NOMSG=TRUE
 
 x86: clean
-	@$(MAKE) "PLATFORM=x86"
+	@$(MAKE) --no-print-directory "PLATFORM=x86" NOMSG=TRUE
 
 setup: toolchain tools infosetup
 	@echo|set /p dummy="■"
 	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@echo|set /p dummy="■"
-	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul
-	@cmd /c echo.
+	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).zip ..\..\LuaRT-$(VERSION)-$(PLATFORM).zip >nul
 
 luart-static: $(BASE_O) $(UI_O) $(STATIC_O)
 	@windres $(DEFINES_RES) -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
@@ -180,7 +187,7 @@ luart-static: $(BASE_O) $(UI_O) $(STATIC_O)
 	@-copy /Y luart-static.exe $(DEST)\luart-static.exe >nul
 
 $(LUA_A): $(BASE_O)
-	@$(CXX) -shared $(CFLAGS) -static-libstdc++ -fno-rtti -o $@ $(BASE_O) $(DLLLDSCRIPT) $(LDFLAGS) $(LIBS) -Wl,--out-implib,liblua54.a  >nul 2>&1
+	@$(CXX) -shared $(CFLAGS) -static-libstdc++ -fno-rtti -o $@ $(BASE_O) $(DLLLDSCRIPT) $(LDFLAGS) $(LIBS) -Wl,--out-implib,liblua54.a >nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 	@-copy /Y liblua54.a "..\..\lib\liblua54.a" >nul
@@ -188,7 +195,8 @@ $(LUA_A): $(BASE_O)
 $(LUART_T): $(LUA_A) luart.c
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ -mconsole luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT) >nul 2>&1
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ -mconsole luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)
+#>nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
@@ -199,13 +207,13 @@ $(LUAWRT_T): $(LUA_A) $(UI_O) luart.c ui\ui.o
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
-$(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) static ..\..\tools\rtc\src\rtc.lua
+$(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) ..\..\tools\rtc\src\rtc.lua
 	@$(RM) $(DEST)\rtc.exe >nul 2>&1
 	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\..\tools\rtc\src >nul
 	@windres $(DEFINES_RES) -D RTC -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)  >nul 2>&1
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o luart.exe -mconsole -DRTC luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT) >nul 2>&1
 	@luart.exe ..\..\tools\rtc\src\rtc.lua -o rtc.exe ..\..\tools\rtc\src >nul
 	@echo|set /p dummy="■"
 	@windres $(DEFINES_RES) -D RTC -I"." -I"./lua/" -D RTWIN resources\resource.rc -o resource.o
@@ -219,16 +227,21 @@ $(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) static ..\..\t
 	@$(RM) wluart.exe >nul 2>&1
 	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1 
 
+staticui: $(UI_O)
+
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-dirtools: infotools $(DEST)\rtc.exe $(DEST)\wrtc.exe
+tools: infotools
+	@$(RM) $(UI_O)  >nul 2>&1
+	@$(MAKE) --no-print-directory staticui BUILD=$(BUILD) STATIC=TRUE NOMSG=TRUE
 	@$(CC) $(CFLAGS) -DAIO -c lrtapi.c -o lrtapi.o
 	@echo|set /p dummy="■"
-	@$(CXX) $(CFLAGS) -static-libstdc++ -fno-rtti -DAIO -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT) >nul 2>&1
+	@$(CXX) -shared $(CFLAGS) -static-libstdc++ -fno-rtti -DAIO -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT)
+#>nul 2>&1
 	@echo|set /p dummy="■"
 	@rtc -i ..\..\tools\QuickRT\contrib\quickrt.ico ..\..\tools\QuickRT\src\quickrt.lua -o ..\..\tools\QuickRT\QuickRT.exe ..\..\tools\QuickRT\src >nul
 	@-copy /Y lua54.dll ..\..\tools\QuickRT\lua54.dll >nul	
 	@echo|set /p dummy="■"	
-	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -c lrtapi.c -o lrtapi.o
+	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -c lrtapi.c -o lrtapi.o
 	@echo|set /p dummy="■"
 	@$(CXX) $(CFLAGS) -static-libstdc++ -fno-rtti -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT) >nul 2>&1
 	@echo|set /p dummy="■"
@@ -288,4 +301,5 @@ clean:
 
 ALL= all
 
-.PHONY: all clean
+
+.PHONY: clean
