@@ -37,6 +37,13 @@ Lua multipurpose programming framework to develop Windows applications
 - LuaRT Studio: a Lua/LuaRT IDE for Windows to develop and debug desktop/console applications
   
 ## :small_blue_diamond:Installation
+    
+> :arrows_clockwise: *Updating LuaRT*
+> 
+> *If you have already installed LuaRT and want to update to latest release version, you can use one of those two methods :*
+> - *Run the `LuaRT Update` application from the Windows Start menu*
+> - *From the `File` menu of `LuaRT Studio`, choose `Check for LuaRT update`*
+> 
 
 #### Method 1 : Release package :package:
 

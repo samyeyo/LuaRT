@@ -1,3 +1,94 @@
+## LuaRT v1.6.0 (Nov 26 2023)
+
+#### Highlights 
+- This release focuses on fixing many bugs in the `ui` module, to prepare for the launch of the LuaRT GUI builder
+- It also offers many suggestions proposed by LuaRT users
+- New: `ini` module to convert from/to Windows INI configuration file from/to Lua table
+- New: ``Panel`` widget that can contain other child widgets
+
+#### LuaRT toolchain
+- Updated: Using ``require()`` to load ``.wlua`` files is now possible
+- New: New tool `update.exe` to check/install LuaRT updates
+- Fixed: `rtc` compiled executables with embedded modules can have now multiple running instances (Fixes #124)
+- Fixed: `QuickRT` now pretty prints correctly `Object` values (Fixes #9).
+- Fixed: `wluart.exe` don't crash anymore in case of error (Fixes #121)
+- Fixed: `wluart.exe` errors are now shown, without the empty "Runtime error" message box (Fixes #123)
+
+#### LuaRT Studio
+- Updated: LuaRT Studio is now using the LuaRT 1.6.0 toolchain
+- New: New `Check for LuaRT update` command in `File` menu
+- New: New toolbar icon for the "Analyze" command
+- Updated: `Help` menu now contains links related to LuaRT webiste
+- Fixed: Debugging a script that contains a call to the `Task:wait()` method won't crash the program anymore (Fixes #20)
+- Fixed: Clicking on the "stop" button will now really stop the running program (Fixes #19)
+
+#### LuaRT documentation
+- Updated: now the documentation contains all new LuaRT 1.6.0 changes, and a lot of fixes
+- Fixed: ``Canvas`` documentation for transformations methods are now published as expected
+
+#### Examples
+- Updated: `net\download.lua` hides now the cursor during downloading
+- Updated: `ui\notepad.wlua` can now open *.rtf files
+- Fixed: `net\server.wlua` now shows text as expected
+- Fixed: Syntax highlighting fixed in `ui\zoom.wlua`
+
+#### `sys` module
+- Updated: `sys.cmd()` now has a third argument to specify whether the launched process is a standalone one or a child process
+- Fixed: Setting a number `COM` property value don't cause an error anymore when using a string (Fixes #113)
+- Fixed: ``COM`` objects don't crash once garbage collection/program exit (Fixes #116)
+- Fixed: ``Datetime:interval()`` now returns a to...from interval as expected (Fixes #114)
+
+#### `console` module
+- Fixed: `console.reset()` now resets cursor height too
+
+#### `net` module
+- Fixed: `Http` object can now send new requests without crashing (Fixes #149)
+
+#### `ui` module
+- New: ``Panel`` widget that can contain other child widgets
+- New: `Edit.rtf` property to set Rich Text Format mode without loosing content
+- Updated: `Edit.richtext` property now set/get the current Edit content in Rich Text Format
+- Updated: Setting ``Edit.text`` property won't scroll the content to the bottom anymore
+- Updated: Autosized widgets now conforms more with Windows UI standards
+- Updated: `Widget.align` now remembers last widget position and size
+- Updated: `Widget.bgcolor` property now returns `nil` if bgcolor was not previously set, meaning the widget uses the parent background color
+- Updated: `List.selected`, `Tree.selected` and `Combobox.selected` can now be set to `nil` to unselect current selection
+- Fixed: Examples using `Edit.color` instead of `Edit.fgcolor` since LuaRT 1.5.0 are now fixed
+- Fixed: ``Label.bgcolor`` and ``Label.fgcolor`` cannot be set when ``Label`` is inside a ``TabItem`` (Fixes #119)
+- Fixed: ``ui.run()`` ``Task`` won't run indefinitely anymore in some cases
+- Fixed: ``Groupbox`` child widgets events now provides the correct `self` (Fixes #125)
+- Fixed: `Tab.cursor` property don't set cursor for `TabItems`, only on the tabsheet part (Fixes #134)
+- Fixed: `Tab` don't align TabItems correctly when setting the `Tab.align` property (Fixes #128)
+- Fixed: Widget background color may not be drawn correctly (Fixes #127)
+- Fixed: Clicking on a `List` blank space unselects the current selected item (Fixes #143)
+- Fixed: Deleting a `Treeitem` may crash the program (Fixes #137)
+- Fixed: `Entry` is still focused when ENTER/RETURN key is pressed (Fixes #135)
+- Fixed: `Groupbox` does not dispatch the `onClick()` event to its child widgets as expected (Fixes #147)
+- Fixed: `Window:maximize()` does not work on first display (Fixes #142)
+- Fixed: `Picture:load()` don't adjust image to `Picture` alignment (Fixes #132)
+- Fixed: `Label.textalign` returns `"center"` instead of `"right"` when text alignement was previously set to right (Fixes #139)
+- Fixed: Widgets property `tooltip` returns incorrect or empty string (Fixes #138)
+- Fixed: Centering a Widget with the `center()` method in a `Window` with a status bar resulting in a vertical position too far up (Fixes #146)
+- Fixed: `Picture:load()` don't adjust image to `Picture` alignment (Fixes #132)
+- Fixed: `Progressbar.fgcolor` and `Progressbar.bgcolor` return wrong `0x000000` colors in non themed mode (Fixes #131)
+- Fixed: `ui.opendialog()` and `ui.savedialog()` should not change current directory (Fixes #133) 
+- Fixed: Clicking on a `MenuItem` without an `onClick` event handler should not throw a runtime error (Fixes #145)
+- Fixed: `ListItem:loadicon()` `TabItem:loadicon()` `ComboItem:loadicon()` and `TreeItem:loadicon()` don't remove icon when called with a `nil` value (Fixes #129)
+- Fixed: Setting `Edit.text` property don't work when `Edit.richedit` is set to `true` (Fixes #130)
+- Fixed: `Edit:load()` and `Edit:save()` methods don't closes the file (Fixes #148)
+
+#### `webview` module
+- New: `Webview.acceleratorkeys` property 
+- Updated: ``Webview:eval()`` now returns a `Task` that will be finished once the Javascript engine has returned the result
+- Updated: `Webview:onResult()` event removed due to the `eval()` rework
+- Updated: `hostfromfolder()` now allows local resource access when using `loadstring()`
+- Fixed: Compiling ``Webview`` module won't throw library missing errors anymore
+
+#### `json` module
+- New: `json.load()` and `json.save()` to load/save lua table from/to a JSON file
+- Fixed : `json.encode()` failed memory allocation fixed (Fixes #117)
+- Fixed : `json.encode()` now encodes Lua `"null"` values to JSON `null` (Fixes #118)
+
 ## LuaRT v1.5.2 Bugfix (Sept 16 2023)
 
 #### LuaRT installer
