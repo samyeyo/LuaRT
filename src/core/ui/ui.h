@@ -41,7 +41,6 @@ static const PSTR cursors_values[] = {
 LUA_API  luart_type TWidgetItem;
 
 void new_items_mt(lua_State *L, Widget *w);
-LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 #define get_item(w, i) __get_item(w, i, NULL)
 void *__get_item(Widget *w, int idx, HTREEITEM hti);
 #define push_item(L, w, i) __push_item(L, w, i, NULL)
