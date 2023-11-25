@@ -411,7 +411,7 @@ static int do_request(lua_State *L, Http *h, const char *verb) {
     h->received = "";
     h->url += h->host + uri;
     if (h->hRequest)
-        CloseHandle(h->hRequest);
+        InternetCloseHandle(h->hRequest);
     if ( (h->hRequest = HttpOpenRequestA(h->hConnect, h->method.c_str(), uri.c_str(), NULL, NULL, NULL, INTERNET_FLAG_KEEP_CONNECTION | INTERNET_FLAG_NO_CACHE_WRITE | (h->ssl ? INTERNET_FLAG_SECURE : 0), (DWORD_PTR)h)) ) {
         DWORD error = ERROR_SUCCESS;
         
