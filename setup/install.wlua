@@ -50,14 +50,13 @@ if update then
         local numcurr = current:gsub("%.", "")
         if current == VERSION then
             caption = "Reinstall"
-            update = false
         elseif numcurr > numver then
             caption = "Downgrade to"
         else
             caption = "Update to"
         end
     else
-        ui.info("Failed to get LuaRT version")
+        caption = "Repair"
     end
 end
 
@@ -89,9 +88,35 @@ local function shortcut(name, target, icon)
     shortcut:Save()
 end
 
+local function isopen(path, name)
+    local f = sys.File(path)
+    if f.exists then
+        local try, err = pcall(f.open, f, "write")
+        if try == false then
+            win:hide()
+            error(name.." is currently running\nPlease close "..name.." and retry installation")
+        else
+            f:close()
+            f:remove()
+        end
+    end
+end
+
 function button:onClick()
     local dir = update and sys.Directory(update) or ui.dirdialog("Select a directory to install LuaRT")
+    if update then 
+        ui.warn("Before installing, make sure to close any LuaRT-related programs.")
+    end
     if dir ~= nil then
+        isopen(dir.fullpath.."/bin/luart.exe", "LuaRT console interpreter")        
+        isopen(dir.fullpath.."/bin/wluart.exe", "LuaRT console interpreter")       
+        isopen(dir.fullpath.."/bin/rtc.exe", "rtc compiler")        
+        isopen(dir.fullpath.."/bin/wrtc.exe", "wrtc compiler")        
+        isopen(dir.fullpath.."/bin/update.exe", "LuaRT update checker")        
+        isopen(dir.fullpath.."/bin/luart-static.exe", "LuaRT console interpreter")      
+        isopen(dir.fullpath.."/bin/wluart-static.exe", "LuaRT console interpreter")     
+        isopen(dir.fullpath.."/LuaRT-Studio/LuaRT Studio.exe", "LuaRT Studio")      
+        isopen(dir.fullpath.."/QuickRT/QuickRT.exe", "QuickRT")      
         win.installation = true
         local label = ui.Label(win, "", 40, 190, 312)
         label.autosize = false        
@@ -107,7 +132,7 @@ function button:onClick()
         local size = 0
         self:hide()
         for entry, isdir in each(archive) do
-             if not isdir then
+            if not isdir then
                 local fname = entry:gsub('/', '\\')
                 label.text = "Extracting "..fname:sub(1, 40).."..."
                 local result = archive:extract(entry, dir)
