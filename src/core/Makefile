@@ -173,6 +173,12 @@ $(LUAWRT_T): $(BASE_O) $(UI_O)
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
+!if "$(BUILD)" == "debug"
+luart-static: 
+
+rtc:
+
+!else
 luart-static: $(BASE_O) $(UI_O) $(STATIC_O) infostatic
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul
 	@echo|set /p dummy="■"
@@ -210,7 +216,7 @@ rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
 	@$(RM) luart.exe >nul 2>&1
 	@$(RM) wluart.exe >nul 2>&1
 	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1 
-
+!endif
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
 buildtools: infotools rtc
