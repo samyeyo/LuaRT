@@ -6,7 +6,7 @@ local file = sys.File(sys.File(arg[1]).path.."/messages.html")
 
 local win = ui.Window("Webview test", 640, 540)
 
-local wv = ui.Webview(win, file.fullpath, 0, 46)
+local wv = ui.Webview(win, file.fullpath, 0, 46, 540, 500)
 wv.align = "bottom"
 
 local button = ui.Button(win, "Change color !", 0, 0)
