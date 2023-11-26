@@ -30,12 +30,6 @@
 
 #include "..\resources\resource.h"
 
-#ifdef _MSC_VER
-__declspec(dllimport) lua_CFunction update;
-#else
-lua_CFunction update;
-#endif
-
 static HMODULE richeditlib;
 int UIWindow;
 int UIButton;
@@ -821,6 +815,5 @@ int luaopen_ui(lua_State *L) {
 	lua_widgetdestructor = Widget_destructor;
 	lua_widgetproc = WidgetProc;
 	WIDGET_METHODS = Widget_methods;
-	update = do_update;
 	return 1;
 }

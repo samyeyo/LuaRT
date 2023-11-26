@@ -100,9 +100,13 @@ int resume_task(lua_State *L, Task *t, int args) {
 
 //-------- Task scheduler
 int update_tasks(lua_State *L) {
+	bool terminated = false;
+
 	for (auto it = Tasks.begin(); it != Tasks.end(); ++it) {
 		Task *t = *it;
 		switch (t->status) {
+			case TTerminated:	terminated = true;
+								break;
 			case TSleep:	
 							if (t->sleep < GetTickCount64()) {	
 								t->sleep = 0;
@@ -124,17 +128,16 @@ int update_tasks(lua_State *L) {
 			default:		break;
 		}		
 	}
-	if (update)
-		update(L);
-	for (auto it = Tasks.begin(); it != Tasks.end();) {
-		Task *tt = *it;
-		if (tt->status == TTerminated) {
-			luaL_unref(L, LUA_REGISTRYINDEX, tt->ref);
-			luaL_unref(L, LUA_REGISTRYINDEX, tt->taskref);
-			tt->ref = -1;
-			it = Tasks.erase(it);
-		} else ++it;
-	}	
+	if (terminated)
+		for (auto it = Tasks.begin(); it != Tasks.end();) {
+			Task *tt = *it;
+			if (tt->status == TTerminated) {
+				luaL_unref(L, LUA_REGISTRYINDEX, tt->ref);
+				luaL_unref(L, LUA_REGISTRYINDEX, tt->taskref);
+				tt->ref = -1;
+				it = Tasks.erase(it);
+			} else ++it;
+		}	
 	return 0;
 }
 
