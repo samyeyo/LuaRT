@@ -38,6 +38,7 @@
 - Fixed: Syntax highlighting fixed in `ui\zoom.wlua`
 
 #### `sys` module
+- Updated: Faster `Task` switching in internal scheduler providing more responsiveness
 - Updated: `sys.cmd()` now has a third argument to specify whether the launched process is a standalone one or a child process
 - Fixed: Setting a number `COM` property value don't cause an error anymore when using a string (Fixes #113)
 - Fixed: ``COM`` objects don't crash once garbage collection/program exit (Fixes #116)
