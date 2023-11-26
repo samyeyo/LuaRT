@@ -22,6 +22,11 @@
 - Fixed: Debugging a script that contains a call to the `Task:wait()` method won't crash the program anymore (Fixes #20)
 - Fixed: Clicking on the "stop" button will now really stop the running program (Fixes #19)
 
+#### QuickRT
+- Updated: QuickRT now uses LuaRT 1.6.0 runtime (Lua 5.4.6 VM)
+- Fixed: interacting with `ui` widgets and windows won't hang the GUI anymore
+- Fixed: Pretty printing of LuaRT `Object` is now fixed
+
 #### LuaRT documentation
 - Updated: now the documentation contains all new LuaRT 1.6.0 changes, and a lot of fixes
 - Fixed: ``Canvas`` documentation for transformations methods are now published as expected
