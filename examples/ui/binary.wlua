@@ -38,26 +38,22 @@ function clean(buff)
   return result
 end
 
--- Read data task by 16 bytes chunks
-local function readdata(file)
-  while true do
-    local data = file:read(16)
-    if #data == 0 then
-      break
-    end
-    edit:append(string.gsub(data:encode("hex"), "%w%w", function (byte) return byte.." " end).."  "..clean(data).."\n")
-    coroutine.yield()
-  end
-end
-
 local file = ui.opendialog("Select a file to view its binary content", false, "All files (*.*)|*.*")
 file:open("read", "binary")
- 
--- use a coroutine to keep loading the file while updating the ui (for big files)
-local task = coroutine.create(readdata)
 
--- update user interface
-repeat
-	ui.update()
-  coroutine.resume(task, file)
-until not win.visible
+-- use a Task to keep loading the file while updating the ui (for big files)
+async(function ()
+  while true do
+    for i = 1, 64 do
+      local data = file:read(16)
+      if #data == 0 then
+        return
+      end
+      edit:append(string.gsub(data:encode("hex"), "%w%w", function (byte) return byte.." " end).."  "..clean(data).."\n")
+    end
+    sleep()
+  end  
+end)
+
+-- update user interface Task concurrently
+ui.run(win):wait()
