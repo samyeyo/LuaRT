@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023.
+ | Luart.org, Copyright (c) Tine Samir 2024.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Widget.c | LuaRT Widget object implementation
@@ -26,7 +26,7 @@ const char *luart_wtypes[] = {
 };
 
 const char *events[] = {
-	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick", "onKey", "onMouseUp", "onMouseDown", NULL };
+	"onHide", "onShow", "onMove", "onResize", "onHover", "onLeave", "onClose", "onClick", "onDoubleClick", "onContext", "onCreate", "onCaret", "onChange", "onSelect", "onTrayClick", "onTrayDoubleClick", "onTrayContext", "onTrayHover", "onClick", "onKey", "onMouseUp", "onMouseDown", "onMaximize", "onMinimize", "onRestore", NULL };
 
 const char *cursors[] = {
 	"arrow", "working", "cross", "hand", "help", "ibeam", "forbidden", "cardinal", "horizontal", "vertical", "leftdiagonal", "rightdiagonal", "up", "wait", "none"
@@ -157,8 +157,8 @@ int ProcessUIMessage(HWND hwnd, Widget *w, UINT uMsg, WPARAM wParam, LPARAM lPar
 						SetFocus(GetParent(w->handle));
 						SendMessageW(w->handle, WM_UPDATEUISTATE, MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS), 0);
 						free(text);
-						lua_indexevent(w, onSelect, idx);
 						UpdateWindow(GetParent(w->handle));
+						lua_indexevent(w, onSelect, idx);
 						return FALSE;
 					}
 				}
@@ -324,7 +324,7 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				lua_callevent(w, onShow);
 			break;
 		case WM_NCHITTEST:
-			if (w->ismain)
+			if (w->isactive)
 				return HTTRANSPARENT;
 			if (w->wtype == UIGroup) 
 				return HTCLIENT;
@@ -521,6 +521,7 @@ Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, S
     	SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
     	SetFontFromWidget(w, wp);
     	SetWindowSubclass(h, proc ? proc : WidgetProc, 0, 0);
+		GetWindowPlacement(h, &w->wp);
     	lua_callevent(w, onCreate);
 	}
     return w;
@@ -548,15 +549,15 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
         id = (HMENU)(((UINT_PTR)++wp->status));
 #endif
     w = calloc(1, sizeof(Widget));
-    h = CreateWindowExW(exstyle, classname, text, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type-UIWindow-1]), (int)luaL_optinteger(L, idx+3, defheight[type-UIWindow-1]), hParent, id, hInstance, NULL);
+    h = CreateWindowExW(exstyle, classname, text, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | style, (int)luaL_optinteger(L, idx, 8), (int)luaL_optinteger(L, idx+1, 10), (int)luaL_optinteger(L, idx+2, width[type-UIWindow-1]), type == UICombo ? height[UICombo-UIWindow-1] : (int)luaL_optinteger(L, idx+3, defheight[type-UIWindow-1]), hParent, id, hInstance, NULL);
     free(text);
     w->handle = h;
     SetWindowLongPtr(h, GWLP_USERDATA, (ULONG_PTR)w);
     SetFontFromWidget(w, wp);
 	w->wp.length = sizeof(WINDOWPLACEMENT);
-    if (type != UIEdit)
-        w->hcursor = wp->hcursor ? wp->hcursor : LoadCursor(NULL, IDC_ARROW);
     w->wtype = type;
+    if (type != UIEdit)
+    	w->hcursor = wp->hcursor ? wp->hcursor : LoadCursor(NULL, IDC_ARROW);
 	w->align = -1;	
 	if ((w->autosize = autosize)) {
 		if (lua_gettop(L) < idx+2)
@@ -762,7 +763,7 @@ LUA_PROPERTY_SET(Widget, text) {
 	}
 	SetWindowTextW(w->handle, text);
 	if (w->wtype == UIEntry)
-		SendMessage(w->handle, EM_SETSEL, len, len);
+		SendMessage(w->handle, EM_SETSEL, 0, 0);
 	else if (w->autosize)
 		WidgetAutosize(w);
 	UpdateWindow(w->handle);
@@ -775,9 +776,15 @@ int size(Widget *widget, lua_State *L, int offset_from, int offset_to, BOOL set,
 	HWND h = w->handle;
 	RECT r;
 	LONG len;
-	if (w->wtype == UIWindow)
+	if (w->wtype == UIWindow) {
 		GetClientRect(h,&r);
-	else
+		if (w->menu && IsWindowVisible(h)) {
+			MENUBARINFO mbi;
+			mbi.cbSize = sizeof(MENUBARINFO);
+			GetMenuBarInfo(h, OBJID_MENU, 0, &mbi);
+			r.bottom += mbi.rcBar.bottom - mbi.rcBar.top+1;				
+		}
+	} else
 		GetWindowRect(h, &r);
 	len = set ? floor(value) : (*(LONG*)(((char*)&r)+offset_from))-(*(LONG*)(((char*)&r)+offset_to));
 	if (set) {
@@ -790,12 +797,15 @@ int size(Widget *widget, lua_State *L, int offset_from, int offset_to, BOOL set,
 			len = (*(LONG*)(((char*)&r)+offset_from))-(*(LONG*)(((char*)&r)+offset_to));
 		} else if (w->autosize)
 			w->autosize = FALSE;
+		if ((w->wtype == UICombo) && (r.bottom-r.top < 100))
+			r.top += 100;
 		SetWindowPos(h, NULL, 0, 0, iswidth ? len : r.right-r.left, iswidth ? r.bottom-r.top : len, SWP_NOMOVE | SWP_NOZORDER);
 		RedrawWindow(GetParent(h), NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 		GetWindowPlacement(h, &w->wp);
 	}
-	else 
+	else {
 		lua_pushinteger(L, len);
+	}
 	return 1;
 }
 
@@ -1231,28 +1241,28 @@ LUA_METHOD(Widget, loadicon) {
 
 LUA_METHOD(Widget, center) {
 	Widget *w = lua_self(L, 1, Widget);
-    HWND hParent = GetParent(w->handle);
-    RECT rp, rw;
-    GetClientRect(hParent, &rp);
+    RECT rw;
     GetWindowRect(w->handle, &rw);
 	
 	if (w->wtype != UIWindow) {
+		RECT rp;
+		HWND hParent = GetParent(w->handle);
 		Widget *win = (Widget*)GetWindowLongPtr(hParent, GWLP_USERDATA);
+		
+		GetClientRect(hParent, &rp);
 		rw.bottom -= rw.top;
 		rw.right -= rw.left;
 		rw.left = rw.top = 0;
 		rw.top = (rp.bottom - rw.bottom)/2;
 		rw.left = (rp.right - rw.right)/2;
-		if (win) {
-			if (win->status) {	
-				RECT sr;
-				GetWindowRect(win->status, &sr);
-				rw.top -= (sr.bottom-sr.top)/2;
-			} else if (win->wtype == UIGroup)
-				rw.top += 22;
-		}
+		if (win && (win->wtype == UIWindow) && win->status) {	
+			RECT sr;
+			GetWindowRect(win->status, &sr);
+			rw.top -= (sr.bottom-sr.top)/2;
+		} 		
 		SetWindowPos(w->handle, NULL, rw.left, rw.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-	} else SetWindowPos(w->handle, 0, GetSystemMetrics(SM_CXSCREEN)/2 - (rw.right-rw.left)/2, GetSystemMetrics(SM_CYSCREEN)/2 - (rw.bottom-rw.top)/2, rw.right, rw.bottom, SWP_NOZORDER | SWP_NOSIZE);
+	} else 
+		SetWindowPos(w->handle, 0, GetSystemMetrics(SM_CXSCREEN)/2 - (rw.right-rw.left)/2, GetSystemMetrics(SM_CYSCREEN)/2 - (rw.bottom-rw.top)/2, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 	return 0;	
 }
 
@@ -1266,10 +1276,10 @@ LUA_METHOD(Picture, load) {
 		DeleteObject(w->status);
 		w->status = h;
 		GetObject(h, sizeof(BITMAP), &bm);
-		SetWindowPos(w->handle, NULL, 0, 0, bm.bmWidth, bm.bmHeight,SWP_NOZORDER | SWP_NOMOVE);
+		SetWindowPos(w->handle, NULL, 0, 0, luaL_optinteger(L, 3, bm.bmWidth), luaL_optinteger(L, 3, bm.bmHeight),SWP_NOZORDER | SWP_NOMOVE);
 		SendMessage(w->handle, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
 	}
-	lua_pushboolean(L, !h);
+	lua_pushboolean(L, h != 0);
 	do_align(w);
 	return 1;
 }
@@ -1455,7 +1465,13 @@ LUA_PROPERTY_GET(Calendar, date) {
 }
 
 LUA_PROPERTY_SET(Calendar, date) {
-	SendMessage(lua_self(L, 1, Widget)->handle, MCM_SETCURSEL, 0, (LPARAM) luaL_checkcinstance(L, 2, Datetime)->st);
+	int idx = 2;
+	if (lua_type(L, 2) == LUA_TSTRING) {
+		lua_pushvalue(L, 2);
+		lua_pushinstance(L, Datetime, 1);
+		idx = -1;
+	}
+	SendMessage(lua_self(L, 1, Widget)->handle, MCM_SETCURSEL, 0, (LPARAM) luaL_checkcinstance(L, idx, Datetime)->st);
 	return 0;
 }
 
