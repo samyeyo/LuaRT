@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Task.c | LuaRT Task object implementation
@@ -25,7 +25,7 @@ LUA_CONSTRUCTOR(Task) {
 //----------------------------------[ Task.cancel() ]
 LUA_METHOD(Task, cancel) {
 	Task *t = lua_self(L, 1, Task);
-	if (t->status >= TRunning) {
+	if (t->status < TTerminated) {
 		lua_pushboolean(L, TRUE);
 		close_task(L, t);
 	} else lua_pushboolean(L, FALSE); 
