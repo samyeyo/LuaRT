@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Items.c | LuaRT Tree, List, Combobox, Tab and associated items object implementation
@@ -133,6 +133,53 @@ static wchar_t *get_text(HWND h, void *item, wchar_t **buff, int *len, UINT msg,
 	return *buff;
 }
 
+int get_index_byTreeitem(HWND h, HTREEITEM hti) {
+	int count = 0;
+	HTREEITEM next;
+
+	while (hti) {
+		count++;
+		next = hti;
+		while ((next = TreeView_GetPrevSibling(h, next))) {
+			TVITEM item = {0};
+			item.mask = TVIF_HANDLE | TVIF_CHILDREN;
+			item.hItem = next;
+			TreeView_GetItem(h, &item);
+			count++;
+			if (item.cChildren) {
+				HTREEITEM child = TreeView_GetNextItem(h, next, TVGN_CHILD);
+				count++;
+				while ((child = TreeView_GetNextSibling(h, child)))
+					count++;
+			}
+		}
+		hti = TreeView_GetParent(h, hti);
+	}
+	return count;
+}
+
+HTREEITEM get_Treeitem_byindex(HWND h, HTREEITEM parent, int start, int idx) {
+	int count = start;
+	HTREEITEM hti = parent ? TreeView_GetNextItem(h, parent, TVGN_CHILD) : TreeView_GetRoot(h);
+
+	while (hti) {
+		TVITEM item = {0};
+		item.mask = TVIF_HANDLE | TVIF_CHILDREN;
+		item.hItem = hti;
+		if (idx == count)
+			break;
+		TreeView_GetItem(h, &item);
+		if (item.cChildren) {
+			HTREEITEM hsubitem;
+			if ((hsubitem = get_Treeitem_byindex(h, hti, ++count, idx)))
+				return hsubitem;
+		}
+		hti = TreeView_GetNextSibling(h, hti);
+		count++;
+	}
+	return hti;
+}
+
 void *__get_item(Widget *w, int idx, HTREEITEM hti) {
 	wchar_t **text = NULL;
 	int *len;
@@ -142,7 +189,7 @@ void *__get_item(Widget *w, int idx, HTREEITEM hti) {
 	int t = w->wtype == UIItem ? w->item.itemtype : w->wtype;
 
 	if (t == UITree) {
-		if(!hti)
+		if(!hti && !(hti = get_Treeitem_byindex(w->handle, NULL, 0, idx)))
 			return NULL;
 		result = calloc(1, sizeof(TVITEMW));
 		((TVITEMW*)result)->hItem = hti;
@@ -846,8 +893,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		lparam.idFrom = id;
 		lparam.hwndFrom = w->handle;
 		SendMessageW(h, WM_NOTIFY, (WPARAM)lparam.hwndFrom, (LPARAM)&lparam );
-	} else if (w->wtype == UICombo)
-		SendMessageW(w->handle , WM_COMMAND, MAKEWPARAM(id, CBN_SELCHANGE), (LPARAM)w->handle);
+	} 
 done: 
 	UpdateWindow(w->handle);
 	return 0;
@@ -889,7 +935,7 @@ LUA_METHOD(Item, loadicon) {
 		}
 		else {
 			if (w->item.treeitem->iImage == INT16_MAX) {
-				w->index = ((Widget*)GetWindowLongPtr(h, GWLP_USERDATA))->index++;
+				w->index = get_index_byTreeitem(h, w->item.treeitem->hItem);
 				w->item.treeitem->iImage = w->index;
 			} else 
 				w->index = w->item.treeitem->iImage;
@@ -930,7 +976,9 @@ LUA_METHOD(Item, loadicon) {
 }
 
 LUA_PROPERTY_GET(Item, index) {
-	lua_pushinteger(L, lua_self(L, 1, Widget)->index+1);
+	Widget *w = lua_self(L, 1, Widget);
+	
+	lua_pushinteger(L, w->item.itemtype == UITree ? get_index_byTreeitem(w->handle, w->item.treeitem->hItem) : w->index+1);
 	return 1;
 }
 
@@ -1111,6 +1159,7 @@ luaL_Reg TreeItem_methods[] = {
 	{"get_text",		Item_gettext},
 	{"add",				Listbox_add},
 	{"get_count",		Items___len},
+	{"get_index",		Item_getindex},
 	{"get_parent", 		Widget_getparent},
 	{"loadicon",		Item_loadicon},
 	{"expand",			Item_expand},
