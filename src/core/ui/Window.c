@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023.
+ | Luart.org, Copyright (c) Tine Samir 2024.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Window.c | LuaRT Window object implementation
@@ -181,6 +181,15 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 
 	if (w) {
 		switch(Msg) {
+
+			case WM_SYSCOMMAND:
+				if (wParam == SC_MAXIMIZE)
+					lua_callevent(w, onMaximize);
+				else if (wParam == SC_MINIMIZE)
+					lua_callevent(w, onMinimize);
+				else if (wParam == SC_RESTORE)
+					lua_callevent(w, onRestore);
+				break;
 			case WM_COMMAND:
 				if (lParam) {
 					PostMessageW((HWND)lParam, WM_COMMAND, wParam, lParam);
@@ -277,10 +286,15 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				}
 				return 0;
              }
+			case WM_NCHITTEST:
+				if (w->isactive)
+					return HTTRANSPARENT;
+				break;
 
 			case WM_SIZING:
 			    EnumChildWindows(hWnd, ResizeChilds, (LPARAM)hWnd);
 				break;
+
             case WM_SETCURSOR:
 				if (LOWORD(lParam) == HTCLIENT) {
 						SetCursor(w->hcursor);
@@ -319,7 +333,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 }
 
 static const char *styles[] = {  "dialog", "fixed", "float", "raw", "single", NULL };
-static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_EX_PALETTEWINDOW, WS_POPUP, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX};
+static int style_values[] = { WS_OVERLAPPEDWINDOW, WS_DLGFRAME | WS_SYSMENU, WS_EX_PALETTEWINDOW, WS_POPUP, WS_DLGFRAME | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX};
 
 extern int size(Widget *w, lua_State *L, int offset_from, int offset_to, BOOL set, LONG value, BOOL iswidth);
 
@@ -346,14 +360,22 @@ LUA_CONSTRUCTOR(Window) {
 	static HINSTANCE hInstance = NULL;
 	NOTIFYICONDATAW *nid;
 	NONCLIENTMETRICS ncm;
+	int start = 2;
+	Widget *wp;
+
 	if (!hInstance)
 		hInstance = GetModuleHandle(NULL);
-	title = lua_towstring(L, 2);
-	i = lua_type(L, 3) == LUA_TSTRING ? 4 : 3;
-	style = i == 4 ? luaL_checkoption(L, 3, "dialog", styles) : 0;
+	wp = lua_iscinstance(L, 2, TWidget);
+	if (wp && (wp->wtype != UIWindow))
+		luaL_typeerror(L, 2, "Window");
+	if (wp || (!wp && (lua_type(L,2) == LUA_TNIL)))
+		start++;
+	title = lua_towstring(L, start);
+	i = lua_type(L, start+1) == LUA_TSTRING ? start+2 : start+1;
+	style = i == start+2 ? luaL_checkoption(L, start+1, "dialog", styles) : 0;
 	r.bottom = luaL_optinteger(L, i+1, 480);
 	r.right = luaL_optinteger(L, i, 640);
-	w->handle = CreateWindowExW(uiLayout, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, HWND_DESKTOP, NULL, hInstance, NULL);
+	w->handle = CreateWindowExW(uiLayout, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, wp ?  wp->handle : NULL, NULL, hInstance, NULL);
 	switch(style) {
 		case 3: 	{
 						DWM_WINDOW_CORNER_PREFERENCE d = DWMWCP_ROUND;
@@ -366,7 +388,7 @@ LUA_CONSTRUCTOR(Window) {
 		case 2:		
 		default:	w->style = WS_CAPTION;
 	}
-  	AdjustWindowRectEx(&r, GetWindowLongPtr(w->handle, GWL_STYLE), FALSE, GetWindowLongPtr(w->handle, GWL_EXSTYLE));
+	AdjustWindowRectEx(&r, GetWindowLongPtr(w->handle, GWL_STYLE), FALSE, GetWindowLongPtr(w->handle, GWL_EXSTYLE));
 	SetWindowPos(w->handle, 0, 0, 0, r.right-r.left, r.bottom-r.top, SWP_HIDEWINDOW | SWP_NOMOVE);
 	free(title); 
 	SetWindowLongPtr(w->handle, GWLP_USERDATA, (ULONG_PTR)w);
@@ -401,6 +423,11 @@ LUA_METHOD(Window, minimize) {
 	return 0;
 }
 
+LUA_METHOD(Window, restore) {
+	ShowWindow(lua_self(L, 1, Widget)->handle, SW_RESTORE);
+	return 0;
+}
+
 LUA_METHOD(Window, showmodal) {
 	HWND parent = lua_self(L, 1, Widget)->handle;
 	Widget *child = lua_self(L, 2, Widget);
@@ -413,10 +440,19 @@ LUA_METHOD(Window, showmodal) {
 
 LUA_PROPERTY_GET(Window, fullscreen) {
 	Widget *w = lua_self(L, 1, Widget);
-	HWND h = w->handle;
 
-  	lua_pushboolean(L, !(GetWindowLongPtr(h, GWL_STYLE) & w->style));
+  	lua_pushboolean(L, !(GetWindowLongPtr(w->handle, GWL_STYLE) & w->style));
 	return 1;
+}
+
+LUA_PROPERTY_GET(Window, topmost) {
+  	lua_pushboolean(L, GetWindowLongPtr(lua_self(L, 1, Widget)->handle, GWL_EXSTYLE) & WS_EX_TOPMOST);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Window, topmost) {
+	SetWindowPos(lua_self(L, 1, Widget)->handle, lua_toboolean(L, 2) ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	return 0;
 }
 
 LUA_PROPERTY_SET(Window, fullscreen) {
@@ -455,14 +491,17 @@ LUA_METHOD(Window, loadtrayicon) {
 
 LUA_METHOD(Window, status) {
 	Widget *win = lua_self(L, 1, Widget);
-	int i, n;
+	int i, n = lua_gettop(L)-1;
 	HANDLE handle;
 	
 	if (!(handle = win->status)) {
 		handle = CreateWindowExW(0, STATUSCLASSNAMEW, NULL, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP | WS_CLIPCHILDREN, 0, 0, 0, 0, win->handle, NULL, GetModuleHandle(NULL), NULL);
 		win->status = handle;
+	} else if (!n) {
+		win->status = NULL;
+		DestroyWindow(handle);
 	}
-	if ((n = (lua_gettop(L)-1))) {
+	if (n) {
 		HDC dc = GetWindowDC(handle);
 		int *parts = calloc(n, sizeof(int));
 		int len;
@@ -558,7 +597,6 @@ LUA_PROPERTY_SET(Window, menu) {
 			FreeMenu(L, lua_touserdata(L, -1));
 		}
 	}
-	DrawMenuBar(w->handle);
 	return 0;
 }
 
@@ -616,6 +654,7 @@ OBJECT_MEMBERS(Window)
 	METHOD(Window, showmodal)
 	METHOD(Window, minimize)
 	METHOD(Window, maximize)
+	METHOD(Window, restore)
 	METHOD(Window, status)
 	METHOD(Window, loadtrayicon)
 	METHOD(Widget, loadicon)
@@ -624,6 +663,7 @@ OBJECT_MEMBERS(Window)
 	METHOD(Widget, center)
 	READWRITE_PROPERTY(Window, traytooltip)
 	READWRITE_PROPERTY(Window, fullscreen)
+	READWRITE_PROPERTY(Window, topmost)
 	READWRITE_PROPERTY(Window, menu)
 	READWRITE_PROPERTY(Widget, bgcolor)
  	{"set_title",		Widget_settext},
