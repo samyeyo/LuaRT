@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | sys.c | LuaRT sys module
@@ -73,16 +73,16 @@ LUA_METHOD(sys, cmd) {
     info.cb = sizeof(info);
 	info.dwFlags = STARTF_USESHOWWINDOW;
     info.wShowWindow = SW_HIDE;
-    if (CreateProcessW(NULL, buff, NULL, NULL, TRUE, lua_toboolean(L, 2) ? CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB : CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &info, &procInfo)) {
+    if (CreateProcessW(NULL, buff, NULL, NULL, TRUE, lua_toboolean(L, 2) ? CREATE_NO_WINDOW : 0, NULL, NULL, &info, &procInfo)) {
 		if (!lua_toboolean(L, 3))
 			AssignProcessToJobObject(hJob, procInfo.hProcess);
 		WaitForSingleObject(procInfo.hProcess, INFINITE);
 		GetExitCodeProcess(procInfo.hProcess,&procInfo.dwProcessId);
 		CloseHandle(procInfo.hProcess);
 		CloseHandle(procInfo.hThread);
-		CloseHandle(hJob);
 		lua_pushboolean(L, TRUE);
 	} else lua_pushboolean(L, FALSE);
+	CloseHandle(hJob);
 	free(buff);
 	free(exec);
 	return 1;
