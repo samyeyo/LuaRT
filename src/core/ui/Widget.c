@@ -556,8 +556,9 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
     SetFontFromWidget(w, wp);
 	w->wp.length = sizeof(WINDOWPLACEMENT);
     w->wtype = type;
-    if (type != UIEdit)
+    if (type != UIEdit) {
     	w->hcursor = wp->hcursor ? wp->hcursor : LoadCursor(NULL, IDC_ARROW);
+	}
 	w->align = -1;	
 	if ((w->autosize = autosize)) {
 		if (lua_gettop(L) < idx+2)
