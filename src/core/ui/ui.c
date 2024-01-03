@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023.
+ | Luart.org, Copyright (c) Tine Samir 2024.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | ui.c | LuaRT ui module
@@ -279,7 +279,9 @@ static int dialog(lua_State *L, BOOL save, DWORD flags) {
 				while (i++ < ofn.nFilterIndex*2)
   					idx += wcslen(ofn.lpstrFilter+idx) + 1;
 				if (*((ofn.lpstrFilter+idx+2)) != L'*') {
-					lua_pushwstring(L, ofn.lpstrFilter+idx+1);
+					const wchar_t *filter = ofn.lpstrFilter+idx+1;
+					wchar_t *end = wcsstr(filter, L";");
+					lua_pushlwstring(L, filter, (end ? end-filter : (int)wcslen(filter)));
 					lua_concat(L, 2);
 				}
 			}
@@ -435,7 +437,7 @@ int do_update(lua_State *L) {
 						lua_pushinstance(L, MenuItem, 2);
 						lua_remove(L, -2);
 					}
-				} else goto do_msg;
+				}
 			} else goto do_msg;
 			if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
 				Task *t = search_task(L);
@@ -554,7 +556,7 @@ LUA_METHOD(ui, fontdialog) {
 			wcscpy((wchar_t*)&cf.lpLogFont->lfFaceName, (wchar_t*)chf.szFaceName);
 			format(L, w, CFM_SIZE, &chf, SCF_SELECTION, FALSE);
 			cf.lpLogFont->lfHeight = -(chf.yHeight * GetDeviceCaps(GetDC(NULL), LOGPIXELSY)) / (20*72);
-			get_fontstyle(L, w, (LOGFONTW*)cf.lpLogFont);
+			get_fontstyle(L, w, (LOGFONTW*)cf.lpLogFont, SCF_SELECTION);
 		} else 	cf.lpLogFont = (LPLOGFONTW)Font(w);
 		cf.Flags = CF_INITTOLOGFONTSTRUCT;
 		idx++;
@@ -610,7 +612,7 @@ LUA_CONSTRUCTOR(Picture) {
 
 LUA_CONSTRUCTOR(Progressbar)
 {   
-    Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, FALSE, TRUE);
+    Widget_create(L, UIProgressbar, 0, PROGRESS_CLASSW, WS_CHILD, FALSE, TRUE)->index = TRUE;
     return 1;
 }
 
@@ -784,7 +786,7 @@ int luaopen_ui(lua_State *L) {
 	widget_type_new(L, &UILabel, "Label", Label_constructor, color_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	widget_type_new(L, &UIEntry, "Entry", Entry_constructor, Entry_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE);
 	if ( (richeditlib = LoadLibraryA("Riched20.dll")) )
-		widget_type_new(L, &UIEdit, "Edit", Edit_constructor, Edit_methods, NULL, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE);
+		widget_type_new(L, &UIEdit, "Edit", Edit_constructor, Edit_methods, NULL, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
 	widget_noinherit(L, &UIMenu, "Menu", Menu_constructor, Menu_methods, Menu_metafields);
 	widget_type_new(L, &UICheck, "Checkbox", Checkbox_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE);
 	widget_type_new(L, &UIRadio, "Radiobutton", Radiobutton_constructor, Checkbox_methods, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE);

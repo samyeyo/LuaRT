@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023.
+ | Luart.org, Copyright (c) Tine Samir 2024.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Widget.h | LuaRT Widget object header file
@@ -153,7 +153,7 @@ void fontstyle_createtable(lua_State *L, LOGFONTW *l);
 void fontstyle_fromtable(lua_State *L, int idx, LOGFONTW *l);
 LUA_API int fontsize_fromheight(int height);
 Widget *format(lua_State *L, Widget *w, DWORD mask, CHARFORMAT2W *cf, int scf, BOOL isset);
-Widget *get_fontstyle(lua_State *L, Widget *w, LOGFONTW *lf);
+void get_fontstyle(lua_State *L, Widget *w, LOGFONTW *lf, int scf);
 LOGFONTW *Font(Widget *w);
 int GetText(lua_State *L, HANDLE h);
 void FreeMenu(lua_State *L, Widget *w);
@@ -191,6 +191,9 @@ LUA_METHOD(Widget, __gc);
 #define WM_LUAKEY 			(WM_LUAMIN + 19)
 #define WM_LUAMOUSEUP 		(WM_LUAMIN + 20)
 #define WM_LUAMOUSEDOWN 	(WM_LUAMIN + 21)
+#define WM_LUAMAXIMIZE  	(WM_LUAMIN + 22)
+#define WM_LUAMINIMIZE   	(WM_LUAMIN + 23)
+#define WM_LUARESTORE    	(WM_LUAMIN + 24)
 
 typedef enum {
 	onHide			= WM_LUAHIDE,
@@ -214,7 +217,10 @@ typedef enum {
 	onMenu			= WM_LUAMENU,
 	onKey			= WM_LUAKEY,
     onMouseUp       = WM_LUAMOUSEUP,
-    onMouseDown       = WM_LUAMOUSEDOWN
+    onMouseDown     = WM_LUAMOUSEDOWN,
+    onMaximize      = WM_LUAMAXIMIZE,
+    onMinimize      = WM_LUAMINIMIZE,
+    onRestore       = WM_LUARESTORE,
 } WidgetEvent;
 
 //---- call close event a associated with window w
