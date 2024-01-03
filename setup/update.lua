@@ -86,9 +86,14 @@ local function download_update(progressbar, version)
     return false
 end
 
+local function version_num(v)
+  local num = v:gsub("LuaRT ", ""):gsub("(%d)%.(%d)%.(%d)", "%1%2%3")
+  return num
+end
+
 function win:onShow()
-    local version = check_update(bar)
-    if version and version ~= _VERSION then
+    local version = check_update(bar)    
+    if version and (version_num(_VERSION) < version_num(version)) then
         local file = download_update(bar, version)
         if file then
             local tmpdir = sys.tempdir()
