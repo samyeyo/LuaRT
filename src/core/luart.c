@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | luart.c | LuaRT interpreter
@@ -243,7 +243,7 @@ int main() {
 	lua_register(L, "link", link);
 #endif
 	if (argc == 1 && !is_embeded)
-		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2023, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
+		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2024, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
 	else {
 		lua_createtable(L, argc, 0);	
 		lua_pushwstring(L, exename);
@@ -288,21 +288,28 @@ compiledscript:		t = (Task*)lua_pushinstance(L, Task, 1);
 error:			
 						{
 #ifdef RTWIN
-						int len;
-						wchar_t *err = lua_tolwstring(L, -1, &len);	
-						if (len)	{			
+						size_t len;
+						const char *err = lua_tolstring(L, -1, &len);	
+						if (len)	{	
 							if (is_embeded) {
-								wchar_t *err_embed = wcsstr(err, L": ");
-								err = err_embed ? err_embed+2 : err;
+								if (strstr(err, "[string """) == err) {
+									const char *tmp = luaL_gsub(L, err, "[string \"", "");
+									err = luaL_gsub(L, tmp, "\"]:", ":");
+									len = strlen(err);
+								}
 							}
-							MessageBoxW(NULL, err, L"Runtime error", MB_ICONERROR | MB_OK | MB_DEFAULT_DESKTOP_ONLY);						
+							lua_pushstring(L, err);							
+							wchar_t *msg = lua_towstring(L, -1);		
+							MessageBoxW(NULL, msg, L"Runtime error", MB_ICONERROR | MB_OK | MB_DEFAULT_DESKTOP_ONLY);	
+							free(msg);					
 						}
-						free(err);
 #else
-						char *err = (char*)lua_tostring(L, -1);
+						const char *err = lua_tostring(L, -1);
 						if (is_embeded) {
-							char *err_embed = strstr(err, ": ");
-							err = err_embed ? err_embed+2 : err;
+							if (strstr(err, "[string """) == err) {
+								const char *tmp = luaL_gsub(L, err, "[string \"", "");
+								err = luaL_gsub(L, tmp, "\"]:", ":");
+							}
 						}
 						fputs(err, stderr);
 						fputs("\n", stderr);
