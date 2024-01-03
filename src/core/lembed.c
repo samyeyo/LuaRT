@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | lembed.c | LuaRT embed module implementation
@@ -74,32 +74,36 @@ static int luart_fsloader(lua_State *L) {
 		_snprintf(fname, len, "%s.wlua", modname);
     if (!(buff = fsload(L, fname))) {
       lua_pushfstring(L, "no embedded module '%s' found", fname);
-      _snprintf(fname, len, "%s.dll", modname);
-      if (zip_entry_open(fs, fname) == 0) {
-            lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS);
-            lua_pushwstring(L, temp_path);
-            lua_pushstring(L, fname);
-            lua_concat(L, 2);
-            wchar_t *tmp = lua_towstring(L, -1);
-            if ((zip_entry_fread(fs, tmp) == 0) || (GetFileAttributesW(tmp) != 0xFFFFFFFF)) {
-              HMODULE hm;
-              if ( (hm = LoadLibraryW(tmp)) ) {
-                _snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
-                lua_CFunction f = (lua_CFunction)(voidf)GetProcAddress(hm, fname);
-                if (f) {
-                  lua_pushlightuserdata(L, (void*)hm);
-                  lua_rawset(L, -3);
-                  lua_pushcfunction(L, f);
-                  free(tmp);  
-                  zip_entry_close(fs);
-                  goto done;          
-                } else FreeLibrary(hm);
-              }
+      _snprintf(fname, len, "%s\\init.lua", modname);
+      if (!(buff = fsload(L, fname))) {
+        lua_pushfstring(L, "no embedded module '%s\\init.lua' found", fname);
+        _snprintf(fname, len, "%s.dll", modname);
+        if (zip_entry_open(fs, fname) == 0) {
+          lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS);
+          lua_pushwstring(L, temp_path);
+          lua_pushstring(L, fname);
+          lua_concat(L, 2);
+          wchar_t *tmp = lua_towstring(L, -1);
+          if ((zip_entry_fread(fs, tmp) == 0) || (GetFileAttributesW(tmp) != 0xFFFFFFFF)) {
+            HMODULE hm;
+            if ( (hm = LoadLibraryW(tmp)) ) {
+              _snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
+              lua_CFunction f = (lua_CFunction)(voidf)GetProcAddress(hm, fname);
+              if (f) {
+                lua_pushlightuserdata(L, (void*)hm);
+                lua_rawset(L, -3);
+                lua_pushcfunction(L, f);
+                free(tmp);  
+                zip_entry_close(fs);
+                goto done;          
+              } else FreeLibrary(hm);
             }
-            free(tmp);
-    		zip_entry_close(fs);
+          }
+          free(tmp);
+          zip_entry_close(fs);
+        }
+        lua_pushfstring(L, "no embedded module '%s.dll' found", modname);
       }
-      lua_pushfstring(L, "no embedded module '%s.dll' found", modname);
     }
 	}
 done:
