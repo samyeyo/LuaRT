@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | File.c | LuaRT File object implementation
@@ -167,6 +167,8 @@ LUA_METHOD(File, write) {
 		if (f->encoding == UNICODE)
 			free(buf);
 		lua_pushinteger(L, done);
+		if (f->std)
+			fflush(f->stream);
 		return 1;
 	}
 	return luaL_error(L, "error: File not opened for writing");
@@ -209,7 +211,10 @@ static int FileRead(lua_State *L, File *f, size_t size, BOOL line) {
 			BOOL redirected;
 			int save;
 			
-readstd:	save = _setmode(_fileno(fout), _O_U16TEXT);
+readstd:	
+#ifndef RTWIN
+			save = _setmode(_fileno(fout), _O_U16TEXT);
+#endif
 			redirected = GetConsoleMode(f->h, &mode) == FALSE;
 			SetConsoleMode(f->h, mode & ~ENABLE_LINE_INPUT & ~ENABLE_PROCESSED_INPUT & ~ENABLE_ECHO_INPUT );
 			
@@ -241,16 +246,22 @@ readstd:	save = _setmode(_fileno(fout), _O_U16TEXT);
 					break;
 			}
 			SetConsoleMode(std, mode);
+#ifndef RTWIN			
 			_setmode(_fileno(fout), save);
+#endif
 		} else if (line) {
 			wchar_t buffer[4096];
+#ifndef RTWIN						
 			int save = _setmode(_fileno(f->stream), _O_U16TEXT);
+#endif
 			if (fgetws(buffer, 4096, f->stream)) {
 				luaL_addlstring(&b, (char*)buffer, sizeof(wchar_t)*wcslen(buffer)-2);
 				#ifndef _MSC_VER				 
 				fgetwc(f->stream);
 				#endif
+#ifndef RTWIN							
 				_setmode(_fileno(f->stream), save);
+#endif
 			}
 			else {
 				lua_pushstring(L, "");
