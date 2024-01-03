@@ -1,5 +1,5 @@
 ﻿# | LuaRT - A Windows programming framework for Lua
-# | Luart.objrg, Copyright (c) Tine Samir 2023
+# | Luart.objrg, Copyright (c) Tine Samir 2024
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
 # | LuaRT Core Makefile for the toolchain, the Core framework and the tools
@@ -57,7 +57,7 @@ DEFINES_RES= /d LUART_MINOR="$(LUART_MINOR)" /d LUART_MAJOR="$(LUART_MAJOR)" /d 
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG /NODEFAULTLIB:msvcrt
 !else
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /MD /Gy /GF /Oi /O1 /GA
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /MD /Gy /Gw /GF /Oi /O2 /GA
 LDFLAGS= /nologo /OPT:REF /OPT:ICF
 !endif
 
