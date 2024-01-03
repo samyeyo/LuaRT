@@ -1,3 +1,48 @@
+## LuaRT v1.7.0 (Jan 05 2024)
+
+#### Highlights 
+- This release introduces RTBuilder, a new GUI RAD tool to design LuaRT desktop interfaces using `ui` module
+- Lots of bugs have been fixed, especially for the `ui` module, the `rtc` compiler and the LuaRT Studio IDE
+
+#### LuaRT toolchain
+- Updated: MSVC builds now use better optimizations for faster execution
+- Fixed: `rtcheck` won't propose to update for an inferior version now (Fixes #167)
+- Fixed: Compiled executables with `rtc` now shows the script file and line number when an error occurs
+
+#### LuaRT Studio
+- Updated: LuaRT Studio is now using the LuaRT 1.7.0 toolchain
+- Fixed: Debugger will now pause once a breakpoint is hit inside an `ui` event function, when using a `Task` to update the GUI
+- Fixed: Output panel bug with Unicode input/output fixed
+- Fixed: require of modules using `init.lua` from compiled executable is now working as expected
+- Fixed: Setting project arguments won't add a blank space to the first argument anymore
+
+#### Examples
+- New: `balls_demo.wlua` example for `canvas` module
+
+#### `sys` module
+- Fixed: `Task:cancel()` won't try to close an already closed Task
+- Fixed: `sys.cmd()` now returns `true` in LuaRT Studio as expected (Fixes #155)
+- Fixed: `File:write()` method now flush data to disk when the file is a standard stream (Fixes #165)
+
+#### `ui` module
+- New: `Window` constructor now takes a first optional argument to provide a parent Window
+- New: `Window:restore()` method
+- New: `Window.topmost` property
+- New: `Window.onMaximize()`, `Window.onMinimize()` and `Window.onRestore()` events
+- New: `Tree.items` property can now be indexed by integer value, returning the `TreeItem` in numerical order from the first `TreeItem` to the last one
+- New: `Tree.items` property is now iterable with the `each()` iterator
+- New: `TreeItem.index` property to get the numerical order of the `TreeItem` in the `Tree`
+- Updated: Setting `Entry.text` property now moves the caret at the start Updated: Setting the `Calendar.date` property from a `string` is now possible
+- Fixed: `Treeitem: Loadicon()` won't fail to load a new icon after having removed the previous one (Fixes #160)
+- Fixed: Providing a filename without extension in `ui.savedialog()` now returns correct filename when using multiple filters (Fixes #166)
+- Fixed: `Window` keyboard shortcuts now execute binded Lua functions as expected (Fixes #162)
+- Fixed: After `Progressbar` construction, `Progressbar.themed` returns `true` now as expected (Fixes #154)
+- Fixed: `Canvas.fontstyle` now returns a string value as expected (Fixes #164)
+- Fixed: Third party widgets now use initial size/position when the `align` property is set to `nil` (Fixes #158)
+- Fixed: `Widget:center()` method now work as expected inside a `Groupbox` (Fixes #163 and #153)
+- Fixed: `Window.height` returns now the correct value and a `Window.menu` property is set (Fixes #161)
+- Fixed: Setting `Edit.font` property now preserve the current foreground color (Fixes #159)
+
 ## LuaRT v1.6.0 (Nov 26 2023)
 
 #### Highlights 
