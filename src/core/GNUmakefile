@@ -27,7 +27,7 @@ PLATFORM ?= x64
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 6
+LUART_MINOR= 7
 LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 CLEAN=clean
@@ -241,9 +241,13 @@ tools: infotools
 	@echo|set /p dummy="■"	
 	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -c lrtapi.c -o lrtapi.o
 	@echo|set /p dummy="■"
+	@$(CC) $(CFLAGS) -DRTWIN -DLUA_BUILD_AS_DLL -c src/File.c -o src/File.o
+	@echo|set /p dummy="■"
 	@$(CXX) $(CFLAGS) -static-libstdc++ -fno-rtti -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT) >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
+	@echo|set /p dummy="■"
+	@$(CC) $(CFLAGS) -c src/File.c -o src/File.o
 	@echo|set /p dummy="■"
 	@windres $(DEFINES_RES) -D RTWIN -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"

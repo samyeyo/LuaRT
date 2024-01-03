@@ -48,7 +48,7 @@ _ARCH = x86
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 6
+LUART_MINOR= 7
 LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 DEFINES_RES= /d LUART_MINOR="$(LUART_MINOR)" /d LUART_MAJOR="$(LUART_MAJOR)" /d LUART_RELEASE="$(LUART_RELEASE)"
@@ -219,7 +219,7 @@ rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
 !endif
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-buildtools: infotools rtc
+buildtools: rtc infotools 
 	@$(CC) /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll >nul 2>&1
@@ -255,8 +255,9 @@ buildtools: infotools rtc
 	@-copy /Y rtcheck.exe "..\..\tools\LuaRT-Studio\bin\rtcheck.exe" 2>&1 >nul
 	@-move /Y rtcheck.exe ..\..\bin 2>&1 >nul
 	@echo|set /p dummy="■"
+	@cmd /c echo.
 
-setup: toolchain tools buildtools infosetup
+setup: buildtools infosetup
 	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
 	@echo|set /p dummy="■"
 	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).zip ..\..\LuaRT-$(VERSION)-$(PLATFORM).zip >nul
