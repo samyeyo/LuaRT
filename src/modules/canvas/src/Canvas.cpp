@@ -1,6 +1,6 @@
 /*
  | Canvas for LuaRT
- | Luart.org, Copyright (c) Tine Samir 2023.
+ | Luart.org, Copyright (c) Tine Samir 2024.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Canvas.cpp | LuaRT binary module
@@ -514,7 +514,7 @@ LUA_PROPERTY_SET(Canvas, fontstyle) {
 }
 
 LUA_PROPERTY_GET(Canvas, fontstyle) {
-  lua_pushinteger(L, ((Direct2D*)(lua_self(L, 1, Widget))->user)->textFormat->GetFontStyle());
+  lua_pushstring(L, style_values[((Direct2D*)(lua_self(L, 1, Widget))->user)->textFormat->GetFontStyle()]);
 	return 1;
 }
 
