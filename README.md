@@ -132,7 +132,7 @@ There have been many hours of hard work put into LuaRT. Your support will be gre
   
 ## :small_blue_diamond:License
   
-LuaRT is copyright (c) 2023 Samir Tine.
+LuaRT is copyright (c) 2024 Samir Tine.
 LuaRT is open source, released under the MIT License.
 See full copyright notice in the LICENSE.txt file.
 

@@ -1,5 +1,5 @@
 # | net module for LuaRT
-# | Luart.org, Copyright (c) Tine Samir 2023.
+# | Luart.org, Copyright (c) Tine Samir 2024.
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
 # | Makefile

@@ -1,3 +1,11 @@
+/*
+ | LuaRT - A Windows programming framework for Lua
+ | Luart.org, Copyright (c) Tine Samir 2024
+ | See Copyright Notice in LICENSE.TXT
+ |-------------------------------------------------
+ | Widget.h | LuaRT Widget object header
+*/
+
 #define LUA_LIB
 
 #include <luart.h>
@@ -74,6 +82,7 @@ typedef struct Widget {
 	WINDOWPLACEMENT	wp;
 	void		*user;
 	BOOL		ismain;
+	BOOL		isactive;
 } Widget;
 
 //--- Register a widget type

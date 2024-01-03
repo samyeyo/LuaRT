@@ -1,6 +1,6 @@
 --[[
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | makedist.lua | Builds the LuaRT setup executable
@@ -71,7 +71,6 @@ console.write("■")
 z:write(parent.."/tools/QuickRT/QuickRT.exe", "QuickRT/QuickRT.exe")
 console.write("■")
 z:close()
-dist:removeall()
 
 file_add("../../setup/install.wlua", "local VERSION = '"..VERSION.."'")
 local exe = 'LuaRT-'..VERSION..'-'..PLATFORM
@@ -83,3 +82,4 @@ compressed:close()
 console.write("■")
 
 sys.File(exe..'.exe'):remove()
+dist:removeall()

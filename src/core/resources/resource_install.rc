@@ -36,7 +36,7 @@ BEGIN
             VALUE "FileDescription", "LuaRT Desktop application"
             VALUE "FileVersion", LUA_VERSION_MAJOR " ," LUA_VERSION_MINOR " ," LUA_VERSION_RELEASE
             VALUE "InternalName", "LuaRT"
-            VALUE "LegalCopyright", "Copyright (C) Samir Tine 2023"
+            VALUE "LegalCopyright", "Copyright (C) Samir Tine 2024"
             VALUE "ProductName", "LuaRT"
             VALUE "ProductVersion", LUA_VERSION_MAJOR " ," LUA_VERSION_MINOR " ," LUA_VERSION_RELEASE
         END

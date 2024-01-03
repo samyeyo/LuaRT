@@ -1,6 +1,6 @@
 ﻿/*
  | Webview for LuaRT - HTML/JS/CSS render Widget
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE
  |-------------------------------------------------
  | WebView2Loader.h | static reimplementation of WebView2Loader for MinGW-w64

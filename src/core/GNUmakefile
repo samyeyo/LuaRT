@@ -1,5 +1,5 @@
 # | LuaRT - A Windows programming framework for Lua
-# | Luart.org, Copyright (c) Tine Samir 2023
+# | Luart.org, Copyright (c) Tine Samir 2024
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
 # | LuaRT Core Makefile for the toolchain, the Core framework and the tools
@@ -195,8 +195,7 @@ $(LUA_A): $(BASE_O)
 $(LUART_T): $(LUA_A) luart.c
 	@windres $(DEFINES_RES) -I"." -I"./lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
-	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ -mconsole luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT)
-#>nul 2>&1
+	@$(CC) resource.o $(CFLAGS) $(LDFLAGS) -o $@ -mconsole luart.c $(LDFLAGS) -llua54 $(LIBS) $(LDSCRIPT) >nul 2>&1
 	@echo|set /p dummy="■"
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
@@ -235,8 +234,7 @@ tools: infotools
 	@$(MAKE) --no-print-directory staticui BUILD=$(BUILD) STATIC=TRUE NOMSG=TRUE
 	@$(CC) $(CFLAGS) -DAIO -c lrtapi.c -o lrtapi.o
 	@echo|set /p dummy="■"
-	@$(CXX) -shared $(CFLAGS) -static-libstdc++ -fno-rtti -DAIO -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT)
-#>nul 2>&1
+	@$(CXX) -shared $(CFLAGS) -static-libstdc++ -fno-rtti -DAIO -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT) >nul 2>&1
 	@echo|set /p dummy="■"
 	@rtc -i ..\..\tools\QuickRT\contrib\quickrt.ico ..\..\tools\QuickRT\src\quickrt.lua -o ..\..\tools\QuickRT\QuickRT.exe ..\..\tools\QuickRT\src >nul
 	@-copy /Y lua54.dll ..\..\tools\QuickRT\lua54.dll >nul	
