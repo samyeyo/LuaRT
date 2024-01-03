@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023
+ | Luart.org, Copyright (c) Tine Samir 2024
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Entry.c | LuaRT Entry and Edit object implementation
@@ -549,69 +549,115 @@ LUA_PROPERTY_SET(Selection, visible) {
 	return 0;
 }
 
-LUA_PROPERTY_GET(Selection, font) {
+static int get_font(lua_State *L, Widget *w, int scf) {
 	CHARFORMAT2W cf = {0};
-	format(L, NULL, CFM_FACE, &cf, SCF_SELECTION, FALSE);
+	format(L, w, CFM_FACE, &cf, scf, FALSE);
 	lua_pushwstring(L, cf.szFaceName);
 	return 1;
 }
 
-LUA_PROPERTY_SET(Selection, font) {
+static int set_font(lua_State *L, Widget *w, int scf) {
 	CHARFORMAT2W cf = {0};
 	LOGFONTW lf;
-	wchar_t *font = luaL_checkFilename(L, 3);
+	wchar_t *font = luaL_checkFilename(L, w ? 2 : 3);
 
 	if (!LoadFont(font, &lf))
 		luaL_error(L, "failed to load font");
 	wcsncpy(cf.szFaceName, lf.lfFaceName, LF_FACESIZE);
-	format(L, NULL, CFM_FACE, &cf, SCF_SELECTION, TRUE);
+	format(L, w, CFM_FACE, &cf, scf, TRUE);
 	free(font);
 	return 0;
 }
 
-LUA_PROPERTY_GET(Selection, fontsize) {
+static int set_fontsize(lua_State *L, Widget *w, int scf) {
 	CHARFORMAT2W cf;
-	format(L, NULL, CFM_SIZE, &cf, SCF_SELECTION, FALSE);
+	cf.yHeight = lua_tointeger(L, w ? 2 : 3) * 20;
+	format(L, w, CFM_SIZE, &cf, scf, TRUE);
+	return 0;
+}
+
+static int get_fontsize(lua_State *L, Widget *w, int scf) {
+	CHARFORMAT2W cf;
+	format(L, w, CFM_SIZE, &cf, scf, FALSE);
 	lua_pushinteger(L, cf.yHeight / 20);
 	return 1;
 }
 
-LUA_PROPERTY_SET(Selection, fontsize) {
-	CHARFORMAT2W cf;
-	cf.yHeight = lua_tointeger(L, 3) * 20;
-	format(L, NULL, CFM_SIZE, &cf, SCF_SELECTION, TRUE);
-	return 0;
+LUA_PROPERTY_GET(Edit, font) {
+	return get_font(L, lua_self(L, 1, Widget), SCF_ALL);
 }
 
-Widget *get_fontstyle(lua_State *L, Widget *w, LOGFONTW *lf) {
+LUA_PROPERTY_SET(Edit, font) {
+	return set_font(L, lua_self(L, 1, Widget), SCF_ALL);
+}
+
+LUA_PROPERTY_GET(Selection, font) {
+	return get_font(L, NULL, SCF_SELECTION);
+}
+
+LUA_PROPERTY_SET(Selection, font) {
+	return set_font(L, NULL, SCF_SELECTION);
+}
+
+LUA_PROPERTY_GET(Edit, fontsize) {
+	return get_fontsize(L, lua_self(L, 1, Widget), SCF_ALL);
+}
+
+LUA_PROPERTY_SET(Edit, fontsize) {
+	return set_fontsize(L, lua_self(L, 1, Widget), SCF_ALL);
+}
+
+LUA_PROPERTY_GET(Selection, fontsize) {
+	return get_fontsize(L, NULL, SCF_SELECTION);
+}
+
+LUA_PROPERTY_SET(Selection, fontsize) {
+	return set_fontsize(L, NULL, SCF_SELECTION);
+}
+
+void get_fontstyle(lua_State *L, Widget *w, LOGFONTW *lf, int scf) {
 	CHARFORMAT2W cf;
-	format(L, w, CFM_BOLD | CFM_ITALIC | CFM_UNDERLINE | CFM_STRIKEOUT, &cf, SCF_SELECTION, FALSE);
+	format(L, w, CFM_BOLD | CFM_ITALIC | CFM_UNDERLINE | CFM_STRIKEOUT, &cf, scf, FALSE);
 	lf->lfStrikeOut = cf.dwEffects & CFE_STRIKEOUT;
 	lf->lfUnderline = cf.dwEffects & CFE_UNDERLINE;
 	lf->lfItalic = cf.dwEffects & CFE_ITALIC;
 	lf->lfWeight = cf.dwEffects & CFE_BOLD ? FW_BOLD : FW_THIN;
-	return w;
+}
+
+static int set_fontstyle(lua_State *L, Widget *w, int scf) {
+	CHARFORMAT2W cf = {0};
+	LOGFONTW lf = {0};
+	
+	get_fontstyle(L, w, &lf, SCF_SELECTION);
+	fontstyle_fromtable(L, w ? 2 : 3, &lf);
+	cf.dwEffects |= lf.lfStrikeOut ? CFE_STRIKEOUT : 0;
+	cf.dwEffects |= lf.lfUnderline ? CFE_UNDERLINE : 0;
+	cf.dwEffects |= lf.lfItalic ? CFE_ITALIC : 0;
+	cf.dwEffects |= (lf.lfWeight == FW_BOLD || lf.lfWeight == FW_HEAVY) ? CFE_BOLD : 0;
+	format(L, w, CFM_BOLD | CFM_ITALIC | CFM_UNDERLINE | CFM_STRIKEOUT, &cf, scf, TRUE);
+	return 0;
 }
 
 LUA_PROPERTY_GET(Selection, fontstyle) {
 	LOGFONTW lf = {0};
-	get_fontstyle(L, NULL, &lf);
+	get_fontstyle(L, NULL, &lf, SCF_SELECTION);
 	fontstyle_createtable(L, &lf);
 	return 1;
 }
 
 LUA_PROPERTY_SET(Selection, fontstyle) {
-	CHARFORMAT2W cf = {0};
-	LOGFONTW lf = {0};
-	Widget *w = get_fontstyle(L, NULL, &lf);
+	return set_fontstyle(L, NULL, SCF_SELECTION);
+}
 
-	fontstyle_fromtable(L, 3, &lf);
-	cf.dwEffects |= lf.lfStrikeOut ? CFE_STRIKEOUT : 0;
-	cf.dwEffects |= lf.lfUnderline ? CFE_UNDERLINE : 0;
-	cf.dwEffects |= lf.lfItalic ? CFE_ITALIC : 0;
-	cf.dwEffects |= (lf.lfWeight == FW_BOLD || lf.lfWeight == FW_HEAVY) ? CFE_BOLD : 0;
-	format(L, w, CFM_BOLD | CFM_ITALIC | CFM_UNDERLINE | CFM_STRIKEOUT, &cf, SCF_SELECTION, TRUE);
-	return 0;
+LUA_PROPERTY_GET(Edit, fontstyle) {
+	LOGFONTW lf = {0};
+	get_fontstyle(L, lua_self(L, 1, Widget), &lf, SCF_ALL);
+	fontstyle_createtable(L, &lf);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Edit, fontstyle) {
+	return set_fontstyle(L, lua_self(L, 1, Widget), SCF_ALL);
 }
 
 LUA_PROPERTY_GET(Selection, from) {
@@ -677,11 +723,11 @@ static int set_color(lua_State *L, Widget *w, int scf, BOOL isbg) {
 	return 0;
 }
 
-LUA_PROPERTY_GET(Edit, color) {
+LUA_PROPERTY_GET(Edit, fgcolor) {
 	return get_color(L, lua_self(L, 1, Widget), SCF_DEFAULT, FALSE);
 }
 
-LUA_PROPERTY_SET(Edit, color) {
+LUA_PROPERTY_SET(Edit, fgcolor) {
 	return set_color(L, lua_self(L, 1, Widget), SCF_DEFAULT, FALSE);
 }
 
@@ -878,8 +924,14 @@ luaL_Reg Edit_methods[] = {
 	{"save",			Edit_saveto},
 	{"append",			Edit_append},
 	{"get_selection",	Edit_getselection},
-	{"set_fgcolor",		Edit_setcolor},
-	{"get_fgcolor",		Edit_getcolor},
+	{"set_font",		Edit_setfont},
+	{"get_font",		Edit_getfont},
+    {"set_fontsize",	Edit_setfontsize},
+    {"get_fontsize",	Edit_getfontsize},
+    {"get_fontstyle",	Edit_getfontstyle},
+	{"set_fontstyle",	Edit_setfontstyle},
+	{"set_fgcolor",		Edit_setfgcolor},
+	{"get_fgcolor",		Edit_getfgcolor},
 	{"set_bgcolor",		Edit_setbgcolor},
 	{"get_bgcolor",		Edit_getbgcolor},
 	{"get_line",		Edit_getline},
