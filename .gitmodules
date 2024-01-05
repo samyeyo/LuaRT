@@ -7,3 +7,6 @@
 [submodule "tools/rtc"]
 	path = tools/rtc
 	url = https://github.com/samyeyo/rtc
+[submodule "tools\\RTBuilder"]
+	path = tools\\RTBuilder
+	url = https://github.com/samyeyo/RTBuilder
