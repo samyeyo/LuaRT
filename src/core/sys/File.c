@@ -209,7 +209,9 @@ static int FileRead(lua_State *L, File *f, size_t size, BOOL line) {
 		if (echochar) {
 			DWORD mode;
 			BOOL redirected;
+#ifndef RTWIN
 			int save;
+#endif
 			
 readstd:	
 #ifndef RTWIN
