@@ -7,7 +7,11 @@
 #### LuaRT toolchain
 - Updated: MSVC builds now use better optimizations for faster execution
 - Fixed: `rtcheck` won't propose to update for an inferior version now (Fixes #167)
-- Fixed: Compiled executables with `rtc` now shows the script file and line number when an error occurs
+
+#### rtc
+- New: `rtc` now accepts mutiple files (the first one will be considered the main script)
+- Updated: `-l` option now search for modules in the current directory too
+- Fixed: Errors thrown by any compiled executables now mention source file and error line (Fixes #5)
 
 #### LuaRT Studio
 - Updated: LuaRT Studio is now using the LuaRT 1.7.0 toolchain
