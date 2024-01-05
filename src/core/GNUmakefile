@@ -109,10 +109,6 @@ infotoolchain:
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building LuaRT toolchain       "
 
-infotools:
-	@cmd /c echo.
-	@echo|set /p dummy="▸  Building QuickRT/LuaRT Studio  "
-
 infosetup:
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building LuaRT installer       "
@@ -207,8 +203,8 @@ $(LUAWRT_T): $(LUA_A) $(UI_O) luart.c ui\ui.o
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 $(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) ..\..\tools\rtc\src\rtc.lua
-	@$(RM) $(DEST)\rtc.exe >nul 2>&1
-	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
+	@-$(RM) $(DEST)\rtc.exe >nul 2>&1
+	@-$(RM) $(DEST)\wrtc.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\..\tools\rtc\src >nul
 	@windres $(DEFINES_RES) -D RTC -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
@@ -229,7 +225,12 @@ $(DEST)\rtc.exe $(DEST)\wrtc.exe: $(LUA_A) $(LUART_T) $(LUAWRT_T) ..\..\tools\rt
 staticui: $(UI_O)
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-tools: infotools
+tools: $(DEST)\rtc.exe
+	@rtc.exe -s -w -o rtcheck.exe -i ..\..\setup\img\update.ico ..\..\setup\update.lua ..\..\setup\img\ 2>&1 >nul
+	@-copy /Y rtcheck.exe "..\..\tools\LuaRT-Studio\bin\rtcheck.exe" 2>&1 >nul
+	@-move /Y rtcheck.exe ..\..\bin 2>&1 >nul	
+	@$(MAKE) LUART_PATH=$(shell echo %CD%)\..\.. -C ..\..\tools\RTBuilder --no-print-directory
+	@echo|set /p dummy="▸  Building QuickRT/LuaRT Studio  "
 	@$(RM) $(UI_O)  >nul 2>&1
 	@$(MAKE) --no-print-directory staticui BUILD=$(BUILD) STATIC=TRUE NOMSG=TRUE
 	@$(CC) $(CFLAGS) -DAIO -c lrtapi.c -o lrtapi.o
@@ -241,13 +242,13 @@ tools: infotools
 	@echo|set /p dummy="■"	
 	@$(CC) $(CFLAGS) -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -c lrtapi.c -o lrtapi.o
 	@echo|set /p dummy="■"
-	@$(CC) $(CFLAGS) -DRTWIN -DLUA_BUILD_AS_DLL -c src/File.c -o src/File.o
+	@$(CC) $(CFLAGS) -DRTWIN -DLUA_BUILD_AS_DLL -c sys/File.c -o sys/File.o
 	@echo|set /p dummy="■"
 	@$(CXX) $(CFLAGS) -static-libstdc++ -fno-rtti -DAIO -DRTCOMPAT -DLUA_BUILD_AS_DLL -shared -o lua54.dll $(BASE_O) $(UI_O) $(LDFLAGS) $(LIBS) $(DLLLDSCRIPT) >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(CC) $(CFLAGS) -c lrtapi.c -o lrtapi.o
 	@echo|set /p dummy="■"
-	@$(CC) $(CFLAGS) -c src/File.c -o src/File.o
+	@$(CC) $(CFLAGS) -c sys/File.c -o sys/File.o
 	@echo|set /p dummy="■"
 	@windres $(DEFINES_RES) -D RTWIN -I"." -I"../../include/lua/" resources\resource.rc -o resource.o
 	@echo|set /p dummy="■"
@@ -299,6 +300,7 @@ clean:
 	@$(RM) LuaRT-$(VERSION)-x86.exe >nul 2>&1
 	@$(RM) ..\..\LuaRT-$(VERSION)-x64.exe >nul 2>&1
 	@$(RM) ..\..\LuaRT-$(VERSION)-x86.exe >nul 2>&1
+	@$(MAKE) -C ..\..\tools\RTBuilder clean --no-print-directory >nul 2>&1
 	@echo ✓
 
 ALL= all

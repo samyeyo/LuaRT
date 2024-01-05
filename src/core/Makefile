@@ -112,10 +112,6 @@ infotoolchain:
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building LuaRT toolchain       "
 
-infotools: utf8
-	@cmd /c echo.
-	@echo|set /p dummy="▸  Building QuickRT/LuaRT Studio  "
-
 infosetup: utf8
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building LuaRT installer       "
@@ -142,9 +138,9 @@ lua\lvm.obj:
 !endif
 
 static: 
-	@$(RM) $(BASE_O)  >nul 2>&1
-	@$(RM) $(STATIC_O) >nul 2>&1
-	@$(RM) $(UI_O)  >nul 2>&1
+	@-$(RM) $(BASE_O)  >nul 2>&1
+	@-$(RM) $(STATIC_O) >nul 2>&1
+	@-$(RM) $(UI_O)  >nul 2>&1
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building static executables    "
 	@$(MAKE) /nologo luart-static "BUILD=$(BUILD)" "STATIC=TRUE"
@@ -194,9 +190,9 @@ luart-static: $(BASE_O) $(UI_O) $(STATIC_O) infostatic
 	@-copy /Y luart-static.exe $(DEST)\luart-static.exe >nul
 
 rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
-	@$(RM) $(DEST)\rtc.exe >nul 2>&1
-	@$(RM) $(DEST)\wrtc.exe >nul 2>&1
-	@$(RM) $(DEST)\rtcheck.exe >nul 2>&1
+	@-$(RM) $(DEST)\rtc.exe >nul 2>&1
+	@-$(RM) $(DEST)\wrtc.exe >nul 2>&1
+	@-$(RM) $(DEST)\rtcheck.exe >nul 2>&1
 	@-copy $(DEST)\*.exe ..\..\tools\rtc\src >nul
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building rtc compiler          "
@@ -213,13 +209,17 @@ rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
 	@luart.exe ..\..\tools\rtc\src\rtc.lua -o wrtc.exe -w -i ..\..\tools\rtc\src\img\rtc.ico ..\..\tools\rtc\src\rtc.lua ..\..\tools\rtc\src >nul 2>&1
 	@-copy /Y rtc.exe "$(DEST)\rtc.exe" >nul	
 	@-copy /Y wrtc.exe "$(DEST)\wrtc.exe" >nul	
-	@$(RM) luart.exe >nul 2>&1
-	@$(RM) wluart.exe >nul 2>&1
-	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1 
+	@-$(RM) luart.exe >nul 2>&1
+	@-$(RM) wluart.exe >nul 2>&1
+	@-$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1 
 !endif
 
 #---- Warning, be sure to use the x86 / x64 LuaRT-Studio git branch accordingly to the PLATFORM target
-buildtools: rtc infotools 
+buildtools: rtc 
+	@cd ..\..\tools\RTBuilder
+	@nmake.bat "LUART_PATH=%CD%/../.."
+	@cd ..\..\src\core
+	@echo|set /p dummy="▸  Building QuickRT/LuaRT Studio  "
 	@$(CC) /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c >nul 2>&1
 	@echo|set /p dummy="■"
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll >nul 2>&1
@@ -245,7 +245,7 @@ buildtools: rtc infotools
 	@-copy /Y ..\..\bin\wrtc.exe "..\..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
 	@-copy /Y lua54.dll "..\..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
 	@echo|set /p dummy="■"
-	@$(RM) lua54.dll
+	@-$(RM) lua54.dll
 	@rmdir  "..\..\tools\LuaRT-Studio\examples\" /s /q
 	@xcopy "..\..\examples"  "..\..\tools\LuaRT-Studio\examples\" /s /e /y >nul
 	@echo|set /p dummy="■"
@@ -265,35 +265,38 @@ setup: buildtools infosetup
 
 clean: utf8
 	@echo|set /p dummy="▸  Cleaning Lua 5.4 VM... "
-	@$(RM) $(BASE_O) >nul 2>&1
+	@-$(RM) $(BASE_O) >nul 2>&1
 	@echo ✓
 	@echo|set /p dummy="▸  Cleaning LuaRT Core framework... "
-	@$(RM) *.obj >nul 2>&1
-	@$(RM) *.pdb >nul 2>&1
-	@$(RM) *.exp >nul 2>&1
-	@$(RM) *.lib >nul 2>&1
-	@$(RM) *.ilk >nul 2>&1
-	@$(RM) lua54.* >nul 2>&1
-	@$(RM) resource.res >nul 2>&1
-	@$(RM) ..\..\lib\lua54.lib >nul 2>&1
-	@$(RM) $(ALL_T) >nul 2>&1
-	@$(RM) $(LUART_T) >nul 2>&1
-	@$(RM) $(LUAWRT_T)  >nul 2>&1
-	@$(RM) $(UI_O) >nul 2>&1
+	@-$(RM) *.obj >nul 2>&1
+	@-$(RM) *.pdb >nul 2>&1
+	@-$(RM) *.exp >nul 2>&1
+	@-$(RM) *.lib >nul 2>&1
+	@-$(RM) *.ilk >nul 2>&1
+	@-$(RM) lua54.* >nul 2>&1
+	@-$(RM) resource.res >nul 2>&1
+	@-$(RM) ..\..\lib\lua54.lib >nul 2>&1
+	@-$(RM) $(ALL_T) >nul 2>&1
+	@-$(RM) $(LUART_T) >nul 2>&1
+	@-$(RM) $(LUAWRT_T)  >nul 2>&1
+	@-$(RM) $(UI_O) >nul 2>&1
 	@echo ✓
-	@echo|set /p dummy="▸  Cleaning LuaRT toolchain... "
-	@$(RM) $(DEST)\*.exe >nul 2>&1
-	@$(RM) rtc.exe >nul 2>&1
-	@$(RM) wrtc.exe >nul 2>&1
-	@$(RM) luart*.exe >nul 2>&1
-	@$(RM) wluart*.exe >nul 2>&1
-	@$(RM) quickrt.exe >nul 2>&1
-	@$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1
-	@$(RM) ..\..\setup\luaRT.zip >nul 2>&1
-	@$(RM) ..\..\tools\QuickRT\QuickRT.exe >nul 2>&1
-	@$(RM) ..\..\tools\QuickRT\lua54.dll >nul 2>&1
-	@$(RM) LuaRT-$(VERSION)-x64.* >nul 2>&1
-	@$(RM) LuaRT-$(VERSION)-x86.* >nul 2>&1
-	@$(RM) ..\..\LuaRT-$(VERSION)-x64.* >nul 2>&1
-	@$(RM) ..\..\LuaRT-$(VERSION)-x86.* >nul 2>&1
+	@cd ..\..\tools\RTBuilder
+	@nmake.bat clean >nul 2>&1
+	@cd ..\..\src\core
+	@echo ✓	@echo|set /p dummy="▸  Cleaning LuaRT toolchain... "
+	@-$(RM) $(DEST)\*.exe >nul 2>&1
+	@-$(RM) rtc.exe >nul 2>&1
+	@-$(RM) wrtc.exe >nul 2>&1
+	@-$(RM) luart*.exe >nul 2>&1
+	@-$(RM) wluart*.exe >nul 2>&1
+	@-$(RM) quickrt.exe >nul 2>&1
+	@-$(RM) ..\..\tools\rtc\src\*.exe >nul 2>&1
+	@-$(RM) ..\..\setup\luaRT.zip >nul 2>&1
+	@-$(RM) ..\..\tools\QuickRT\QuickRT.exe >nul 2>&1
+	@-$(RM) ..\..\tools\QuickRT\lua54.dll >nul 2>&1
+	@-$(RM) LuaRT-$(VERSION)-x64.* >nul 2>&1
+	@-$(RM) LuaRT-$(VERSION)-x86.* >nul 2>&1
+	@-$(RM) ..\..\LuaRT-$(VERSION)-x64.* >nul 2>&1
+	@-$(RM) ..\..\LuaRT-$(VERSION)-x86.* >nul 2>&1
 	@echo ✓
