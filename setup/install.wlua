@@ -84,6 +84,7 @@ local function shortcut(name, target, icon)
     local shell = sys.COM("WScript.Shell")
     local shortcut = shell:CreateShortcut(startmenu_dir.fullpath.."/"..name..".lnk")
     shortcut.TargetPath = target
+    shortcut.WorkingDirectory = sys.File(target).path
     shortcut.IconLocation = icon or (target..",0")
     shortcut:Save()
 end
@@ -111,12 +112,14 @@ function button:onClick()
         isopen(dir.fullpath.."/bin/luart.exe", "LuaRT console interpreter")        
         isopen(dir.fullpath.."/bin/wluart.exe", "LuaRT console interpreter")       
         isopen(dir.fullpath.."/bin/rtc.exe", "rtc compiler")        
+        isopen(dir.fullpath.."/bin/rtcheck.exe", "LuaRT updater")        
         isopen(dir.fullpath.."/bin/wrtc.exe", "wrtc compiler")        
         isopen(dir.fullpath.."/bin/rtcheck.exe", "LuaRT update checker")        
         isopen(dir.fullpath.."/bin/luart-static.exe", "LuaRT console interpreter")      
         isopen(dir.fullpath.."/bin/wluart-static.exe", "LuaRT console interpreter")     
         isopen(dir.fullpath.."/LuaRT-Studio/LuaRT Studio.exe", "LuaRT Studio")      
         isopen(dir.fullpath.."/QuickRT/QuickRT.exe", "QuickRT")      
+        isopen(dir.fullpath.."/RTBuilder/RTBuilder.exe", "RTBuilder")      
         win.installation = true
         local label = ui.Label(win, "", 40, 190, 312)
         label.autosize = false        
@@ -171,6 +174,7 @@ function button:onClick()
             startmenu_dir:make()
         end
         shortcut("QuickRT", dir.fullpath.."\\QuickRT\\QuickRT.exe")
+        shortcut("RTBuilder", dir.fullpath.."\\RTBuilder\\RTBuilder.exe")
         shortcut("LuaRT Update", dir.fullpath.."\\bin\\rtcheck.exe")
         shortcut("LuaRT Studio", dir.fullpath.."\\LuaRT-Studio\\LuaRT Studio.exe")
         shortcut("LuaRT Documentation", "https://luart.org/doc/index.html", sys.env.windir.."\\system32\\shell32.dll, 13")

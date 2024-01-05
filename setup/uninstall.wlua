@@ -73,6 +73,7 @@ while win.visible do
         sys.Directory(path.."/lib"):removeall()
         sys.Directory(path.."/modules"):removeall()
         sys.Directory(path.."/examples"):removeall()
+        sys.Directory(path.."/RTBuilder"):removeall()
         ui.update()
         sys.File(path.."\\CHANGELOG.md"):remove()
         sys.File(path.."\\LICENSE"):remove()
