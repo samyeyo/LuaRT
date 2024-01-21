@@ -66,17 +66,19 @@ end
 
 local function download_update(progressbar, version)
     if ui.confirm("New "..version.." is available !\nDo you want to proceed with installation ?") == "yes" then
+        win:show()
         bar:show()
         local v = version:match("([%d%.]+)")
         github.headers["Accept-Encoding"] = "None"
         local task = github:download("/samyeyo/LuaRT/releases/download/v"..v.."/LuaRT-"..v.."-".._ARCH..".zip")
-        sleep(500)
+        sleep(800)
         label.text = "Downloading "..version.." for ".._ARCH.."... "
         while not task.terminated do
             sleep()
-            length = length or github.headers["Content-Length"] or false
+            length = length or github.headers["content-length"] or github.headers["Content-length"] or github.headers["Content-Length"]  or github.headers["content-Length"] or false
             if length == false then                
-                error("Network error: failed to donwload LuaRT update")
+                ui.error("Network error: failed to donwload LuaRT update")
+                win:hide()
             end
             bar.position = math.floor(github.received/length*100)
         end        
@@ -92,7 +94,7 @@ local function version_num(v)
 end
 
 function win:onShow()
-    local version = check_update(bar)    
+    local version = check_update(bar)   
     if version and (version_num(_VERSION) < version_num(version)) then
         local file = download_update(bar, version)
         if file then
@@ -103,7 +105,8 @@ function win:onShow()
                 local zip = compression.Zip(tmpfile)
                 zip:extractall(tmpdir)
                 zip:close()
-                sys.cmd(tmpfile.fullpath:gsub(".zip", ".exe"))
+                sys.cmd(tmpfile.fullpath:gsub(".zip", ".exe"), false, false)
+                ui.info("done")
                 tmpdir:removeall()
             else
                 error("Failed to execute LuaRT setup")
