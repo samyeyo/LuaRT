@@ -104,8 +104,7 @@ int lua_super(lua_State *L, int idx) {
 static int super_proxy(lua_State *L) {
 	int len, nargs = lua_gettop(L);
 
-	if (nargs) {
-		lua_getmetatable(L, 1);
+	if (nargs && lua_getmetatable(L, 1)) {	
 		if (!lua_getfield(L, -1, "__ancestors")) {
 			lua_pop(L, 1);
 			lua_createtable(L, 3, 0);

@@ -69,6 +69,7 @@ void close_task(lua_State *L, Task *t) {
 		}
 	}	
 }
+
 //-------- Resume a Task
 int resume_task(lua_State *L, Task *t, int args) {
 	int nresults = 0, status;
@@ -83,8 +84,8 @@ int resume_task(lua_State *L, Task *t, int args) {
 	} else if (status == LUA_OK) {
 		if (lua_rawgeti(t->L, LUA_REGISTRYINDEX, t->taskref)) {
 			if (lua_getfield(t->L, -1, "after") == LUA_TFUNCTION) {
-				lua_remove(t->L, -2);
-				lua_insert(t->L, -nresults-1);
+				lua_insert(t->L, -nresults-2);
+				lua_insert(t->L, -nresults-2);
 				lua_call(t->L, nresults, LUA_MULTRET);
 				close_task(L, t);
 				return 0;
