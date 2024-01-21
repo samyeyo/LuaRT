@@ -10,8 +10,8 @@
 local console = require("console")
 local compression = require("compression")
 
-local VERSION = arg[2]
-local PLATFORM = arg[3]
+local VERSION = arg[1]
+local PLATFORM = arg[2]
 local dist = sys.Directory(sys.Directory(sys.currentdir).parent.path.."\\dist")
 local parent = dist.parent.parent.path
 local bin = sys.Directory(dist.path.."\\bin")

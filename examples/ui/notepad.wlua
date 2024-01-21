@@ -195,6 +195,4 @@ Edit:onChange()
 win:show()
 
 ---------------------------- Main loop
-while win.visible do
-	ui.update()
-end
+ui.run(win):wait()

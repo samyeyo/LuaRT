@@ -1,7 +1,7 @@
 local ui = require "ui"
 
 -- Get the File 'calc.html' depending on if it is embeded or not
-local file = embed and embed.File('calc.html') or sys.File(sys.File(arg[1]).path.."/calc.html")
+local file = embed and embed.File('calc.html') or sys.File(sys.File(arg[0]).path.."/calc.html")
 
 require "webview"
 

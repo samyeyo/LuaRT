@@ -65,7 +65,7 @@ win.width = img.width
 win.bgcolor = 0xFFFFFF
 win:center()
 
-local button = ui.Button(win, caption.." LuaRT "..VERSION.." for "..(arg[0]:find("x64") and "x64" or "x86"))
+local button = ui.Button(win, caption.." LuaRT "..VERSION.." for "..(arg[-1]:find("x64") and "x64" or "x86"))
 button:loadicon(File("img/install.ico"))
 button.cursor = "hand"
 button:center()
@@ -110,9 +110,8 @@ function button:onClick()
     end
     if dir ~= nil then
         isopen(dir.fullpath.."/bin/luart.exe", "LuaRT console interpreter")        
-        isopen(dir.fullpath.."/bin/wluart.exe", "LuaRT console interpreter")       
+        isopen(dir.fullpath.."/bin/wluart.exe", "LuaRT desktop interpreter")       
         isopen(dir.fullpath.."/bin/rtc.exe", "rtc compiler")        
-        isopen(dir.fullpath.."/bin/rtcheck.exe", "LuaRT updater")        
         isopen(dir.fullpath.."/bin/wrtc.exe", "wrtc compiler")        
         isopen(dir.fullpath.."/bin/rtcheck.exe", "LuaRT update checker")        
         isopen(dir.fullpath.."/bin/luart-static.exe", "LuaRT console interpreter")      

@@ -2,7 +2,7 @@ local ui = require "ui"
 require "webview"
 
 -- Get the File 'messages.html' (even if the script is running from another folder)
-local file = sys.File(sys.File(arg[1]).path.."/messages.html")
+local file = sys.File(sys.File(arg[0]).path.."/messages.html")
 
 local win = ui.Window("Webview test", 640, 540)
 

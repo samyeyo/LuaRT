@@ -11,7 +11,7 @@ c.cursor = "cross"
 c.sync = false
 
 -- Create an Image instance from file
-local img = c:Image(sys.File(arg[1]).path.."\\LuaRT.png")
+local img = c:Image(sys.File(arg[0]).path.."\\LuaRT.png")
 
 -- Flag to draw on the canvas or not
 c.drawing = false

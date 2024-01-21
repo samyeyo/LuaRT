@@ -13,7 +13,7 @@ local ui = require "ui"
 
 local File = embed and embed.File or sys.File
 
-local exe = sys.File(arg[0])
+local exe = sys.File(arg[-1])
 local tmpexe = sys.File(sys.env.TEMP..'\\'..exe.name)
 
 if exe.fullpath ~= tmpexe.fullpath then

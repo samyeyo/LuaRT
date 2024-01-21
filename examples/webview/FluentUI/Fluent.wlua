@@ -1,7 +1,7 @@
 local ui = require "ui"
 
 -- Get the File 'Fluent.html' depending on if it is embeded or not
-local file = embed and embed.File('Fluent.html') or sys.File(sys.File(arg[1]).path.."/Fluent.html")
+local file = embed and embed.File('Fluent.html') or sys.File(sys.File(arg[0]).path.."/Fluent.html")
 
 require "webview"
 

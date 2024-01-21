@@ -247,11 +247,11 @@ int main() {
 	else {
 		lua_createtable(L, argc, 0);	
 		lua_pushwstring(L, exename);
-		lua_rawseti(L, -2, 0);
+		lua_rawseti(L, -2, -1);
 		for (i=1; i < argc; i++) {
 			lua_pushwstring(L, wargv[i]);
-			lua_rawseti(L, -2, i);
-		}
+			lua_rawseti(L, -2, i-1 + is_embeded);
+		}	
 		lua_setglobal(L, "arg");
 		lua_gc(L, LUA_GCGEN, 0, 0);
 		if (is_embeded) {	
@@ -268,10 +268,8 @@ int main() {
 							is_embeded = TRUE;
 							goto compiledscript;
 						} 
-						else if (__argc > 3) {
-							argfile = 3;
-							goto execscript;
-						}
+						fputs(lua_tostring(L, -1), stderr);
+						fputs("\n", stderr);
 					} else
 						fputs("error: -e option expects a statement argument\n", stderr);					
 				} else {

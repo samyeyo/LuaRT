@@ -1,7 +1,7 @@
 local ui = require "ui"
 
 -- get the the path to the messages.wlua folder
-local homedir = sys.File(arg[1]).directory
+local homedir = sys.File(arg[0]).directory
 
 require "webview"
 

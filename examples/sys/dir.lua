@@ -14,7 +14,7 @@ local function format_int(number)
   return result
 end
 
-local dir = sys.Directory(arg[2] or sys.currentdir)
+local dir = sys.Directory(arg[1] or sys.currentdir)
 
 console.writecolor("gray", "\n"..string.rep("\xe2\x94\x80", 2).."\xe2\x94\xac\xe2\x94\x80 ")
 console.writecolor("yellow", dir.fullpath.."\\\n")
