@@ -105,12 +105,15 @@ static int COM_method_call(lua_State *L) {
 	}
 	params.cArgs = n;
 	args = calloc(n+1, sizeof(VARIANT));
-	for (i = (n - 1); i >= 0; i--) {
+
+	for (i = (n-1); i >= 0; i--) {
 		VARIANT *var;
 		var = &args[i];
 		VariantInit(var);
 		switch(lua_type(L, idx)) {
-			case LUA_TNIL:		var->vt = VT_NULL; break;
+			case LUA_TNIL:		V_VT(var) = VT_EMPTY;
+								V_I1(var) = 0;
+								break;
 			case LUA_TBOOLEAN:	var->vt = VT_BOOL; var->boolVal = lua_toboolean(L, idx); break;
 number:		case LUA_TNUMBER:	if (lua_isinteger(L, idx)) {
 									var->vt = VT_I4;
@@ -127,7 +130,7 @@ number:		case LUA_TNUMBER:	if (lua_isinteger(L, idx)) {
 									wchar_t *name;
 									BOOL done = FALSE;
 									VARDESC *vardesc;
-									for (UINT i = 0; !done && (i < attr-> cVars); i++) {
+									for (UINT i = 0; !done && (i < attr->cVars); i++) {
 										ITypeInfo_GetVarDesc(t, i, &vardesc);
 										ITypeInfo_GetDocumentation(t, vardesc->memid, &name, NULL, NULL, NULL);
 										if (wcscmp(str, name) == 0) {
@@ -147,7 +150,7 @@ number:		case LUA_TNUMBER:	if (lua_isinteger(L, idx)) {
 			case LUA_TTABLE:	{
 									COM *o = lua_self(L, idx, COM);
 									V_DISPATCH(var) = o->this;
-									IDispatch_AddRef(o->this);
+									IDispatch_AddRef(o->this);						
 									if (method & DISPATCH_PROPERTYPUT)
 										method = DISPATCH_PROPERTYPUTREF;
 									V_VT(var) = VT_DISPATCH;
@@ -173,16 +176,19 @@ number:		case LUA_TNUMBER:	if (lua_isinteger(L, idx)) {
 												hr = S_OK;
 												goto done;
 											}
-											lua_pushwstring(L, (LPCWSTR)execpInfo.bstrDescription);
-											SysFreeString(execpInfo.bstrDescription);
 											if (execpInfo.bstrHelpFile)
 												SysFreeString(execpInfo.bstrHelpFile);
 											if (execpInfo.bstrSource)
 												SysFreeString(execpInfo.bstrSource);
-											break;
-				case DISP_E_BADVARTYPE:		lua_pushstring(L, "Bad argument type");							
-				case DISP_E_TYPEMISMATCH:	lua_pushfstring(L, "type mismatch for parameter %d", puArgErr); break;
+											if (execpInfo.bstrDescription) {
+												lua_pushwstring(L, (LPCWSTR)execpInfo.bstrDescription);
+												SysFreeString(execpInfo.bstrDescription);
+												break;
+											}
 				default: 					lua_pushstring(L, "unknown error");
+											break;
+				case DISP_E_BADVARTYPE:		lua_pushstring(L, "Bad argument type"); break;							
+				case DISP_E_TYPEMISMATCH:	lua_pushfstring(L, "type mismatch for parameter %d", puArgErr); break;
 			} 
 		} else switch(result.vt) {
 			case VT_EMPTY:
@@ -218,9 +224,13 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 			case VT_DECIMAL:	VariantChangeType(&result, &result, 0, VT_R8);
 								lua_pushnumber(L, V_R8(&result)); break;
 			case VT_DISPATCH:	{
-									lua_pushlightuserdata(L, result.pdispVal);
-									lua_pushinstance(L, COM, 1);
-									goto cleanup;
+									if (result.pdispVal) {
+										lua_pushlightuserdata(L, result.pdispVal);
+										lua_pushinstance(L, COM, 1);
+										goto cleanup;
+									}
+									lua_pushnil(L);
+									break;
 								}
 			case VT_DATE:		{
 									SYSTEMTIME st;
