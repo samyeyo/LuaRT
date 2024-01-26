@@ -466,20 +466,27 @@ int do_update(lua_State *L) {
 			} else if (w->wtype > UIMenuItem)
 				goto do_msg;
 		} else {				 
-			Widget *wp = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
-			while(wp && (wp->wtype != UIWindow))
+			Widget *wp = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);			
+			while(wp && (wp->wtype != UIWindow) && (wp->wtype != UITab) && (wp->wtype != UIGroup))
 				wp = (Widget*)GetWindowLongPtr(GetParent(wp->handle), GWLP_USERDATA);					
-			if (wp) {
+			if (wp && (wp->wtype != UIGroup)) {
+				HWND parent = GetParent(wp->handle);
 				if ((msg.message == WM_KEYDOWN) && (msg.wParam == VK_TAB)) {
-					HWND h;
+					if (wp->wtype == UITab) {							
+						TCITEMW *page = __get_item(wp, SendMessageW(wp->handle, TCM_GETCURSEL, 0, 0), NULL);
+						parent = (HWND)page->lParam;
+						free(page->pszText);
+						free(page);								
+					}
 					Widget *w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA);
-					if (w && (w->wtype != UIEdit) && (h = GetNextDlgTabItem(wp->handle, msg.hwnd, GetAsyncKeyState(VK_SHIFT) & 0x8000 ? TRUE : FALSE))) {
+					if (w && (w->wtype != UIEdit)) {
+						HWND h = GetNextDlgTabItem(parent, msg.hwnd, GetAsyncKeyState(VK_SHIFT) & 0x8000 ? TRUE : FALSE);
 						SetFocus(h);
 						continue;
 					}
 				}
 				if (TranslateAcceleratorW(wp->handle, wp->accel_table, &msg))
-					goto dispatch;
+						goto dispatch;
 			}
 do_msg:			TranslateMessage(&msg);
 dispatch:		DispatchMessage(&msg);
@@ -702,15 +709,14 @@ LUA_CONSTRUCTOR(Combobox) {
 	return 1;
 }
 
-extern LUA_PROPERTY_SET(Edit, richtext);
+extern LUA_PROPERTY_SET(Edit, text);
 	
 LUA_CONSTRUCTOR(Edit) {
 	Widget *w = Widget_create(L, UIEdit, WS_EX_STATICEDGE, RICHEDIT_CLASSW, WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_LEFT | ES_AUTOHSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | ES_NOHIDESEL | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, TRUE, FALSE);
-	// wchar_t *str = lua_towstring(L, 3);
 	SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
 	SendMessage(w->handle, EM_EXLIMITTEXT, 0, 0x7FFFFFF0);
-	SendMessage(w->handle, EM_SETTEXTMODE, TM_RICHTEXT, 0);
-	lua_pushcfunction(L, Edit_setrichtext);
+	SendMessage(w->handle, EM_SETTEXTMODE, TM_PLAINTEXT, 0);
+	lua_pushcfunction(L, Edit_settext);
 	lua_pushvalue(L, -2);
 	lua_pushvalue(L, 3);
 	lua_call(L, 2, 0);
