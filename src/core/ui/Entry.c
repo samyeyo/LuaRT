@@ -235,17 +235,19 @@ LUA_PROPERTY_GET(Edit, rtf) {
 }
  
 LUA_PROPERTY_SET(Edit, text);
+LUA_PROPERTY_SET(Edit, richtext);
 LUA_PROPERTY_GET(Edit, text);
 
 LUA_PROPERTY_SET(Edit, rtf) {
+	BOOL tortf = lua_toboolean(L, 2);
 	HWND h = lua_self(L, 1, Widget)->handle;	
-	lua_pushcfunction(L, Edit_settext);
+	lua_pushcfunction(L, tortf ? Edit_setrichtext : Edit_settext);
 	lua_pushvalue(L, 1);
 	lua_pushcfunction(L, Edit_gettext);
 	lua_pushvalue(L, 1);
 	lua_call(L, 1, 1);	
 	SendMessage(h, WM_SETTEXT, (WPARAM)"", (LPARAM)0);
-	SendMessage(h, EM_SETTEXTMODE, lua_toboolean(L, 2) ? TM_RICHTEXT : TM_PLAINTEXT, 0);
+	SendMessage(h, EM_SETTEXTMODE, tortf ? TM_RICHTEXT : TM_PLAINTEXT, 0);
 	lua_call(L, 2, 0);
 	return 0;
 }
@@ -497,7 +499,7 @@ LUA_PROPERTY_SET(Edit, richtext) {
 	es.dwCookie = (DWORD_PTR)&si;
 	es.pfnCallback = ReadStringCB;
 	if (SendMessage(w->handle, EM_GETTEXTMODE, 0, 0) & TM_RICHTEXT)
-		type = SF_RTF | (SF_USECODEPAGE | (CP_UTF8 << 16));
+		type = SF_RTF; // | (SF_USECODEPAGE | (CP_UTF8 << 16));
 	else 
 		type = SF_TEXT | (SF_USECODEPAGE | (CP_UTF8 << 16));
 	if ( SendMessage(w->handle, EM_STREAMIN, type, (LPARAM)&es) && (es.dwError == 0))
