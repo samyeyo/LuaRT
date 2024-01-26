@@ -1,3 +1,50 @@
+## LuaRT v1.7.1 Bugfix (Jan 26 2024)
+
+#### LuaRT interpreter
+- Updated: Now LuaRT uses an `arg` table implementation closer to PUC Lua :
+- arg[2] => command line argument at position 2
+- arg[1] => command line argument at position 1 
+- arg[0] => The executing script path (or `nil` in case of a compiled executable)
+- arg[-1] => The current executable ("luart.exe", "wluart.exe", or the compiled executable file)
+- Fixed: Errors from command line switch `-e` are now thrown as expected (Fixes #176)
+
+#### LuaRT Updater
+- Fixed:  LuaRT Updater now downloads updates correctly (Fixes #168)
+
+#### LuaRT Studio
+- Fixed: Running scripts with arguments now set the `arg` table correctly
+
+#### QuickRT
+- Fixed: Can't change values of a global variable defined in another environment (using `loadfile()` for example)
+- Fixed: QuickRT exits when printing custom `userdata`
+
+#### rtc
+- Fixed: `wrtc` error message "no input file" fixed (Fixes #172)
+- Fixed:  `wrtc`don't throw "no input file" error anymore
+- Updated: `rtc` now use LuaRT 1.7.1 `arg` table
+
+#### RTBuilder
+- Fixed: RTBuilder won't crash anymore when changing current Window name 
+- Fixed: Shortcuts `CTRL+O` and `CTRL+S` work now as expected
+- Fixed: Changing the `Tab.selected` property in inspector shows the selected `TabItem`
+- Fixed: Assigning icon to `TreeItem` now works as expected
+- Updated: Setting an icon in the TreeItems editor will switch the `Tree.style` property to `"icons"` in inspector window
+- Updated: `RTBuilder` now uses LuaRT 1.7.1 `arg` table
+- Updated: RTBuilder windows are not `topmost` anymore
+
+#### LuaRT documentation
+- Updated: now the documentation contains all new LuaRT 1.7.1 changes 
+
+#### `sys` module
+- Fixed: Calling `COM` object methods with `nil` argument won't crash the program anymore (Fixes #177)
+- Fixed: `COM` method or property returning a COM `Nothing` value won't crash the program anymore (Fixes #173)
+- Fixed: `Task` that returns a `boolean` or `number` value will crash the program when calling the `Task.after` function (Fixes #175)
+
+#### `ui` module
+- Fixed: `TreeItem:loadicon()` now load icon correctly (Fixes #170)
+- Fixed: `Tab:onSelect()` event is now fired when the property `Tab.selected` is set (Fixes #171)
+- Fixed: `Tab` key can now be used to navigate between widgets inside a `Panel` or `TabItem` (Fixes #174)
+
 ## LuaRT v1.7.0 (Jan 05 2024)
 
 #### Highlights 
