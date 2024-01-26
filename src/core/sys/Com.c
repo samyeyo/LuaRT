@@ -111,8 +111,8 @@ static int COM_method_call(lua_State *L) {
 		var = &args[i];
 		VariantInit(var);
 		switch(lua_type(L, idx)) {
-			case LUA_TNIL:		V_VT(var) = VT_EMPTY;
-								V_I1(var) = 0;
+			case LUA_TNIL:		V_VT(var) = VT_ERROR;
+								var->scode = DISP_E_PARAMNOTFOUND;
 								break;
 			case LUA_TBOOLEAN:	var->vt = VT_BOOL; var->boolVal = lua_toboolean(L, idx); break;
 number:		case LUA_TNUMBER:	if (lua_isinteger(L, idx)) {
