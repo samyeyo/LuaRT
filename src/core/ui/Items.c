@@ -101,7 +101,10 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			return FALSE;
 		case WM_SYSKEYDOWN:
 			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
-			return FALSE;			
+			return FALSE;		
+		case WM_SETFOCUS:
+			SetFocus(GetNextDlgTabItem(hWnd, (HWND)wParam, FALSE));
+
 	}
 	return WindowProc(hWnd, Msg, wParam, lParam);
 }
@@ -853,9 +856,7 @@ LUA_PROPERTY_GET(Listbox, selected) {
 
 LUA_PROPERTY_SET(Listbox, selected) {
 	Widget *w = lua_self(L, 1, Widget);
-	HANDLE h = GetParent(w->handle);
 	Widget *sel;
-	UINT_PTR id = GetDlgCtrlID(w->handle);
 	
 	if (lua_isnil(L, 2)) {
 		if (w->wtype == UITree)
@@ -879,21 +880,17 @@ LUA_PROPERTY_SET(Listbox, selected) {
 			ListView_EnsureVisible(w->handle, sel->index, FALSE);
 			ListView_SetItemState(w->handle, sel->index, LVIS_SELECTED, LVIS_SELECTED);
 		}
-		else if (w->wtype == UITab)
+		else if (w->wtype == UITab) {
 			SendMessageW(w->handle, TCM_SETCURFOCUS, sel->index, 0);
+			page_resize(w, TRUE);
+			lua_indexevent(w, onSelect, TabCtrl_GetCurSel(w->handle));
+		}
 		else if (w->wtype == UICombo) {
 			SendMessageW(w->status ? w->status : w->handle, CB_SETCURSEL, sel->index, 1);
 			SetWindowTextW(w->handle, sel->item.cbitem->pszText);
 		}
 	} else 
 		luaL_error(L, "cannot select an item that don't belong to this %s object", luaL_typename(L, 1));
-	if (w->wtype == UITab) {
-		NMHDR lparam = {0};
-		lparam.code = TCN_SELCHANGE;
-		lparam.idFrom = id;
-		lparam.hwndFrom = w->handle;
-		SendMessageW(h, WM_NOTIFY, (WPARAM)lparam.hwndFrom, (LPARAM)&lparam );
-	} 
 done: 
 	UpdateWindow(w->handle);
 	return 0;
@@ -935,7 +932,7 @@ LUA_METHOD(Item, loadicon) {
 		}
 		else {
 			if (w->item.treeitem->iImage == INT16_MAX) {
-				w->index = get_index_byTreeitem(h, w->item.treeitem->hItem);
+				w->index = get_index_byTreeitem(h, w->item.treeitem->hItem)-1;
 				w->item.treeitem->iImage = w->index;
 			} else 
 				w->index = w->item.treeitem->iImage;
