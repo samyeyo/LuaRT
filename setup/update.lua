@@ -60,7 +60,6 @@ local function check_update()
     elseif response.status ~= 200 then
         error(response.reason)
     end
-
     return response.content:match("(LuaRT [%d%.]+)")
 end
 
@@ -77,7 +76,7 @@ local function download_update(progressbar, version)
             sleep()
             length = length or github.headers["content-length"] or github.headers["Content-length"] or github.headers["Content-Length"]  or github.headers["content-Length"] or false
             if length == false then                
-                ui.error("Network error: failed to donwload LuaRT update")
+                ui.error("Network error: failed to download LuaRT update")
                 win:hide()
             end
             bar.position = math.floor(github.received/length*100)
@@ -106,7 +105,6 @@ function win:onShow()
                 zip:extractall(tmpdir)
                 zip:close()
                 sys.cmd(tmpfile.fullpath:gsub(".zip", ".exe"), false, false)
-                ui.info("done")
                 tmpdir:removeall()
             else
                 error("Failed to execute LuaRT setup")
