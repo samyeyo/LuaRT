@@ -129,20 +129,21 @@ LUA_API int luaL_embedclose(lua_State *L) {
 }
 
 //-------------------------------------------------[luaL_embedopen() luaRT C API]
-LUA_API int luaL_embedopen(lua_State *L, const wchar_t *exename) {
-  HRSRC hres = FindResource(NULL, MAKEINTRESOURCE(EMBED), RT_RCDATA);
-  HGLOBAL hdata = LoadResource(NULL, hres);
-  datafs = LockResource(hdata);
-  size_t size = SizeofResource(NULL, hres);
-  if (datafs && (size > 2) && (fs = open_fs(datafs, size))) {
-	  lua_getglobal(L, "package");
-    lua_getfield(L, -1, "searchers");
-    lua_pushcfunction(L, luart_fsloader);
-    lua_rawseti(L, -2, luaL_len(L, -2)+1);
-    lua_pop(L, 2);
-    return TRUE;
+LUA_API BYTE *luaL_embedopen(lua_State *L) {
+  if (!datafs) {
+    HRSRC hres = FindResource(NULL, MAKEINTRESOURCE(EMBED), RT_RCDATA);
+    HGLOBAL hdata = LoadResource(NULL, hres);
+    datafs = LockResource(hdata);
+    size_t size = SizeofResource(NULL, hres);
+    if (datafs && (size > 2) && (fs = open_fs(datafs, size))) {
+      lua_getglobal(L, "package");
+      lua_getfield(L, -1, "searchers");
+      lua_pushcfunction(L, luart_fsloader);
+      lua_rawseti(L, -2, luaL_len(L, -2)+1);
+      lua_pop(L, 2);
+    } else datafs = NULL;
   }
-  return FALSE;
+  return datafs;
 }
 
 LUA_METHOD(embed, File) {

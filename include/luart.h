@@ -166,8 +166,8 @@ LUA_API void lua_pushlwstring(lua_State *L, const wchar_t *str, int len);
 //--- Returns index of string at specfied index, in a an array of options strings, or the default specified index
 LUA_API int lua_optstring(lua_State *L, int idx, const char *options[], int def);
 
-//--- Returns true if the specified executable has embedded content, and loads global "embed" module to access it 
-LUA_API int luaL_embedopen(lua_State *L, const wchar_t *exename);
+//--- Returns an array of bytes if the specified executable has embedded content or NULL otherwise, and loads global "embed" module
+LUA_API BYTE *luaL_embedopen(lua_State *L);
 
 //--- Closes embedded content previously opened with luaL_embedopen()
 LUA_API int luaL_embedclose(lua_State *L);

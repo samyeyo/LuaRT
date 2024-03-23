@@ -232,7 +232,7 @@ int main() {
 	#endif
 #endif
 	GetModuleFileNameW(NULL, (WCHAR*)exename, sizeof(exename));
-	if ((is_embeded = luaL_embedopen(L, exename))) {
+	if ((is_embeded = (luaL_embedopen(L) != NULL))) {
 		luaL_requiref(L, "embed", luaopen_embed, 2);
 		lua_pop(L, 1);
 	}
