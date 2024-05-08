@@ -9,8 +9,9 @@ win:loadicon(sys.env.windir.."\\notepad.exe")
 -- Edit object
 local Edit = ui.Edit(win, "", 0, 0)
 Edit.font = "Consolas"
-Edit.fontsize = 8
+Edit.fontsize = 8*ui.dpi
 Edit.rtf = false
+Edit.border = false
 
 -- global state variables
 encoding = "UTF8" 	-- current edited file encoding
@@ -149,6 +150,14 @@ function SettingsMenu:onClick(idx)
 	Edit.modified = false
 end
 
+-- ThemeMenu => single onClick event
+SettingsMenu:add("Switch to "..(ui.theme == "light" and "dark" or "light").." theme").onClick = function(self)
+	local old = ui.theme
+	local theme =  ui.theme == "light" and "dark" or "light"
+	ui.theme = theme
+	self.text = "Switch to "..old.." theme"
+end
+
 -- Realign Edit size when the Window is resized
 Edit.align = "all"
 
@@ -193,6 +202,5 @@ Edit:onChange()
 
 -- shows the main Window and set focus to the Edit object
 win:show()
-
 ---------------------------- Main loop
 ui.run(win):wait()

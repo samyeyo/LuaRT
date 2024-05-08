@@ -1,7 +1,7 @@
 local ui = require "ui"
 
 -- Get the File 'Fluent.html' depending on if it is embeded or not
-local file = embed and embed.File('Fluent.html') or sys.File(sys.File(arg[0]).path.."/Fluent.html")
+local file = embed and 'Fluent.html' or sys.File(sys.File(arg[0]).path.."/Fluent.html").fullpath
 
 require "webview"
 
@@ -36,7 +36,7 @@ function wv:onReady()
             document.body.style.visibility = "visible";
         }
     }); ]])
-    wv.url = file.fullpath
+    wv.url = "file:///"..file
 end
 
 win:center()

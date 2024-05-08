@@ -1,16 +1,14 @@
 local ui = require "ui"
 
--- get the the path to the messages.wlua folder
-local homedir = sys.File(arg[0]).directory
+-- Get the File 'Blog.html' depending on if it is embeded or not
+local file = embed and 'Blog.html' or sys.File(sys.File(arg[0]).path.."/Blog.html").fullpath
 
 require "webview"
 
 local win = ui.Window("Blog application using Tailwind CSS - Powered by LuaRT", "fixed", 414, 776)
 
-local wv = ui.Webview(win, homedir.path.."/Blog.html")
+local wv = ui.Webview(win, "file:///"..file)
 wv.align = "all"
-
-win:show()
 
 function wv:onReady()
     wv.statusbar = false
@@ -18,6 +16,4 @@ function wv:onReady()
     wv.contextmenu = false
 end
 
-while win.visible do
-    ui.update()
-end
+ui.run(win):wait()

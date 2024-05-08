@@ -4,15 +4,13 @@ require "webview"
 -- Get the File 'messages.html' (even if the script is running from another folder)
 local file = sys.File(sys.File(arg[0]).path.."/messages.html")
 
-local win = ui.Window("Webview test", 640, 540)
-
-local wv = ui.Webview(win, file.fullpath, 0, 46, 540, 500)
-wv.align = "bottom"
+local win = ui.Window("Webview test", "fixed", 640, 540)
 
 local button = ui.Button(win, "Change color !", 0, 0)
 button:center()
 button.y = 10
 
+local wv = ui.Webview(win, file.fullpath, 0, button.height+button.y+20, 640, 540)
 
 function button:onClick()
     wv:postmessage('{ "SetColor" : "blue" }', true)

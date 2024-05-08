@@ -16,8 +16,4 @@ function wv:onReady()
     win:maximize()
 end
 
-win:show()
-
-while win.visible do
-    ui.update()
-end
+ui.run(win):wait()

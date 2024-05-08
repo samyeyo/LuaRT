@@ -7,9 +7,12 @@
 local ui = require "ui"
 local picture= {}
 local alpha= {}
-local speed= {}
 local balls= 6
 local win = ui.Window("Bouncing balls", "fixed", 640, 480)
+
+if ui.theme == "dark" then
+  win.bgcolor = 0x404040
+end
 
 math.randomseed(sys.clock())
 

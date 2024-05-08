@@ -1,13 +1,14 @@
 local ui = require "ui"
 require "canvas"
 
+ui.theme = "dark"
+
 -- create a simple Window
 local win = ui.Window("Gradient balls demo", 500, 400)
-
+win.bgcolor = 0xFF0000
 -- create a Canvas
 local canvas = ui.Canvas(win)
 canvas.align = "all"
-canvas.bgcolor = 0x000000FF
 
 -- Ball object definition
 local Ball = Object{}

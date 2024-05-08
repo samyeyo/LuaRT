@@ -9,8 +9,8 @@ Canvas.bgcolor = 0x000000FF
 
  
 function Canvas:onPaint()
-  local width = Canvas.width
-  local height = Canvas.height
+  local width = math.floor(Canvas.width*ui.dpi)
+  local height = math.floor(Canvas.height*ui.dpi)
   local pixels = {}
   for x = 0, width do
     for y = 0, height do

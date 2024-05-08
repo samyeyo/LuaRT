@@ -1,5 +1,7 @@
 local ui = require "ui"
 
+ui.theme = "dark"
+
 -- create a simple Window
 local win = ui.Window(" File list sample", 320, 300)
 
@@ -9,6 +11,7 @@ FileList = Object(ui.List)
 function FileList:constructor(parent, path, ...)
   local list = ui.List.constructor(self, parent, {}, ...)
   list.style = "icons"
+  list.border = false
   local dir = {}
   local files = {}
   local directory
@@ -35,6 +38,7 @@ function FileList:constructor(parent, path, ...)
     end
     list:clear()
     self:append(dir)
+    sleep()
     self:append(files)
   end
   
