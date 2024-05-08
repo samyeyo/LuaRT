@@ -7,6 +7,7 @@
 */
 
 #include <luart.h>
+#include <Widget.h>
 #include <File.h>
 
 #include <vector>
@@ -24,15 +25,17 @@ static std::vector<D2D1_GRADIENT_STOP> stops;
 
 
 static D2D1_GRADIENT_STOP *table_togradient(lua_State *L, int idx, UINT *count) {
-  D2D1_GRADIENT_STOP stop;
-  UINT32 rgba;
-
+    D2D1_GRADIENT_STOP stop;
+    UINT32 rgba;
+    double dpi;
+    
+    lua_uigetinfo(&dpi, NULL);
     stops.clear();
     lua_pushnil(L);
 	while (lua_next(L, idx)) {
 		if (lua_type(L, -2) != LUA_TNUMBER)
 			luaL_error(L, "invalid gradient table (number expected found %s)", luaL_typename(L, -1));
-        stop.position = (float)(lua_tonumber(L, -2));
+        stop.position = (float)(lua_tonumber(L, -2)*dpi);
         rgba = (UINT32) lua_tointeger(L, -1);
         stop.color = D2D1::ColorF(GetR(rgba)/255, GetG(rgba)/255, GetB(rgba)/255, GetA(rgba)/255);		
         stops.push_back(stop);
@@ -75,17 +78,21 @@ LUA_CONSTRUCTOR(RadialGradient) {
 }
 
 static D2D1_POINT_2F table_topoint(lua_State *L, int idx) {
+    double dpi;
+    lua_uigetinfo(&dpi, NULL);
     luaL_checktype(L, idx, LUA_TTABLE);
     lua_rawgeti(L, idx, 1);
     lua_rawgeti(L, idx, 2);
-    return D2D1::Point2F(static_cast<FLOAT>(lua_tonumber(L, -2)), static_cast<FLOAT>(lua_tonumber(L, -1)));
+    return D2D1::Point2F(static_cast<FLOAT>(lua_tonumber(L, -2)*dpi), static_cast<FLOAT>(lua_tonumber(L, -1)*dpi));
 }
 
 static void point_totable(lua_State *L, D2D1_POINT_2F p) {
+    double dpi;
+    lua_uigetinfo(&dpi, NULL);
     lua_createtable(L, 0, 2);
-    lua_pushnumber(L, p.x);
+    lua_pushnumber(L, floor(p.x/dpi));
     lua_setfield(L, -2, "x");
-    lua_pushnumber(L, p.y);
+    lua_pushnumber(L, floor(p.y/dpi));
     lua_setfield(L, -2, "y");
 }
 
@@ -122,6 +129,7 @@ LUA_PROPERTY_GET(LinearGradient, opacity) {
 LUA_PROPERTY_SET(RadialGradient, radius) {
     RadialGradient *g = lua_self(L, 1, RadialGradient);
     D2D1_POINT_2F p = table_topoint(L, 2);
+
     g->radial->SetRadiusX(p.x);
     g->radial->SetRadiusY(p.y);
     return 0;

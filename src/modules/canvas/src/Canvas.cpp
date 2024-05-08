@@ -9,6 +9,7 @@
 #include <luart.h>
 #include <Widget.h>
 #include <windows.h>
+#include <math.h>
 
 #include "Direct2D.h"
 #include "Canvas.h"
@@ -44,7 +45,7 @@ LRESULT CALLBACK CanvasProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
       d->DCRender->EndDraw();
       bitmap->Release();
       EndPaint(hwnd, &ps);      
-      return 0;
+      return FALSE;
     }	
     case WM_LBUTTONUP:
       PostMessage(hwnd, onMouseRelease, 0, 0);
@@ -63,28 +64,42 @@ LRESULT CALLBACK CanvasProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
         d->Render->DrawBitmap(oldbitmap);
         d->Render->EndDraw();
         oldbitmap->Release();
-        InvalidateRect(hwnd, NULL, TRUE);
         break;
       }
     case WM_TIMER:
       PostMessage(hwnd, onPaint, 0, 0);
       return 0;
+
+    case WM_ERASEBKGND: return FALSE;
   }
 
   return lua_widgetproc(hwnd, uMsg, wParam, lParam, 0, 0);
 }
 
+inline float checkFloat(lua_State *L, int idx, double dpi) {
+  return static_cast<FLOAT>(luaL_checknumber(L, idx)*dpi);
+}
+
 //------------------------------------ Canvas constructor
 LUA_CONSTRUCTOR(Canvas)
 {   
-    Widget *w, *wp;
-    HWND h, hParent = (HWND)lua_widgetinitialize(L, &wp);     
-	int width = (int)luaL_optinteger(L, 5, 320), height = (int)luaL_optinteger(L, 6, 240);
-    h = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD, (int)luaL_optinteger(L, 3, 0), (int)luaL_optinteger(L, 4, 0), width, height, hParent, 0, GetModuleHandle(NULL), NULL);    
-    w = lua_widgetconstructor(L, h, TCanvas, wp, (SUBCLASSPROC)CanvasProc);
+  Widget *w, *wp;
+  double dpi;
+  BOOL isdark;
+  HWND h, hParent = (HWND)lua_widgetinitialize(L, &wp, &dpi, &isdark);
+	int width = (int)luaL_optinteger(L, 5, 320)*dpi, height = (int)luaL_optinteger(L, 6, 240)*dpi;
+
+  h = CreateWindowExW(WS_EX_COMPOSITED, L"Window", NULL,  WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE, (int)luaL_optinteger(L, 3, 0)*dpi, (int)luaL_optinteger(L, 4, 0)*dpi, width, height, hParent, 0, GetModuleHandle(NULL), NULL);    
+  w = lua_widgetconstructor(L, h, TCanvas, wp, (SUBCLASSPROC)CanvasProc);
 	w->user = new Direct2D(h, width, height);
 	if (((Direct2D *)w->user)->error)
-		luaL_error(L, ((Direct2D *)w->user)->error); 
+	  luaL_error(L, ((Direct2D *)w->user)->error); 
+  if (isdark) {
+    ((Direct2D *)w->user)->bgcolor = D2D1::ColorF(D2D1::ColorF::Black, 1.0f);
+    ((Direct2D *)w->user)->color = D2D1::ColorF(D2D1::ColorF::White, 1.0f);
+    DeleteObject(((Direct2D *)w->user)->colorBrush);
+    ((Direct2D *)w->user)->Render->CreateSolidColorBrush(((Direct2D *)w->user)->color, &((Direct2D *)w->user)->colorBrush);    
+  }
   ((Direct2D *)w->user)->Render->BeginDraw();
   ((Direct2D *)w->user)->Render->Clear(((Direct2D *)w->user)->bgcolor);
   ((Direct2D *)w->user)->Render->EndDraw();    
@@ -100,8 +115,10 @@ LUA_METHOD(Canvas, __gc) {
   return 0;
 }
 
-static ID2D1Brush *getBrush(lua_State *L, Direct2D *d, int idx) {
+static ID2D1Brush *getBrush(lua_State *L, Direct2D *d, int idx, double *dpi) {
   ID2D1Brush *brush = NULL;
+  
+  lua_uigetinfo(dpi, NULL);
   if (lua_gettop(L) >= idx)
     switch(lua_type(L, idx)) {
       case LUA_TNUMBER: {
@@ -135,11 +152,13 @@ LUA_METHOD(Canvas, map) {
   ID2D1Bitmap *bmp;
   D2D1_SIZE_F size;
   D2D1_RECT_U rect;
+  double dpi;
 
+  lua_uigetinfo(&dpi, NULL);
   d->Render->GetBitmap(&bmp);
   size = bmp->GetSize();
   rect = D2D1::RectU(0, 0, size.width, size.height);
-  if (len < (size.width * size.height * 4) || FAILED(bmp->CopyFromMemory(NULL, str, size.width * 4)))
+  if (len < floor(size.width * size.height * 4) || FAILED(bmp->CopyFromMemory(NULL, str, size.width * 4)))
     len = 0;
   lua_pushboolean(L, len);
   bmp->Release();
@@ -148,9 +167,11 @@ LUA_METHOD(Canvas, map) {
 
 LUA_METHOD(Canvas, point) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 4);
-  float x = static_cast<FLOAT>(luaL_checknumber(L, 2));
-  float y = static_cast<FLOAT>(luaL_checknumber(L, 3));
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 4, &dpi);
+
+  float x = checkFloat(L, 2, dpi);
+  float y = checkFloat(L, 3, dpi);
 	d->Render->DrawRectangle(D2D1::RectF(x, y, x+0.5f, y+0.5f), brush ? brush : d->colorBrush, 0.5f, NULL);
   if (brush)
     brush->Release();
@@ -159,8 +180,10 @@ LUA_METHOD(Canvas, point) {
 
 LUA_METHOD(Canvas, line) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 6);
-	d->Render->DrawLine(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 6, &dpi);
+
+	d->Render->DrawLine(D2D1::Point2F(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi)), D2D1::Point2F(checkFloat(L, 4, dpi), checkFloat(L, 5, dpi)), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f)*dpi, NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -168,8 +191,10 @@ LUA_METHOD(Canvas, line) {
 
 LUA_METHOD(Canvas, rect) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 6);
-	d->Render->DrawRectangle(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 6, &dpi);
+
+	d->Render->DrawRectangle(D2D1::RectF(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi), checkFloat(L, 4, dpi), checkFloat(L, 5, dpi)), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f)*dpi, NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -177,8 +202,10 @@ LUA_METHOD(Canvas, rect) {
 
 LUA_METHOD(Canvas, fillrect) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 6);
-	d->Render->FillRectangle(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 6, &dpi);
+
+	d->Render->FillRectangle(D2D1::RectF(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi), checkFloat(L, 4, dpi), checkFloat(L, 5, dpi)), brush);
   if (brush)
     brush->Release();
 	return 0;
@@ -186,8 +213,10 @@ LUA_METHOD(Canvas, fillrect) {
 
 LUA_METHOD(Canvas, roundrect) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 8);
-	d->Render->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)),static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), static_cast<FLOAT>(luaL_checknumber(L, 6)), static_cast<FLOAT>(luaL_checknumber(L, 7))), brush ? brush : d->colorBrush, luaL_optnumber(L, 9, 1.0f), NULL);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 8, &dpi);
+
+	d->Render->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi), checkFloat(L, 4, dpi), checkFloat(L, 5, dpi)), checkFloat(L, 6, dpi), checkFloat(L, 7, dpi)), brush ? brush : d->colorBrush, luaL_optnumber(L, 9, 1.0f)*dpi, NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -195,8 +224,10 @@ LUA_METHOD(Canvas, roundrect) {
 
 LUA_METHOD(Canvas, fillroundrect) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 8);
-	d->Render->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3)),static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), static_cast<FLOAT>(luaL_checknumber(L, 6)), static_cast<FLOAT>(luaL_checknumber(L, 7))), brush);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 8, &dpi);
+
+	d->Render->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi), checkFloat(L, 4, dpi), checkFloat(L, 5, dpi)), checkFloat(L, 6, dpi), checkFloat(L, 7, dpi)), brush);
   if (brush)
     brush->Release();
 	return 0;
@@ -204,9 +235,10 @@ LUA_METHOD(Canvas, fillroundrect) {
 
 LUA_METHOD(Canvas, ellipse) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 6);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 6, &dpi);
 
-	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f), NULL);
+	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi)), checkFloat(L, 4, dpi), checkFloat(L, 5, dpi)), brush ? brush : d->colorBrush, luaL_optnumber(L, 7, 1.0f)*dpi, NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -214,9 +246,10 @@ LUA_METHOD(Canvas, ellipse) {
 
 LUA_METHOD(Canvas, fillellipse) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 6);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 6, &dpi);
 
-	d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 5))), brush ? brush : d->colorBrush);
+  d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi)), checkFloat(L, 4, dpi), checkFloat(L, 5, dpi)), brush);
   if (brush)
     brush->Release();
 	return 0;
@@ -225,9 +258,11 @@ LUA_METHOD(Canvas, fillellipse) {
 LUA_METHOD(Canvas, circle) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
   lua_Number radius = luaL_checknumber(L, 4);
-  ID2D1Brush *brush = getBrush(L, d, 5);
-  
-	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(radius), static_cast<FLOAT>(radius)), brush ? brush : d->colorBrush, luaL_optnumber(L, 6, 1.0f), NULL);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 5, &dpi);
+
+  radius *= dpi;
+	d->Render->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi)), static_cast<FLOAT>(radius), static_cast<FLOAT>(radius)), brush ? brush : d->colorBrush, luaL_optnumber(L, 6, 1.0f)*dpi, NULL);
   if (brush)
     brush->Release();
 	return 0;
@@ -235,15 +270,18 @@ LUA_METHOD(Canvas, circle) {
 
 LUA_METHOD(Canvas, fillcircle) {
 	Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget))->user;
-  ID2D1Brush *brush = getBrush(L, d, 5);
+  lua_Number radius = luaL_checknumber(L, 4);
+  double dpi;
+  ID2D1Brush *brush = getBrush(L, d, 5, &dpi);
 
-	d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 2)), static_cast<FLOAT>(luaL_checknumber(L, 3))), static_cast<FLOAT>(luaL_checknumber(L, 4)), static_cast<FLOAT>(luaL_checknumber(L, 4))), brush ? brush : d->colorBrush);
+  radius *= dpi;
+	d->Render->FillEllipse(D2D1::Ellipse(D2D1::Point2F(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi)), static_cast<FLOAT>(radius), static_cast<FLOAT>(radius)), brush);
   if (brush)
     brush->Release();
 	return 0;
 }
 
-static IDWriteTextLayout *prepare_text(lua_State *L, Direct2D **d) {
+static IDWriteTextLayout *prepare_text(lua_State *L, Direct2D **d, double *dpi) {
   Widget *w = lua_self(L, 1, Widget);
 	*d = (Direct2D*)w->user;
   int len;
@@ -252,6 +290,7 @@ static IDWriteTextLayout *prepare_text(lua_State *L, Direct2D **d) {
 	FLOAT dpix, dpiy;
 	RECT re;
 
+  lua_uigetinfo(dpi, NULL);
 	GetClientRect((HWND)w->handle, &re);
 	dpix = static_cast<float>(re.right - re.left);
 	dpiy = static_cast<float>(re.bottom - re.top);
@@ -262,11 +301,12 @@ static IDWriteTextLayout *prepare_text(lua_State *L, Direct2D **d) {
 
 LUA_METHOD(Canvas, print) {
   Direct2D *d;
-  IDWriteTextLayout* layout = prepare_text(L, &d);
+  double dpi;
+  IDWriteTextLayout* layout = prepare_text(L, &d, &dpi);
 
 	if (layout) {
-    ID2D1Brush *brush = getBrush(L, d, 5);
-		d->Render->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(luaL_checknumber(L, 3)), static_cast<FLOAT>(luaL_checknumber(L, 4))), layout, brush ? brush : d->colorBrush);
+    ID2D1Brush *brush = getBrush(L, d, 5, &dpi);
+		d->Render->DrawTextLayout(D2D1::Point2F(checkFloat(L, 3, dpi), checkFloat(L, 4, dpi)), layout, brush ? brush : d->colorBrush);
 		layout->Release();
     if (brush)
       brush->Release();    
@@ -276,7 +316,8 @@ LUA_METHOD(Canvas, print) {
 
 LUA_METHOD(Canvas, measure) {
   Direct2D *d;
-  IDWriteTextLayout* layout = prepare_text(L, &d);
+  double dpi;
+  IDWriteTextLayout* layout = prepare_text(L, &d, &dpi);
   DWRITE_TEXT_METRICS tm;
 
   if (layout && SUCCEEDED(layout->GetMetrics(&tm))) {
@@ -294,7 +335,7 @@ LUA_METHOD(Canvas, flip) {
   Widget *w = lua_self(L, 1, Widget);
 	Direct2D *d = (Direct2D*)w->user;
   d->Render->EndDraw();
-  InvalidateRect((HWND)w->handle, NULL, TRUE);
+  InvalidateRect((HWND)w->handle, NULL, FALSE);
   d->transform = D2D1::Matrix3x2F::Identity();
   d->Render->SetTransform(d->transform);  
 	return 0;
@@ -303,11 +344,13 @@ LUA_METHOD(Canvas, flip) {
 LUA_METHOD(Canvas, rotate) {
   Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
   D2D1_POINT_2F center;
+  double dpi;
 
+  lua_uigetinfo(&dpi, NULL);
   if (lua_gettop(L) == 2) {
     const D2D1_SIZE_F& size = d->Render->GetSize();
     center = D2D1::Point2F(size.width / 2.0f, size.height / 2.0f);
-  } else center = D2D1::Point2F(luaL_checknumber(L, 3), luaL_checknumber(L, 4));
+  } else center = D2D1::Point2F(checkFloat(L, 3, dpi), checkFloat(L, 4, dpi));
   d->transform = d->transform * D2D1::Matrix3x2F::Rotation(luaL_checknumber(L, 2), center);
   d->Render->SetTransform(d->transform);
 	return 0;
@@ -316,11 +359,13 @@ LUA_METHOD(Canvas, rotate) {
 LUA_METHOD(Canvas, scale) {
   Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
   D2D1_POINT_2F center;
+  double dpi;
 
+  lua_uigetinfo(&dpi, NULL);
   if (lua_gettop(L) == 3) {
     const D2D1_SIZE_F& size = d->Render->GetSize();
     center = D2D1::Point2F(size.width / 2.0f, size.height / 2.0f);
-  } else center = D2D1::Point2F(luaL_checknumber(L, 4), luaL_checknumber(L, 5));
+  } else center = D2D1::Point2F(checkFloat(L, 4, dpi), checkFloat(L, 5, dpi));
   d->transform = d->transform * D2D1::Matrix3x2F::Scale(D2D1::SizeF(luaL_checknumber(L, 2), luaL_checknumber(L, 3)), center);
   d->Render->SetTransform(d->transform);
 	return 0;
@@ -328,8 +373,10 @@ LUA_METHOD(Canvas, scale) {
 
 LUA_METHOD(Canvas, translate) {
   Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
+  double dpi;
 
-  d->transform = d->transform * D2D1::Matrix3x2F::Translation(luaL_checknumber(L, 2), luaL_checknumber(L, 3));
+  lua_uigetinfo(&dpi, NULL);
+  d->transform = d->transform * D2D1::Matrix3x2F::Translation(checkFloat(L, 2, dpi), checkFloat(L, 3, dpi));
   d->Render->SetTransform(d->transform);
 	return 0;
 }
@@ -337,11 +384,13 @@ LUA_METHOD(Canvas, translate) {
 LUA_METHOD(Canvas, skew) {
   Direct2D *d = (Direct2D*)(lua_self(L, 1, Widget)->user);
   D2D1_POINT_2F center;
-
+  double dpi;
+  
+  lua_uigetinfo(&dpi, NULL);
   if (lua_gettop(L) == 3) {
     const D2D1_SIZE_F& size = d->Render->GetSize();
     center = D2D1::Point2F(size.width / 2.0f, size.height / 2.0f);
-  } else center = D2D1::Point2F(luaL_checknumber(L, 4), luaL_checknumber(L, 5));
+  } else center = D2D1::Point2F(checkFloat(L, 4, dpi), checkFloat(L, 5, dpi));
   d->transform = d->transform * D2D1::Matrix3x2F::Skew(luaL_checknumber(L, 2), luaL_checknumber(L, 3));
   d->Render->SetTransform(d->transform);
 	return 0;
