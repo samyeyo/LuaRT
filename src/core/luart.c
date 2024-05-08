@@ -19,6 +19,7 @@
 #include <wchar.h>
 #include <stdlib.h>
 #include <shlwapi.h>
+#include <ui\ui.h>
 
 
 #ifndef _MSC_VER
@@ -159,6 +160,7 @@ static int update_exe_icon(lua_State *L) {
 				free(icon.images[i]);
 			free(icon.images);
 			free(icon.header);
+			SHChangeNotify(0x08000000, 0, NULL, NULL);
 		}
 		fclose(file);
 	}
@@ -298,7 +300,7 @@ error:
 							}
 							lua_pushstring(L, err);							
 							wchar_t *msg = lua_towstring(L, -1);		
-							MessageBoxW(NULL, msg, L"Runtime error", MB_ICONERROR | MB_OK | MB_DEFAULT_DESKTOP_ONLY);	
+							ThemedMsgBox(L"Runtime error", msg, MB_ICONERROR | MB_OK);
 							free(msg);					
 						}
 #else
