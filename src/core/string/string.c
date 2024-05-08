@@ -1985,6 +1985,29 @@ int str_unpack (lua_State *L) {
   return n + 1;
 }
 
+int str_split(lua_State *L) {
+    int len = 0;
+    wchar_t *string = lua_towstring(L, 1);
+    wchar_t *str = string;
+    wchar_t *sep = lua_tolwstring(L, 2, &len);
+    wchar_t *end = NULL;
+    int i = 0;
+
+    lua_newtable(L);  
+    while ((end = wcsstr(str, sep)) != NULL) {
+        if (end-str > 0) {
+            lua_pushlwstring(L, str, end-str); 
+            lua_rawseti(L, -2, ++i);
+        }
+        str = end + len; 
+    }
+    lua_pushwstring(L, str);
+    lua_rawseti(L, -2, ++i);
+    free(string);
+    free(sep);
+    return 1;  
+}
+
 /* }====================================================== */
 
 extern const luaL_Reg strlib[];
@@ -2009,6 +2032,7 @@ static const luaL_Reg wstrlib[] = {
   {"packsize", str_packsize},
   {"unpack", str_unpack},
   {"usearch", str_search},
+  {"split", str_split},
   {NULL, NULL}
 };
 
