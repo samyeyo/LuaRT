@@ -19,9 +19,10 @@
 extern "C" {
 #endif
 
-void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
-void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip);
-void *Widget_init(lua_State *L, Widget **wp);
+void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip, BOOL is_parent, BOOL do_pop);
+#define RegisterWidget(L, type, typename, constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_autosize, has_textalign, has_tooltip, is_parent) widget_type_new(L, type, typename, constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_autosize, has_textalign, has_tooltip, is_parent, TRUE)
+
+void *Widget_init(lua_State *L, Widget **wp, double *dpi, BOOL *isdark);
 Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc);
 Widget *Widget_destructor(lua_State *L);
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
@@ -62,6 +63,7 @@ LOGFONTW *Font(Widget *w);
 void UpdateFont(Widget *w, LOGFONTW *l);
 void SetFontFromWidget(Widget *w, Widget *wp);
 LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+BOOL EnumMonitor(HMONITOR h, HDC hdc, LPRECT r, LPARAM data);
 
 LUA_METHOD(Widget, __metanewindex); //----- for event registration
 LUA_METHOD(Widget, show);
@@ -101,10 +103,14 @@ LUA_PROPERTY_GET(Widget, hastext);
 LUA_PROPERTY_SET(Widget, hastext);
 LUA_PROPERTY_GET(Widget, bgcolor);
 LUA_PROPERTY_SET(Widget, bgcolor);
+LUA_PROPERTY_GET(Panel, border);
+LUA_PROPERTY_SET(Panel, border);
 LUA_METHOD(Widget, center);
 
 LUA_CONSTRUCTOR(Window);
+LUA_PROPERTY_GET(Window, childs);
 
+extern const luaL_Reg parent_methods[];
 extern luaL_Reg Widget_cursor[];
 extern luaL_Reg Widget_textalign[];
 extern luaL_Reg Widget_tooltip[];
@@ -160,6 +166,8 @@ void FreeMenu(lua_State *L, Widget *w);
 void remove_menuitem(lua_State *L, Widget *w, int idx);
 int adjust_listvscroll(Widget *w, int start, int end);
 void page_resize(Widget *w, BOOL isfocused);
+BOOL AdjustThemeProc(HWND h, LPARAM isDark);
+int ThemedMsgBox(wchar_t *title, wchar_t *msg, UINT options);
 
 LUA_CONSTRUCTOR(Item);
 LUA_CONSTRUCTOR(Menu);
