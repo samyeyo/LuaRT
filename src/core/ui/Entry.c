@@ -16,18 +16,24 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <richedit.h>
+#include "DarkMode.h"
 
 LUA_METHOD(Edit, append) {
 	Widget *w = lua_self(L, 1, Widget);
 	wchar_t *chars = lua_towstring(L, 2);
-	CHARRANGE cr = { -1, -1 };
-	SendMessage(w->handle, (UINT) EM_EXSETSEL, 0, (LPARAM) &cr);
- 	SendMessageW(w->handle,(UINT) EM_REPLACESEL,(WPARAM) FALSE,(LPARAM) chars);	
+	SendMessage(w->handle, EM_SETSEL, (WPARAM)-1, (LPARAM)-1);
+ 	SendMessageW(w->handle,EM_REPLACESEL,(WPARAM) FALSE,(LPARAM) chars);	
  	if (!w->cursor)
 		SetFocus(w->handle);
-	SendMessage(w->handle, WM_VSCROLL, SB_BOTTOM, 0);
 	free(chars);
  	return 0;
+}
+
+LUA_METHOD(Edit, scroll) {
+	static const char *values[] = { "top", "bottom", "lineup", "linedown", "pageup", "pagedown", NULL };
+	static const WPARAM sb[] = { SB_TOP, SB_BOTTOM, SB_LINEUP, SB_LINEDOWN, SB_PAGEUP, SB_PAGEDOWN };
+	SendMessage(lua_self(L, 1, Widget)->handle, WM_VSCROLL, sb[luaL_checkoption(L, 2, "bottom", values)], 0);
+	return 0;
 }
 
 LUA_METHOD(Entry, redo) {
@@ -176,7 +182,6 @@ static int do_file_operation(lua_State *L, const wchar_t *mode) {
 		type = SF_TEXT | (!iswrite && (detectBOM(f) == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16))));
 	if ( (result = SendMessageW(handle, iswrite ? EM_STREAMOUT : EM_STREAMIN, type, (LPARAM)&es)) && es.dwError == 0) 
 		SendMessage(handle, EM_SETMODIFY, !iswrite, 0);
- 	SetFocus(handle);
 	lua_pushboolean(L, result); 
 	fclose(f);
 	free(fname);
@@ -542,12 +547,10 @@ LUA_PROPERTY_GET(Selection, visible) {
 }
 
 LUA_PROPERTY_SET(Selection, visible) {
-	Widget *w = lua_self(L, lua_gettop(L), Widget);
-	SetFocus(lua_toboolean(L, 3) ? w->handle :GetParent(w->handle));
-	if (lua_toboolean(L, 3))
-		SendMessage(w->handle, EM_SETOPTIONS , ECOOP_OR, ECO_NOHIDESEL);
-	else
-		SendMessage(w->handle, EM_SETOPTIONS , ECOOP_XOR, ECO_NOHIDESEL);
+	HWND h = lua_self(L, lua_gettop(L), Widget)->handle;
+	BOOL set = lua_toboolean(L, 3);
+	SetFocus(set ? h :GetParent(h));
+	SendMessageA(h, EM_HIDESELECTION, !set, 0);
 	return 0;
 }
 
@@ -573,7 +576,7 @@ static int set_font(lua_State *L, Widget *w, int scf) {
 
 static int set_fontsize(lua_State *L, Widget *w, int scf) {
 	CHARFORMAT2W cf;
-	cf.yHeight = lua_tointeger(L, w ? 2 : 3) * 20;
+	cf.yHeight = (lua_tointeger(L, w ? 2 : 3)) * 20;
 	format(L, w, CFM_SIZE, &cf, scf, TRUE);
 	return 0;
 }
@@ -581,7 +584,7 @@ static int set_fontsize(lua_State *L, Widget *w, int scf) {
 static int get_fontsize(lua_State *L, Widget *w, int scf) {
 	CHARFORMAT2W cf;
 	format(L, w, CFM_SIZE, &cf, scf, FALSE);
-	lua_pushinteger(L, cf.yHeight / 20);
+	lua_pushinteger(L, cf.yHeight/20);
 	return 1;
 }
 
@@ -714,7 +717,7 @@ static int set_color(lua_State *L, Widget *w, int scf, BOOL isbg) {
 	CHARFORMAT2W cf = {0};
 	COLORREF *col = isbg ? &cf.crBackColor : &cf.crTextColor;
 	if (lua_isnil(L, scf + 2))
-		*col = GetSysColor(isbg ? COLOR_WINDOW : COLOR_WINDOWTEXT);
+		*col = isbg ? (DarkMode ? 0x383838 : 0xFFFFFF) : (DarkMode ? 0xFFFFFF : GetSysColor(COLOR_BTNTEXT));
 	else {
 		DWORD32 color = luaL_checkinteger(L, scf + 2);
 		*col = RGB(GetBValue(color), GetGValue(color), GetRValue(color));
@@ -722,6 +725,20 @@ static int set_color(lua_State *L, Widget *w, int scf, BOOL isbg) {
 	format(L, w, isbg ? CFM_BACKCOLOR : CFM_COLOR, &cf, scf, TRUE);
 	if (isbg && scf == SCF_DEFAULT) 
 		SendMessage(w->handle, EM_SETBKGNDCOLOR, 0, cf.crBackColor);
+	return 0;
+}
+
+LUA_PROPERTY_GET(Edit, border) {
+  	lua_pushboolean(L, GetWindowLongPtr(lua_self(L, 1, Widget)->handle, GWL_EXSTYLE) & WS_EX_STATICEDGE);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Edit, border) {
+	HWND h = lua_self(L, 1, Widget)->handle;
+	DWORD style =  GetWindowLongPtr(h, GWL_EXSTYLE);
+	SetWindowLongPtr(h, GWL_EXSTYLE, lua_toboolean(L, 2) ? style | WS_EX_STATICEDGE : style & ~WS_EX_STATICEDGE);
+	RedrawWindow(h, NULL, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASENOW | RDW_ERASE);
+	SetWindowPos(h, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 	return 0;
 }
 
@@ -925,6 +942,7 @@ luaL_Reg Edit_methods[] = {
 	{"load",			Edit_loadfrom},
 	{"save",			Edit_saveto},
 	{"append",			Edit_append},
+	{"scroll",			Edit_scroll},
 	{"get_selection",	Edit_getselection},
 	{"set_font",		Edit_setfont},
 	{"get_font",		Edit_getfont},
@@ -951,6 +969,8 @@ luaL_Reg Edit_methods[] = {
 	{"get_readonly",	Edit_getreadonly},
 	{"get_caret",		Edit_getcaret},
 	{"set_caret",		Edit_setcaret},
+	{"get_border",		Edit_getborder},
+	{"set_border",		Edit_setborder},
 	{"undo",			Entry_undo},
 	{"redo",			Entry_redo},
 	{"paste",			Entry_paste},
