@@ -14,6 +14,7 @@
 #include <windowsx.h>
 #include <uxtheme.h>
 #include <stdint.h>
+#include "DarkMode.h"
 
 
 typedef struct sort_info {
@@ -44,7 +45,7 @@ int AdjustTab_height(Widget *w) {
 	if (w->wtype == UITab) {
 		RECT r;
 		TabCtrl_GetItemRect(w->handle, 0, &r);
-		return r.bottom-r.top+10;
+		return r.bottom-r.top+10*GetDPIForSystem();
 	}
 	return 0;
 }
@@ -69,7 +70,7 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 		case WM_ERASEBKGND:	{
 			RECT rect;
 			GetClientRect(hWnd, &rect);
-			FillRect((HDC)wParam, &rect,w->brush);
+			FillRect((HDC)wParam, &rect, w->brush);
 			SendMessage(GetParent(w->handle), WM_ERASEBKGND, wParam, lParam);
 			return TRUE;
 		}
@@ -248,28 +249,10 @@ void *__push_item(lua_State *L, Widget *w, int idx, HTREEITEM hti) {
 }
 
 int adjust_listvscroll(Widget *w, int start, int end) {
-	int i, size, width;
-	if (start == -1) {
-		RECT r;
-		end = get_count(w);
-		GetClientRect(w->handle, &r);
-		ListView_SetColumnWidth(w->handle, 0, r.right-10);
-		start = 0;
-	}
-	else
-		end++;
-	width = ListView_GetColumnWidth(w->handle, 0);
-	for (i = start; i < end; i++) {
-		LVITEMW *item = get_item(w, i);
-		size = SendMessageW(w->handle, LVM_GETSTRINGWIDTHW, 0, (LPARAM)item->pszText);
-		if (size > width) {
-			ListView_SetColumnWidth(w->handle, 0, size);
-			width = size;
-		}
-		free(item->pszText);
-		free(item);
-	}
-	return width;
+	RECT r;
+	GetClientRect(w->handle, &r);
+	ListView_SetColumnWidth(w->handle, 0, r.right);
+	return r.right;
 }
 
 #define add_item(w, s) __add_item(w, s, NULL)
@@ -305,8 +288,9 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 		item = calloc(1, sizeof(TCITEMW));
 		RECT r; 
 		GetClientRect(w->handle, &r);
-		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 26, 0, 0, h, NULL, GetModuleHandle(NULL), NULL);
+		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 20.0*GetDPIForSystem()+4, 0, 0, h, NULL, GetModuleHandle(NULL), NULL);
 		SetWindowLongPtr(hh, GWLP_WNDPROC, (ULONG_PTR)PageProc);
+
 		SetWindowLongPtr(hh, GWLP_USERDATA, (ULONG_PTR)w);
 		BringWindowToTop(hh);
 		((TCITEMW*)item)->mask = TCIF_TEXT | TCIF_PARAM;
@@ -324,8 +308,6 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 		((LVITEMW*)item)->iImage = -1;
 		((LVITEMW*)item)->iSubItem = 0;
 		((LVITEMW*)item)->iItem = count;
-		// ((LVITEMW*)item)->state = LVIS_FOCUSED;
-		// ((LVITEMW*)item)->stateMask = LVIS_FOCUSED;
 		msg = LVM_INSERTITEMW;
 	}
 	else if (w->wtype == UICombo) {
@@ -735,8 +717,6 @@ LUA_METHOD(Listbox, add) {
 #else
 	int last;
 #endif
-	if (w->wtype == UIList) 
-		ShowScrollBar(w->handle, SB_VERT, TRUE);
 	while(++i <= count)
 		last = __add_item(w, lua_towstring(L, i), hti);
 	__push_item(L, w, last, (w->wtype == UITree || w->item.itemtype == UITree) ? (HTREEITEM)last : NULL);
@@ -814,7 +794,7 @@ LUA_PROPERTY_SET(Listbox, items) {
 		} else {
 			RECT r; 
 			GetClientRect(w->handle, &r);
-			w->user = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 2, 4, r.right-5, r.bottom-6, w->handle, NULL, GetModuleHandle(NULL), NULL);
+			w->user = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 2, 20.0*GetDPIForSystem()+4, 0, 0, w->handle, NULL, GetModuleHandle(NULL), NULL);
 			SetWindowLongPtr(w->user, GWLP_WNDPROC, (ULONG_PTR)PageProc);
 			SetWindowLongPtr(w->user, GWLP_USERDATA, (ULONG_PTR)w);		
 			page_resize(w, FALSE);
@@ -846,7 +826,7 @@ LUA_PROPERTY_GET(Listbox, selected) {
 	else if (w->wtype == UITab)		
 		i = SendMessageW(w->handle, TCM_GETCURSEL, 0, 0);
 	else if (w->wtype == UIList)
-		i = SendMessage(w->handle, LVM_GETNEXTITEM, -1,  LVNI_ALL | LVNI_SELECTED );
+		i = SendMessage(w->handle, LVM_GETNEXTITEM, -1, LVNI_ALL | LVNI_SELECTED );
 	else if (w->wtype == UICombo)
 		i = SendMessage(w->status, CB_GETCURSEL, 0, 0);
 	if ( hti || (i != -1 && (LONG)get_count(w) >= i))
@@ -862,7 +842,7 @@ LUA_PROPERTY_SET(Listbox, selected) {
 		if (w->wtype == UITree)
 				TreeView_SelectItem(w->handle, NULL);
 		else if (w->wtype == UIList) {
-			ListView_SetItemState(w->handle, SendMessage(w->handle, LVM_GETNEXTITEM, -1,  LVNI_SELECTED), 0, 0);
+			ListView_SetItemState(w->handle, SendMessage(w->handle, LVM_GETNEXTITEM, -1, LVNI_SELECTED), 0, 0);
 		} else if (w->wtype == UICombo) {
 			SendMessageW(w->status ? w->status : w->handle, CB_SETCURSEL, -1, 1);
 			SetWindowTextW(w->handle, L"");
@@ -1126,6 +1106,20 @@ LUA_METHOD(Item, __gc) {
 	return 0;
 }
 
+LUA_PROPERTY_GET(Tree, editable) {
+	lua_pushboolean(L, (GetWindowLong(lua_self(L, 1, Widget)->handle, GWL_STYLE) & TVS_EDITLABELS) != TVS_EDITLABELS);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Tree, editable) {
+	HWND h = lua_self(L, 1, Widget)->handle;
+	DWORD style = GetWindowLongPtr(h, GWL_STYLE);
+	DWORD border = style & WS_BORDER ? WS_BORDER : 0;
+	SetWindowLongPtr(h, GWL_STYLE, lua_toboolean(L, 2) ? (style & ~TVS_EDITLABELS) : style | TVS_EDITLABELS);
+	RedrawWindow(h, NULL, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE | RDW_ALLCHILDREN);
+	return 0;
+}
+
 luaL_Reg ItemWidget_methods[] = {
 	{"set_items",		Listbox_setitems},
 	{"get_items",		Listbox_getitems},
@@ -1172,13 +1166,14 @@ luaL_Reg TreeItem_methods[] = {
 
 luaL_Reg sort_methods[] = {
 	{"sort",		Listbox_sort},
+	{"get_border",	Panel_getborder},
+	{"set_border",	Panel_setborder},
 	{NULL, NULL}
 };
 
-
 luaL_Reg Page_methods[] = {
-	{"get_enabled",		Widget_getenabled},
-	{"set_enabled",		Widget_setenabled},
+	READWRITE_PROPERTY(Widget, enabled)
+	READONLY_PROPERTY(Window, childs)
 	{NULL, NULL}
 };
 
