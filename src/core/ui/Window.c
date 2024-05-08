@@ -14,6 +14,7 @@
 #include <Window.h>
 #include <windowsx.h>
 #include <dwmapi.h>
+#include "DarkMode.h"
 
 luart_type TWindow;
 
@@ -21,7 +22,7 @@ static HANDLE hwndPrevious;
 
 #define Stringify(x) case x: return #x
 
-static const char *VKString(int vk) {
+const char *VKString(int vk) {
     if (vk >= '0' && vk <= '9')
 		return NULL;
     if (vk >= 'A' && vk <= 'Z')
@@ -180,8 +181,12 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 	UINT flags;
 
 	if (w) {
+		if (DarkMode && w->menu) {
+			LRESULT r = MenuBarProc(hWnd, Msg, wParam, lParam, (HBRUSH)w->user);
+			if (r > -1)
+				return r;
+		}
 		switch(Msg) {
-
 			case WM_SYSCOMMAND:
 				if (wParam == SC_MAXIMIZE)
 					lua_callevent(w, onMaximize);
@@ -227,8 +232,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				flags = ((WINDOWPOS*)lParam)->flags;
 				if (flags & SWP_HIDEWINDOW)
 					lua_callevent(w, onHide);
-				else if (flags & SWP_SHOWWINDOW)
+				else if (flags & SWP_SHOWWINDOW) {
+					SendMessage(hWnd, WM_CHANGEUISTATE, (WPARAM) MAKELONG(UIS_SET, UISF_HIDEFOCUS), 0);
 					lua_callevent(w, onShow);
+				}
 				if (!(flags & SWP_NOSIZE)) {
 					if (w->status)
 						SendMessage(w->status, WM_SIZE, 0, 0);
@@ -269,11 +276,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				lua_callevent(w, onContext);
 				break;
 			case WM_LBUTTONDOWN:
-				lua_paramevent(w, onMouseDown, 0, lParam);
-				lua_paramevent(w, onClick, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-				SetFocus(w->handle);
-        		return 0;
-			case WM_DESTROY:		
+				if (w->wtype == UIWindow || w->wtype == UIPanel) {
+					lua_paramevent(w, onMouseDown, 0, lParam);
+					lua_paramevent(w, onClick, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+					SetFocus(w->handle);
+        			return 0;
+				} break;
+			case WM_DESTROY:	
 				PostQuitMessage(0);
 				return 0;
 			case WM_SIZE: {
@@ -297,8 +306,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 
             case WM_SETCURSOR:
 				if (LOWORD(lParam) == HTCLIENT) {
+					POINT p;
+					GetCursorPos(&p);
+					ScreenToClient(w->handle, &p);
+					if (w->handle == ChildWindowFromPoint(w->handle, p)) {
 						SetCursor(w->hcursor);
 						return TRUE;
+					}
 				}
 				break;
 			case WM_APP:
@@ -316,17 +330,29 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			case WM_KEYDOWN:
 				lua_paramevent(w, onKey, VKString(wParam), wParam);
 				break;
+			case WM_ERASEBKGND: return FALSE;
 			case WM_PAINT:	{
 				PAINTSTRUCT ps;
 				RECT rc;
 				HDC hdc = BeginPaint(hWnd, &ps);
+				HBRUSH b = w->brush;
+				if (w->wtype == UITab && DarkMode)
+					b = CreateSolidBrush(0x282828);
 				GetClientRect(hWnd, &rc);
-				FillRect(hdc, &rc, (HBRUSH)w->brush);
+				FillRect(hdc, &rc, b);
+				if (b != w->brush)
+					DeleteObject(b);
 				EndPaint(hWnd, &ps);
-				return 0;
-			}
+				return FALSE;
+			};
+			case WM_SETTINGCHANGE:
+				if (IsDarkModeEnabled() != DarkMode) {
+					DarkMode = !DarkMode;
+					EnumThreadWindows(GetCurrentThreadId(), AdjustThemeProc, (LPARAM)DarkMode);
+				} break;
+			case WM_CTLCOLOREDIT:	
 			case WM_CTLCOLORBTN:
-			case WM_CTLCOLORSTATIC: return widget_setcolors(w, (HDC)wParam, (HWND)lParam);
+			case WM_CTLCOLORSTATIC: return  WidgetProc(hWnd, Msg, wParam, lParam, (UINT_PTR)NULL, (DWORD_PTR)NULL);
 		}
 	}
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
@@ -362,6 +388,7 @@ LUA_CONSTRUCTOR(Window) {
 	NONCLIENTMETRICS ncm;
 	int start = 2;
 	Widget *wp;
+	double dpi = GetDPIForSystem();
 
 	if (!hInstance)
 		hInstance = GetModuleHandle(NULL);
@@ -373,9 +400,9 @@ LUA_CONSTRUCTOR(Window) {
 	title = lua_towstring(L, start);
 	i = lua_type(L, start+1) == LUA_TSTRING ? start+2 : start+1;
 	style = i == start+2 ? luaL_checkoption(L, start+1, "dialog", styles) : 0;
-	r.bottom = luaL_optinteger(L, i+1, 480);
-	r.right = luaL_optinteger(L, i, 640);
-	w->handle = CreateWindowExW(uiLayout, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, wp ?  wp->handle : NULL, NULL, hInstance, NULL);
+	r.bottom = luaL_optinteger(L, i+1, 480)*dpi;
+	r.right = luaL_optinteger(L, i, 640)*dpi;
+	w->handle = CreateWindowExW(uiLayout | WS_EX_LAYERED | WS_EX_COMPOSITED, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, wp ?  wp->handle : NULL, NULL, hInstance, NULL);
 	switch(style) {
 		case 3: 	{
 						DWM_WINDOW_CORNER_PREFERENCE d = DWMWCP_ROUND;
@@ -387,12 +414,12 @@ LUA_CONSTRUCTOR(Window) {
 		case 1:		SetWindowLong(w->handle, GWL_STYLE, GetWindowLongPtr(w->handle, GWL_STYLE) & ~WS_MAXIMIZEBOX); 
 		case 2:		
 		default:	w->style = WS_CAPTION;
-	}
+	}	
 	AdjustWindowRectEx(&r, GetWindowLongPtr(w->handle, GWL_STYLE), FALSE, GetWindowLongPtr(w->handle, GWL_EXSTYLE));
-	SetWindowPos(w->handle, 0, 0, 0, r.right-r.left, r.bottom-r.top, SWP_HIDEWINDOW | SWP_NOMOVE);
+	SetWindowPos(w->handle, 0, 0, 0, r.right-r.left, r.bottom-r.top, SWP_HIDEWINDOW | SWP_NOMOVE);	
 	free(title); 
 	SetWindowLongPtr(w->handle, GWLP_USERDATA, (ULONG_PTR)w);
-	w->brush = GetSysColorBrush(COLOR_BTNFACE);
+	w->brush = DarkMode ? GetStockObject(BLACK_BRUSH) : GetSysColorBrush(COLOR_BTNFACE);
 	w->wtype = UIWindow;
 	w->align = -1;
 	w->wp.length = sizeof(WINDOWPLACEMENT);
@@ -409,6 +436,9 @@ LUA_CONSTRUCTOR(Window) {
 	nid->uID  = (UINT)w->ref;
 	nid->uCallbackMessage = WM_APP;
 	w->imglist =  (HIMAGELIST)nid;
+	w->index = 255;
+	AdjustThemeProc(w->handle, DarkMode);
+	w->user = CreateSolidBrush(0x303030);
 	lua_callevent(w, onCreate);
 	return 1;
 }
@@ -438,6 +468,11 @@ LUA_METHOD(Window, showmodal) {
 	return 0;
 }
 
+LUA_PROPERTY_GET(Window, monitor) {
+	EnumMonitor(MonitorFromWindow(lua_self(L, 1, Widget)->handle, MONITOR_DEFAULTTONEAREST), (HDC)TRUE, NULL, (LPARAM)L);
+	return 1;
+}
+
 LUA_PROPERTY_GET(Window, fullscreen) {
 	Widget *w = lua_self(L, 1, Widget);
 
@@ -459,18 +494,22 @@ LUA_PROPERTY_SET(Window, fullscreen) {
 	Widget *w = lua_self(L, 1, Widget);
 	HWND h = w->handle;
 	DWORD dwStyle = GetWindowLongPtr(h, GWL_STYLE);
+	DWORD dwexStyle = GetWindowLongPtr(h, GWL_EXSTYLE);
 
 	if (lua_toboolean(L, 2)) {
 		MONITORINFO mi;
 		mi.cbSize = sizeof(mi);
 		GetWindowPlacement(h, &w->wp);
-		SetWindowLongPtr(h, GWL_STYLE, dwStyle & ~w->style);
+		SetWindowLongPtr(h, GWL_STYLE, dwStyle & ~(w->style));
+		if (w->index == 255)
+			SetWindowLongPtr(h, GWL_EXSTYLE, dwexStyle & ~WS_EX_LAYERED);
 		if (GetMonitorInfo(MonitorFromWindow(h, MONITOR_DEFAULTTOPRIMARY), &mi))
 			SetWindowPos(h, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom-mi.rcMonitor.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 	} else {
 		SetWindowPlacement(h, &w->wp);
 		SetWindowLongPtr(h, GWL_STYLE, dwStyle | w->style);
-		SetWindowPos(h, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		SetWindowLongPtr(h, GWL_EXSTYLE, GetWindowLongPtr(h, GWL_EXSTYLE) | WS_EX_LAYERED);
+		SetWindowPos(h, NULL, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 	}
 	return 0;
 }
@@ -496,6 +535,8 @@ LUA_METHOD(Window, status) {
 	
 	if (!(handle = win->status)) {
 		handle = CreateWindowExW(0, STATUSCLASSNAMEW, NULL, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP | WS_CLIPCHILDREN, 0, 0, 0, 0, win->handle, NULL, GetModuleHandle(NULL), NULL);
+		if (DarkMode)
+			SetWindowSubclass(handle, StatusProc, 4444, (DWORD_PTR)win);
 		win->status = handle;
 	} else if (!n) {
 		win->status = NULL;
@@ -508,6 +549,7 @@ LUA_METHOD(Window, status) {
 		RECT r;
 		wchar_t **str = calloc(n,sizeof(wchar_t*));
 		LONG size = 0;
+		double dpi = GetDPIForSystem();
 		for(i = 0; i < n; i++) {
 			luaL_tolstring(L, i+2, NULL);
 			str[i] = lua_tolwstring(L, -1, &len);
@@ -516,7 +558,7 @@ LUA_METHOD(Window, status) {
 			else {
 				DrawTextW(dc, str[i], len, &r, DT_CALCRECT);
 				size += r.right-r.left+8;
-				parts[i] = size;
+				parts[i] = size*dpi;
 				memset(&r, 0, sizeof(RECT));
 			}
 		}
@@ -556,6 +598,22 @@ LUA_PROPERTY_GET(Window, menu) {
 	if (w->menu)
 		lua_rawgeti(L, LUA_REGISTRYINDEX, w->menu);	
 	return 1;
+}
+
+LUA_PROPERTY_GET(Window, transparency) {
+	lua_pushinteger(L, lua_self(L, 1, Widget)->index);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Window, transparency) {
+	Widget *w = lua_self(L, 1, Widget);
+	int alpha = luaL_checkinteger(L, 2);
+
+	SetWindowLongPtr(w->handle, GWL_EXSTYLE, GetWindowLongPtr(w->handle, GWL_EXSTYLE) & (alpha != 255 ? ~WS_EX_COMPOSITED : WS_EX_COMPOSITED));
+	w->index = alpha;
+	SetLayeredWindowAttributes(w->handle, 0, alpha, LWA_ALPHA);
+	RedrawWindow(w->handle, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+	return 0;
 }
 
 LUA_METHOD(Window, popup) {
@@ -631,6 +689,35 @@ LUA_METHOD(Window, shortcut) {
 	return 0;
 }
 
+//-------------------------------------[ Window.parent ]
+LUA_PROPERTY_GET(Window, parent) {
+	Widget *wp;
+	HWND h = lua_self(L, 1, Widget)->handle;
+	HWND parent = GetParent(h);
+
+	if (!parent && !(parent = GetAncestor(h, GA_ROOT)))
+		lua_pushnil(L);
+	else if (wp = (Widget*)GetWindowLongPtr(parent, GWLP_USERDATA))
+		lua_rawgeti(L, LUA_REGISTRYINDEX, wp->ref);
+	return 1;
+}
+
+//-------------------------------------[ Window.childs ]
+static BOOL CALLBACK EnumChilds(HWND h, LPARAM lParam) {
+	Widget *w = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA);
+	if (w) {
+		lua_rawgeti((lua_State*)lParam, LUA_REGISTRYINDEX, w->ref);
+		lua_rawseti((lua_State*)lParam, -2, luaL_len((lua_State*)lParam, -2)+1);
+	}
+	return TRUE;
+}
+
+LUA_PROPERTY_GET(Window, childs) {
+	lua_createtable(L, 5, 0);
+	EnumChildWindows(lua_self(L, 1, Widget)->handle, EnumChilds, (LPARAM)L);
+	return 1;
+}
+
 LUA_METHOD(Window, onClose) {
 	lua_pushboolean(L, TRUE);
 	return 1;	
@@ -644,6 +731,11 @@ LUA_METHOD(Window, __gc) {
 	w->imglist = NULL;
 	return Widget___gc(L);
 }
+
+OBJECT_MEMBERS(parent)
+	READONLY_PROPERTY(Window, childs)
+	READONLY_PROPERTY(Window, parent)
+END
 
 OBJECT_METAFIELDS(Window)
 	METHOD(Window, __gc)
@@ -666,6 +758,8 @@ OBJECT_MEMBERS(Window)
 	READWRITE_PROPERTY(Window, topmost)
 	READWRITE_PROPERTY(Window, menu)
 	READWRITE_PROPERTY(Widget, bgcolor)
+	READWRITE_PROPERTY(Window, transparency)
+	READONLY_PROPERTY(Window, monitor)
  	{"set_title",		Widget_settext},
  	{"get_title",		Widget_gettext},
 END
