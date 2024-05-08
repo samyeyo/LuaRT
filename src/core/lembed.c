@@ -141,9 +141,9 @@ LUA_API BYTE *luaL_embedopen(lua_State *L) {
       lua_pushcfunction(L, luart_fsloader);
       lua_rawseti(L, -2, luaL_len(L, -2)+1);
       lua_pop(L, 2);
-    } else datafs = NULL;
+    } else fs = NULL;
   }
-  return datafs;
+  return (BYTE*)fs;
 }
 
 LUA_METHOD(embed, File) {

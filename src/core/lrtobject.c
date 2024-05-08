@@ -559,40 +559,6 @@ void *lua_iscinstance(lua_State *L, int idx, luart_type t) {
 	return obj;
 }
 
-static void property(lua_State *L, const char *prop) {
-	char buffer[255];
-	const char *formats[] = { "get_%s", "set_%s" };
-
-	for (int i = 0; i < 2; i++) {
-		snprintf(buffer, 255, formats[i], prop);
-		lua_pushstring(L, buffer);
-		lua_pushvalue(L, -1);
-		lua_rawget(L, -3);
-		lua_rawset(L, -4);	
-	}
-}
-
-void lua_registerwidget(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_tooltip) {
-	lua_registerobject(L, type, typename, constructor, methods, mt);
-	lua_getfield(L, LUA_REGISTRYINDEX, typename);
-	if (!lua_getfield(L, LUA_REGISTRYINDEX, "Radiobutton"))
-		luaL_error(L, "ui module not found");
-	if (has_text)
-		property(L, "text");	
-	if (has_cursor)
-		property(L, "cursor");	
-	if (has_font) {
-		property(L, "font");
-		property(L, "fontsize");
-		property(L, "fontstyle");
-	}
-	if (has_icon)
-		property(L, "loadicon");
-	if (has_tooltip)
-		property(L, "tooltip");
-	lua_pop(L, 1);
-}
-
 lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction event) {
 	luaL_getsubtable(L, LUA_REGISTRYINDEX, "LuaRT Events");
 	WM_LUAMAX += luaL_len(L, -1)+1;
