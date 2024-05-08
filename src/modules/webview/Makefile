@@ -15,18 +15,18 @@
 LUART_PATH=..\..\..
 
 MODULE=		webview
-VERSION=	0.7
+VERSION=	1.0
 SRC= 		src\handler.obj src\webview.obj
 
 !if "$(BUILD)" == "debug"
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /DLUA_BUILD_AS_DLL /I"./WebView/include" /I"$(LUART_PATH)\include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG
 !else
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /DLUA_BUILD_AS_DLL /I."/WebView/include" /I"$(LUART_PATH)\include" /I"." /MD /Gy /GR- /GL /GS- /Oi /O1
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /DLUA_BUILD_AS_DLL /I."/WebView/include" /I"$(LUART_PATH)\include" /I"." /MD /Gy /GR- /GL /GS- /GF /Oi /O2
 LDFLAGS= /nologo /OPT:REF /OPT:ICF /LTCG
 !endif
 
-LIBS= "$(LUART_PATH)\lib\lua54.lib" "Webview\$(PLATFORM)\WebView2LoaderStatic.lib" user32.lib kernel32.lib advapi32.lib
+LIBS= "$(LUART_PATH)\lib\lua54.lib" "Webview\$(PLATFORM)\WebView2LoaderStatic.lib" user32.lib kernel32.lib advapi32.lib shlwapi.lib urlmon.lib
 RM= del /Q
 CP= copy /Y
 LD= link.exe

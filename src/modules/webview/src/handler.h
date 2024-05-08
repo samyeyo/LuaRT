@@ -10,12 +10,13 @@
 #define CINTERFACE
 #include <functional>
 #include <windows.h>
+#include <Zip.h>
 #include "WebView2.h"
 #include <string>
 #include <vector>
 #include <memory>
 
-extern UINT onResult, onReady, onMessage, onLoaded;
+extern UINT onReady, onMessage, onLoaded, onFullscreen;
 wchar_t *toUTF16(const char *s);
 
 typedef struct {
@@ -43,7 +44,8 @@ class WebviewHandler :	public ICoreWebView2CreateCoreWebView2EnvironmentComplete
 						public ICoreWebView2WebResourceRequestedEventHandler,
 						public ICoreWebView2WebMessageReceivedEventHandler,
 						public ICoreWebView2NavigationCompletedEventHandler,						
-						public ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler
+						public ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler,
+						public ICoreWebView2ContainsFullScreenElementChangedEventHandler
 {
 public:
 	WebviewHandler();
@@ -58,6 +60,7 @@ public:
 	bool CreateWebview(HWND h, const char *URL);
 
 	HWND hwnd; 
+	zip_t *archive = NULL;
 	std::wstring url;
 	std::vector<std::unique_ptr<evalresult*>> results;
 

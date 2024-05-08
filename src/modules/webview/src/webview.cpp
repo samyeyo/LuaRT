@@ -23,7 +23,7 @@
 static luart_type TWebview;
 HANDLE URIEvent;
 LPWSTR URI;
-UINT onReady, onMessage, onLoaded;
+UINT onReady, onMessage, onLoaded, onFullscreen;
 
 //--- Webview procedure
 LRESULT CALLBACK WebviewProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
@@ -36,12 +36,15 @@ LRESULT CALLBACK WebviewProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
 LUA_CONSTRUCTOR(Webview)
 {   
     Widget *w, *wp;
-    HWND h, hParent = (HWND)lua_widgetinitialize(L, &wp);     
+	double dpi;
+	BOOL isdark;
+    HWND h, hParent = (HWND)lua_widgetinitialize(L, &wp, &dpi, &isdark);     
     WebviewHandler *wv = new WebviewHandler;
-    h = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD, (int)luaL_optinteger(L, 4, 0), (int)luaL_optinteger(L, 5, 0), (int)luaL_optinteger(L, 6, 320), (int)luaL_optinteger(L, 7, 240), hParent, 0, GetModuleHandle(NULL),  NULL);
+    h = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD, (int)luaL_optinteger(L, 4, 0)*dpi, (int)luaL_optinteger(L, 5, 0)*dpi, (int)luaL_optinteger(L, 6, 320)*dpi, (int)luaL_optinteger(L, 7, 240)*dpi, hParent, 0, GetModuleHandle(NULL),  NULL);
 	wv->CreateWebview(h, luaL_checkstring(L, 3));
     w = lua_widgetconstructor(L, h, TWebview, wp, (SUBCLASSPROC)WebviewProc);
     w->user = wv;
+	wv->archive = (zip_t *)luaL_embedopen(L);
     return 1;
 }
 
@@ -353,9 +356,13 @@ int event_onReady(lua_State *L) {
   return 1;
 }
 
-int event_onContext(lua_State *L) {
-  lua_getfield(L, 1, "onContext");
-  return 1;
+
+int event_onFullscreen(lua_State *L) {
+  	if (lua_getfield(L, 1, "onFullScreenChange")) {
+		lua_pushboolean(L, ((MSG *)lua_touserdata(L, 2))->wParam);
+		return 2;
+  	}
+  	return 1;
 }
 
 int event_onLoaded(lua_State *L) {
@@ -377,6 +384,7 @@ extern "C" {
 		onReady = lua_registerevent(L, NULL, event_onReady);
 		onMessage = lua_registerevent(L, NULL, event_onMessage);
 		onLoaded = lua_registerevent(L, NULL, event_onLoaded);
+		onFullscreen = lua_registerevent(L, NULL, event_onFullscreen);
 		luaL_require(L, "ui");
 		lua_regwidgetmt(L, Webview, WIDGET_METHODS, FALSE, FALSE, FALSE, FALSE, FALSE);
 		luaL_setrawfuncs(L, Webview_methods);
