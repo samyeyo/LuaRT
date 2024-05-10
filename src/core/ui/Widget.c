@@ -365,6 +365,17 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 			} else if (w->wtype == UIList) {
 				adjust_listvscroll(w, -1, 0);
 				RedrawWindow(w->handle, NULL, NULL, RDW_ALLCHILDREN | RDW_INVALIDATE | RDW_UPDATENOW);
+			} else if ((w->wtype == UIPicture) && (w->status)) {
+				IWICBitmapScaler *scaler;
+				if (SUCCEEDED(ui_factory->lpVtbl->CreateBitmapScaler(ui_factory, &scaler))) {
+					IWICBitmap *bmp; 
+					if (SUCCEEDED(ui_factory->lpVtbl->CreateBitmapFromHBITMAP(ui_factory, (HBITMAP)w->status, NULL, WICBitmapUsePremultipliedAlpha, &bmp) && SUCCEEDED(scaler->lpVtbl->Initialize(scaler, (IWICBitmapSource *)bmp, LOWORD(lParam), HIWORD(lParam), WICBitmapInterpolationModeHighQualityCubic)))) {
+						w->status = ConvertToBitmap(bmp);
+						SendMessage(hwnd, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
+						bmp->lpVtbl->Release(bmp);
+					}
+					scaler->lpVtbl->Release(scaler);
+				}
 			}
 			break;
 		case WM_HSCROLL:
@@ -570,8 +581,14 @@ Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_
 #else
         id = (HMENU)(((UINT_PTR)++wp->status));
 #endif
+	int width = luaL_optinteger(L, idx+2, _width);
+	int height =luaL_optinteger(L, idx+3, _height);
+	if (type != UIPicture) {
+		width = (int)floor(width*dpi); 
+		height = (int)floor(height*dpi);
+	}
     w = calloc(1, sizeof(Widget));
-    h = CreateWindowExW(exstyle, classname, text, WS_CHILD | WS_CLIPSIBLINGS | style, (int)floor(luaL_optinteger(L, idx, 8)*dpi), (int)floor(luaL_optinteger(L, idx+1, 10)*dpi), (int)floor(luaL_optinteger(L, idx+2, _width)*dpi),  (int)floor(luaL_optinteger(L, idx+3, _height)*dpi), hParent, id, hInstance, NULL);
+    h = CreateWindowExW(exstyle, classname, text, WS_CHILD | WS_CLIPSIBLINGS | style, (int)floor(luaL_optinteger(L, idx, 8)*dpi), (int)floor(luaL_optinteger(L, idx+1, 10)*dpi), width, height, hParent, id, hInstance, NULL);
     free(text);
     w->handle = h;
     w->wtype = type;
@@ -1308,7 +1325,6 @@ LUA_METHOD(Picture, load) {
 		w->status = h;
 		GetObject(h, sizeof(BITMAP), &bm);
 		SetWindowPos(w->handle, NULL, 0, 0, luaL_optinteger(L, 3, bm.bmWidth), luaL_optinteger(L, 4, bm.bmHeight),SWP_NOZORDER | SWP_NOMOVE);
-		SendMessage(w->handle, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
 	}
 	lua_pushboolean(L, h != 0);
 	do_align(w);
@@ -1328,7 +1344,6 @@ LUA_METHOD(Picture, resize) {
 		BITMAP bm;
 		GetObject(w->status, sizeof(BITMAP), &bm);
 		SetWindowPos(w->handle, NULL, 0, 0,bm.bmWidth*n, bm.bmHeight*n, SWP_NOZORDER | SWP_NOMOVE | SWP_NOCOPYBITS);
-		InvalidateRect(GetParent(w->handle), NULL, TRUE);
 	}
 	return 0;
 }

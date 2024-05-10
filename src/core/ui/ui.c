@@ -696,7 +696,7 @@ LUA_CONSTRUCTOR(Picture) {
 		bm.bmWidth = r.right-r.left;
 		bm.bmHeight = r.bottom-r.top;
 	}
-	SetWindowPos(w->handle, NULL, 0, 0, bm.bmWidth*dpi, bm.bmHeight*dpi, SWP_NOZORDER | SWP_NOMOVE);
+	SetWindowPos(w->handle, NULL, 0, 0, bm.bmWidth, bm.bmHeight, SWP_NOZORDER | SWP_NOMOVE);
     SendMessage(w->handle, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
 	return 1;
 }
