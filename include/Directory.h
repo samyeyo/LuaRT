@@ -27,6 +27,8 @@ LUA_CONSTRUCTOR(Directory);
 extern const luaL_Reg Directory_methods[];
 extern const luaL_Reg Directory_metafields[];
 
+LUA_API wchar_t *luaL_checkDirname(lua_State *L, int idx);
+
 #ifdef __cplusplus
 }
 #endif

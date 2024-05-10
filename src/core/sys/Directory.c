@@ -23,6 +23,12 @@
 
 luart_type TDirectory;
 
+LUA_API wchar_t *luaL_checkDirname(lua_State *L, int idx) {
+	if (lua_type(L, idx) == LUA_TSTRING)
+		return lua_towstring(L, idx);
+	return wcsdup(((File*)lua_checkcinstance(L, idx, TDirectory))->fullpath);
+}
+
 //-------------------------------------[ Directory Constructor ]
 LUA_CONSTRUCTOR(Directory) {
 	DWORD dwAttrib;
