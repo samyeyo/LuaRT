@@ -9,7 +9,7 @@
 # | Usage (debug build) 		  			 : make debug
 # | Usage (clean all)	 				 	 : make clean
 # |-------------------------------------------------------------
-
+VERBOSE= >nul 2>&1
 
 #---- LuaRT toolchain path
 LUART_PATH=..\..\..
@@ -18,11 +18,10 @@ MODULE=		sqlite
 VERSION=	0.3
 SRC= 		src\sqlite3.obj src\sqlite.obj src\Database.obj
 
-
-
 !if "$(BUILD)" == "debug"
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG
+VERBOSE=
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /MD /Gy /GF /GA /GR- /GS- /Oi /O1 /DSQLITE_OMIT_DEPRECATED /DSQLITE_OMIT_JSON /DSQLITE_OMIT_DESERIALIZE /DSQLITE_THREADSAFE=0 /DSQLITE_USE_ALLOCA /DSQLITE_OMIT_SHARED_CACHE /DSQLITE_OMIT_QUICKBALANCE
 LDFLAGS= /nologo /OPT:REF /OPT:ICF
@@ -44,11 +43,11 @@ infomodule:
 	@echo|set /p dummy="▸  Building module $(MODULE) $(VERSION)	  "
 
 .c.obj: 
-	@$(CC) $(CFLAGS) /c /Fo$@ $< >nul 2>&1
+	@$(CC) $(CFLAGS) /c /Fo$@ $< $(VERBOSE)
 	@echo|set /p dummy="■"
 
 $(MODULE).dll: infomodule $(SRC)
-	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ >nul 2>&1
+	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ $(VERBOSE)
 	
 install: $(MODULE).dll
 !if !exists("$(LUART_PATH)\modules\$(MODULE)")

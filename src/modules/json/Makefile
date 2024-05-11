@@ -9,7 +9,7 @@
 # | Usage (debug build) 		  			 : make debug
 # | Usage (clean all)	 				 	 : make clean
 # |-------------------------------------------------------------
-
+VERBOSE= >nul 2>&1
 
 #---- LuaRT toolchain path
 LUART_PATH=..\..\..
@@ -23,6 +23,7 @@ SRC= 		src\json.obj
 !if "$(BUILD)" == "debug"
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG
+VERBOSE=
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /MD /Gy /GR- /GL /GS- /GF /Oi /O2
 LDFLAGS= /nologo /OPT:REF /OPT:ICF /LTCG
@@ -44,11 +45,11 @@ infomodule:
 	@echo|set /p dummy="▸  Building module $(MODULE) $(VERSION)	  "
 
 .c.obj: 
-	@$(CC) $(CFLAGS) /c /Fo$@ $< 2>&1 >nul
+	@$(CC) $(CFLAGS) /c /Fo$@ $< $(VERBOSE)
 	@echo|set /p dummy="■"
 
 $(MODULE).dll: infomodule $(SRC)
-	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ 2>&1 >nul 
+	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ $(VERBOSE)
 	
 install: $(MODULE).dll
 !if !exists("$(LUART_PATH)\modules\$(MODULE)")

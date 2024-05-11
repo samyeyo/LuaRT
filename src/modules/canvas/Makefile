@@ -9,7 +9,7 @@
 # | Usage (debug build) 		  			 : make debug
 # | Usage (clean all)	 				 	 : make clean
 # |-------------------------------------------------------------
-
+VERBOSE= >nul 2>&1
 
 #---- LuaRT toolchain path
 LUART_PATH=..\..\..
@@ -21,6 +21,7 @@ SRC= 		src\Canvas.obj src\Direct2D.obj src\Image.obj src\Gradient.obj
 !if "$(BUILD)" == "debug"
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /I"$(LUART_PATH)\include" /Z7 /EHsc
 LDFLAGS= /nologo /DEBUG
+VERBOSE=
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /I"$(LUART_PATH)\include" /MD /Gy /GF /GA /GR- /GS- /Oi /O2 /EHsc
 LDFLAGS= /nologo /OPT:REF /OPT:ICF
