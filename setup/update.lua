@@ -21,7 +21,7 @@ elseif ui.dpi >= 1.75 then
     factor = 2
 end
 
-local img = ui.Picture(win, File(("img/logo x"..factor..".png"):gsub(",", ".")).fullpath)
+local img = ui.Picture(win, File(("logox"..factor..".png"):gsub(",", ".")).fullpath)
 win.width = img.width
 img:center()
 img.y = 20
@@ -54,12 +54,6 @@ elseif ui.dpi < 1.75 then
 elseif ui.dpi >= 1.75 then
     factor = 2
 end
-
-local img = ui.Picture(win, File(("img/logo x"..factor..".png"):gsub(",", ".")).fullpath)
-win.width = img.width
-img:center()
-img.y = 20
-win:center()
 
 local button = ui.Button(win, "")
 button:loadicon(File("install.ico"))

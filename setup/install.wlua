@@ -50,7 +50,7 @@ elseif ui.dpi >= 1.75 then
     factor = 2
 end
 
-local img = ui.Picture(win, File(("img/logo x"..factor..".png"):gsub(",", ".")).fullpath)
+local img = ui.Picture(win, File(("img/logox"..factor..".png"):gsub(",", ".")).fullpath)
 win.width = img.width
 img:center()
 img.y = 20
@@ -132,9 +132,7 @@ function button:onClick()
         isopen(dir.fullpath.."/QuickRT/QuickRT.exe", "QuickRT")      
         isopen(dir.fullpath.."/RTBuilder/RTBuilder.exe", "RTBuilder")      
         win.installation = true
-        local label = ui.Label(win, "")
-        label.width = label.width-80
-        label:center()
+        local label = ui.Label(win, "test")
         label.y = 200
         label.autosize = false        
         label.fontsize = 8
@@ -143,15 +141,17 @@ function button:onClick()
         local bar = ui.Progressbar(win)
         bar.width = win.width-80
         bar:center()
+        label.x = bar.x
+        label.width = bar.width
         bar.y = 180
         bar.position = 75
         bar.themed = false
         bar.fgcolor = 0xEFB42C
         bar.bgcolor = win.bgcolor
+        self:hide()
         local archive = compression.Zip(File("luaRT.zip"))
         bar.range = {0, archive.count}
         local size = 0
-        self:hide()
         for entry, isdir in each(archive) do
             if not isdir then
                 local fname = entry:gsub('/', '\\')
@@ -162,6 +162,7 @@ function button:onClick()
                 end
             end
             bar:advance(1)
+            ui.update()
         end
         archive:close()
         local user_path = sys.registry.read("HKEY_CURRENT_USER", "Environment", "Path", false) or ""
