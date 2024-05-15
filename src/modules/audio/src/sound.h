@@ -45,7 +45,7 @@ LUA_PROPERTY_SET(obj, property) { \
   return 0; \
 } 
 
-LUA_API luart_type TSound;
+extern luart_type TSound;
 
 LUA_CONSTRUCTOR(Sound);
 extern const luaL_Reg Sound_methods[];
