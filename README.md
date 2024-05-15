@@ -3,7 +3,7 @@
 ![LuaRT][title] 
 
 [![Lua VM 5.4.6](https://badgen.net/badge/Lua%20VM/5.4/yellow)](https://www.lua.org/)
-![Windows](https://badgen.net/badge/Windows/Vista%20and%20later/blue?icon=windows)
+![Windows](https://badgen.net/badge/Windows/Windows%208.1+/blue?icon=windows)
 [![LuaRT license](https://badgen.net/badge/License/MIT/green)](#license)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af54881b3d764f5ea210a5419fb96086)](https://www.codacy.com/gh/samyeyo/LuaRT/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=samyeyo/LuaRT&amp;utm_campaign=Badge_Grade)  
 [![Twitter Follow](https://img.shields.io/twitter/follow/__LuaRT__?style=social)](https://www.twitter.com/__LuaRT__)
@@ -29,7 +29,7 @@ Lua multipurpose programming framework to develop Windows applications
 - Lightweight with no other dependencies
 - Develop in Lua, C programming knowledge is not needed
 - Batteries included : UTF8 strings, sockets, GUI, compression, audio, graphics...
-- LuaRT runs on Windows Vista, Windows 7, Windows 8, Windows 10 and Windows 11.
+- LuaRT runs on Windows 8.1, Windows 10 and Windows 11.
 
 #### Complete development environment 
 - rtc: a Lua script to executable compiler
