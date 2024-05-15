@@ -94,12 +94,6 @@ LUA_CONSTRUCTOR(Canvas)
 	w->user = new Direct2D(h, width, height);
 	if (((Direct2D *)w->user)->error)
 	  luaL_error(L, ((Direct2D *)w->user)->error); 
-  if (isdark) {
-    ((Direct2D *)w->user)->bgcolor = D2D1::ColorF(D2D1::ColorF::Black, 1.0f);
-    ((Direct2D *)w->user)->color = D2D1::ColorF(D2D1::ColorF::White, 1.0f);
-    DeleteObject(((Direct2D *)w->user)->colorBrush);
-    ((Direct2D *)w->user)->Render->CreateSolidColorBrush(((Direct2D *)w->user)->color, &((Direct2D *)w->user)->colorBrush);    
-  }
   ((Direct2D *)w->user)->Render->BeginDraw();
   ((Direct2D *)w->user)->Render->Clear(((Direct2D *)w->user)->bgcolor);
   ((Direct2D *)w->user)->Render->EndDraw();    
