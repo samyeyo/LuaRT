@@ -1,3 +1,74 @@
+## LuaRT v1.8.0 (May 15 2024)
+
+#### Highlights 
+- Warning : Windows versions older than 8.1 are no more supported
+- This release focuses on the `ui` module, bringing modern Desktop Windows functionnalities :
+	- Windows dark and light themes (requires Windows 10+)
+	- Theme switching depends on Windows system setting, and can be changed programmatically during runtime
+	- Seamless HighDPI support 
+	- Widgets are now double buffered better user experience
+	- Parent widgets/windows can now list all their childs widgets
+	- Monitors enumeration
+
+#### LuaRT interpreter
+- Updated: The `Runtime error` window when an error occurs with `wluart.exe` now uses the current Windows theme
+
+#### LuaRT Studio
+- New: Theme selection is now available in the new `Edit\Preferences\Theme` menu
+- New: `DarkDefault` and `LightDefault` themes
+- Fixed: Themes now applies to the left pane too (Projects/Symbols)
+- Fixed: Better dark mode autodetection for Windows 10/11
+
+#### rtc
+- Updated: `wrtc` has been updated to support HighDPI
+- Updated: When requiring for an embedded Lua or binary modules, `rtc` now uses `package.path` and `package.cpath` to conform to Lua search path
+- Fixed: Changing executable icon with `-i` option updates immediately in Windows explorer
+
+#### RTBuilder
+- New: Option to switch to dark/light theme
+
+#### LuaRT C API
+- New: `lua_uigetinfo()` to get current dpi and theme
+- New: `luaL_checkDirname()` to get the fullpath of a Directory object on the stack
+- New: `lua_regparentwidget()` and `lua_regparentwidgetmt`() to register parent widgets
+
+#### LuaRT documentation
+- Fixed: `ui.rtl` documentation is now available
+- Updated: now the documentation contains all new LuaRT 1.8.0 changes 
+
+#### `sys` module
+- Fixed: `sys.cmd()` now returns `false` if the command fails (fixes #187)
+
+#### `string` module
+- New: `string.split()` function to split a string in substrings using a separator
+
+#### `canvas` module
+- New: `Canvas` widget updated to support double buffering and HighDPI
+
+#### `webview` module
+- New: New event `Webview.onFullScreenChange()` when the current HTML page ask for fullscreen switch
+- New: Webview can now access `"file:///"` resources from embedded content if available
+
+#### `ui` module
+- New: `Window` and other widgets now supports HighDPI (runtime change of DPI not yet supported)
+- New: Widgets now uses double buffering
+- New `ui.dpi` property that returns current dpi scale
+- New `ui.theme` and `ui.systheme` properties for dark/light Windows themes management
+- New `ui.monitors` property to retrieve the list of current connected displays
+- New `ui.windows` property to get a list of all created `Windows`
+- New `Window.transparency` property to get/set Window's degree of transparency
+- New `Window.monitor` property to get the monitor on which the `Window` is located
+- New `Window.parent` to retrieve the parent `Window`
+- New `Window.childs`, `Groupbox.childs`, `TabItem.childs` and `Panel.childs` properties to get a list of childs widgets
+- New `Edit.border`, `List.border` and `Tree.border` properties to show/hide the widget's border
+- New `Edit.scroll()` method to scroll the `Edit` content vertically
+- New: `Tree.readonly` property to prevent any `TreeItem` editing by the user
+- Updated: Resizing `Picture` widget now uses cubic interpolation for better image quality
+- Updated : Widgets position and size properties now take count of the current DPI scale
+- Fixed: `Combobox.tooltip` property now shows its tooltip as expected (Fixes #179)
+- Fixed: `Picture:load()` now uses correct parameter for the height argument (Fixes #185)
+- Fixed: `Edit.selection.visible` now shows/hides selection as expected
+
 ## LuaRT v1.7.1 Bugfix (Jan 26 2024)
 
 #### LuaRT interpreter
