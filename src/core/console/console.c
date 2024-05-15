@@ -431,7 +431,6 @@ int CALLBACK EnumSystemFonts(const LOGFONTW *lf, const TEXTMETRICW *tm, DWORD ft
 LUA_API BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf) {
 	typedef BOOL(WINAPI *PGetFontResourceInfo)(LPCWSTR, LPDWORD, LPVOID, DWORD);
 	HDC dc = GetDC(NULL);
-	BOOL result;
 
 	if (_waccess(file, 0) == 0) {
   		while (RemoveFontResourceW(file));
@@ -440,11 +439,11 @@ LUA_API BOOL LoadFont(LPCWSTR file, LPLOGFONTW lf) {
   			PGetFontResourceInfo GetFontResourceInfo = (PGetFontResourceInfo)(void*)GetProcAddress(GetModuleHandleA("gdi32.dll"), "GetFontResourceInfoW");
   			GetFontResourceInfo(file, &n, lf, 2);
 			RemoveFontResourceW(file);
+			return !EnumFontFamiliesExW(dc, lf, EnumSystemFonts, (LPARAM)NULL, 0);
 		} else return FALSE;
   	} else wcsncpy(lf->lfFaceName, file, LF_FACESIZE);	
-	result = !EnumFontFamiliesExW(dc, lf, EnumSystemFonts, (LPARAM)NULL, 0);
 	ReleaseDC(NULL, dc);
-	return result;
+	return TRUE;
 }
 
 LUA_PROPERTY_SET(console, font) {
