@@ -65,8 +65,8 @@ LDFLAGS= /nologo /OPT:REF /OPT:ICF
 
 DLL_LIBS =	shlwapi.lib advapi32.lib gdi32.lib comctl32.lib kernel32.lib user32.lib oleaut32.lib ole32.lib credui.lib crypt32.lib wininet.lib
 
-LIBS	= 	lua54.lib ole32.lib comctl32.lib
-UI_LIBS = 	gdi32.lib uxtheme.lib shell32.lib user32.lib kernel32.lib dwmapi.lib windowscodecs.lib comdlg32.lib ole32.lib shlwapi.lib oleaut32.lib
+LIBS	= 	lua54.lib ole32.lib comctl32.lib shell32.lib
+UI_LIBS = 	gdi32.lib uxtheme.lib shell32.lib user32.lib kernel32.lib dwmapi.lib windowscodecs.lib comdlg32.lib ole32.lib shlwapi.lib oleaut32.lib shcore.lib
 STATIC_LIBS=ole32.lib comctl32.lib crypt32.lib credui.lib wininet.lib ws2_32.lib Secur32.lib dnsapi.lib iphlpapi.lib urlmon.lib sensapi.lib shell32.lib $(DLL_LIBS)
 
 
@@ -200,7 +200,7 @@ rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
 	@echo|set /p dummy="▸  Building rtc compiler          "
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTC /i "lua/" resources/resource.rc >nul 2>&1
 	@echo|set /p dummy="■"
-	@$(CC) $(CFLAGS) /D RTC luart.c /link $(LDFLAGS) resource.res $(BASE_O) $(STATIC_O) $(STATIC_LIBS) /OUT:luart.exe  $(VERBOSE)
+	@$(CC) $(CFLAGS) /D RTC luart.c /link $(LDFLAGS) resource.res $(BASE_O) $(STATIC_O) $(STATIC_LIBS) /OUT:luart.exe $(VERBOSE)
 	@luart.exe ..\..\tools\rtc\src\rtc.lua ..\..\tools\rtc\src\rtc.lua -o rtc.exe ..\..\tools\rtc\src  $(VERBOSE)
 	@echo|set /p dummy="■"
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTC /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1

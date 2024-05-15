@@ -19,6 +19,7 @@
 #include <wchar.h>
 #include <stdlib.h>
 #include <shlwapi.h>
+#include <shlobj_core.h>
 #include <ui\ui.h>
 
 
