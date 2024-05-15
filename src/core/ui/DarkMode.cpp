@@ -325,7 +325,7 @@ extern "C" {
 		return -1;
 	}
 
-	LRESULT StatusProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+	LRESULT CALLBACK StatusProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
 		PAINTSTRUCT ps;
 		Widget *w = (Widget*)dwRefData;
 		RECT r;
@@ -423,7 +423,7 @@ extern "C" {
 		return DefSubclassProc(hwnd, msg, wParam, lParam);
 	}
 
-	LRESULT ComboBoxSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+	LRESULT CALLBACK ComboBoxSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
 		switch (uMsg)
 		{
 
@@ -495,10 +495,11 @@ extern "C" {
 		wchar_t *buff = (wchar_t *)malloc((len + 1)*sizeof(wchar_t));
 		GetWindowTextW(hwnd, buff, len + 1);
 		DrawTextW(hdc, buff, -1, &r, DT_SINGLELINE | DT_CALCRECT);
-		HBRUSH brush =  wp && wp->brush ? wp->brush : (HBRUSH)GetStockObject(BLACK_BRUSH);
+		HBRUSH brush =  (wp && wp->brush) ? wp->brush : (HBRUSH)GetStockObject(BLACK_BRUSH);
 		HPEN old = (HPEN)SelectObject(hdc, GetStockPen(DC_PEN));
 		SetDCPenColor(hdc, 0x848484);
 		SelectObject(hdc, brush);
+		FillRect(hdc, &rect, brush);
 		Rectangle(hdc, rect.left+4, ++rect.top+r.bottom/2, rect.right-4, rect.bottom-r.bottom/2);
 		SelectObject(hdc, old);
 		if (len) {
@@ -589,7 +590,7 @@ extern "C" {
 				drawTab(hwnd, hdc, nSelected, &ps, &rc, himl, TRUE, cx, cy);
 				MoveToEx(hdc, rc.right, rc.bottom-1, NULL);
 				LineTo(hdc, ps.rcPaint.right, rc.bottom-1);
-			} //else Rectangle(hdc, ps.rcPaint.left, ps.rcPaint.top, ps.rcPaint.right, ps.rcPaint.bottom);
+			} else Rectangle(hdc, ps.rcPaint.left, ps.rcPaint.top, ps.rcPaint.right, ps.rcPaint.bottom);
 			EndPaint(hwnd, &ps);
 		} else DefSubclassProc(hwnd, msg, wParam, lParam);
 		RECT r, rr;

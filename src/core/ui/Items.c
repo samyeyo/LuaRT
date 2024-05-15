@@ -288,7 +288,7 @@ tree:	item = calloc(1, sizeof(TVINSERTSTRUCTW));
 		item = calloc(1, sizeof(TCITEMW));
 		RECT r; 
 		GetClientRect(w->handle, &r);
-		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 1, 20.0*GetDPIForSystem()+4, 0, 0, h, NULL, GetModuleHandle(NULL), NULL);
+		hh = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 2, 20.0*GetDPIForSystem()+4, 0, 0, h, NULL, GetModuleHandle(NULL), NULL);
 		SetWindowLongPtr(hh, GWLP_WNDPROC, (ULONG_PTR)PageProc);
 
 		SetWindowLongPtr(hh, GWLP_USERDATA, (ULONG_PTR)w);

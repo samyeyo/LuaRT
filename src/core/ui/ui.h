@@ -63,7 +63,7 @@ LOGFONTW *Font(Widget *w);
 void UpdateFont(Widget *w, LOGFONTW *l);
 void SetFontFromWidget(Widget *w, Widget *wp);
 LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
-BOOL EnumMonitor(HMONITOR h, HDC hdc, LPRECT r, LPARAM data);
+BOOL CALLBACK EnumMonitor(HMONITOR h, HDC hdc, LPRECT r, LPARAM data);
 
 LUA_METHOD(Widget, __metanewindex); //----- for event registration
 LUA_METHOD(Widget, show);
@@ -166,7 +166,7 @@ void FreeMenu(lua_State *L, Widget *w);
 void remove_menuitem(lua_State *L, Widget *w, int idx);
 int adjust_listvscroll(Widget *w, int start, int end);
 void page_resize(Widget *w, BOOL isfocused);
-BOOL AdjustThemeProc(HWND h, LPARAM isDark);
+BOOL CALLBACK AdjustThemeProc(HWND h, LPARAM isDark);
 int ThemedMsgBox(wchar_t *title, wchar_t *msg, UINT options);
 
 LUA_CONSTRUCTOR(Item);

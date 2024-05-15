@@ -93,7 +93,7 @@ HBITMAP ConvertToBitmap(void *pSource) {
 
 	if (SUCCEEDED(ui_factory->lpVtbl->CreateFormatConverter(ui_factory, &pConverter)))
 	{
-		if (SUCCEEDED(pConverter->lpVtbl->Initialize(pConverter, pSource, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0f, WICBitmapPaletteTypeCustom)))
+		if (SUCCEEDED(pConverter->lpVtbl->Initialize(pConverter, pSource, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeErrorDiffusion, NULL, 0.0f, WICBitmapPaletteTypeCustom)))
 		{
 			UINT x, y;
 			if (SUCCEEDED(pConverter->lpVtbl->GetSize(pConverter, &x, &y)))
@@ -716,7 +716,7 @@ LUA_CONSTRUCTOR(Panel)
 }
 
 LUA_CONSTRUCTOR(Entry) {
-	Widget *w = Widget_create(L, UIEntry, WS_EX_CLIENTEDGE, WC_EDITW, WS_TABSTOP | ES_LEFT | ES_AUTOHSCROLL, TRUE, TRUE);
+	Widget *w = Widget_create(L, UIEntry, 0, WC_EDITW, WS_BORDER | WS_TABSTOP | ES_LEFT | ES_AUTOHSCROLL, TRUE, TRUE);
 	w->cursor = 5;
 	w->hcursor = LoadCursor(NULL, IDC_IBEAM);
 	return 1;
@@ -830,7 +830,7 @@ LUA_PROPERTY_GET(ui, windows) {
 	return 1;
 }
 
-BOOL EnumMonitor(HMONITOR h, HDC hdc, LPRECT r, LPARAM data) {
+BOOL CALLBACK EnumMonitor(HMONITOR h, HDC hdc, LPRECT r, LPARAM data) {
 	MONITORINFOEXW mi = {0};
 	DISPLAY_DEVICEW DispDev = {0};
 	DWORD idx = 0;
@@ -878,7 +878,7 @@ LUA_PROPERTY_GET(ui, systheme) {
 	return 1;
 }
 
-BOOL AdjustThemeProc(HWND h, LPARAM isDark) {
+BOOL CALLBACK AdjustThemeProc(HWND h, LPARAM isDark) {
 	Widget *w = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA);
 	WidgetType wtype = w ? w->wtype : GetWidgetTypeFromHWND(h);
 	if (wtype > -1) {
@@ -976,6 +976,7 @@ color:		if (isDark) {
 					CloseThemeData(hTheme);
 				}
 			}
+			page_resize(w, TRUE);
 		} else if (wtype == UIList) {
 			AllowDarkModeForWindow(h, isDark);
 			if (!SetWindowTheme(h, isDark ? L"DarkMode_Explorer" : L"Explorer", NULL))
@@ -1078,9 +1079,7 @@ int luaopen_ui(lua_State *L) {
 	DWORD dwLayout;
 	int i = -1;
 
-	SetProcessDpiAwareness(2);
 	InitDarkMode();
-
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WindowProc;

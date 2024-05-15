@@ -76,6 +76,7 @@ void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunctio
 
 void page_resize(Widget *w, BOOL isfocused) {
 	int sel = TabCtrl_GetCurSel(w->handle);
+	double dpi = GetDPIForSystem();
 	int count = get_count(w);
 	RECT r, rr;
 	double hfactor;
@@ -83,12 +84,12 @@ void page_resize(Widget *w, BOOL isfocused) {
 	if (count) {
 		TabCtrl_GetItemRect(w->handle, 0, &rr);
 		hfactor = rr.bottom-rr.top+5;
-	} else hfactor =  24.25*GetDPIForSystem(); 
+	} else hfactor =  24.25*dpi; 
 	GetClientRect(w->handle, &r);
-	int width = r.right-r.left-2;
-	int height = r.bottom-r.top-hfactor;
+	int width = r.right-r.left-(DarkMode ? 3 : 6)*dpi;
+	int height = r.bottom-r.top-hfactor-dpi;
 	if (w->user) {
-		SetWindowPos(w->user, NULL, 2, 4, width, height, SWP_NOMOVE | SWP_NOZORDER);
+		SetWindowPos(w->user, NULL, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER);
 		BringWindowToTop(w->user);
 	}
 	else {
@@ -100,6 +101,7 @@ void page_resize(Widget *w, BOOL isfocused) {
 			free(page);	
 			if (isfocused && (i == sel)) {
 				BringWindowToTop((HWND)page->lParam);
+				InvalidateRect((HWND)page->lParam, NULL, TRUE);
 				SetFocus((HWND)page->lParam);
 			} 
 		}
@@ -247,7 +249,7 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 			}
 			else if (w->wtype == UIList) {
 				SendMessage(w->handle, WM_CHANGEUISTATE, MAKELONG(UIS_SET, UISF_HIDEFOCUS), 0);
-				if (lpNmHdr->code == LVN_ITEMCHANGED) {
+				if (lpNmHdr->code == LVN_ITEMCHANGED && (((LPNMLISTVIEW)lParam)->uNewState & LVNI_SELECTED)) {
 					int i = SendMessage(w->handle, LVM_GETNEXTITEM, -1, LVNI_ALL | LVNI_SELECTED );
 					if (i != -1) 
 						lua_indexevent(w, onSelect, i);
@@ -391,29 +393,13 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 			if (DarkMode && (w->wtype == UIGroup))
 				return GroupBoxSubclassProc(hwnd, uMsg, wParam, lParam, uIdSubclass, (DWORD_PTR)w);
 			break;
-		case WM_ERASEBKGND: if ((w->wtype == UIGroup) || (w->wtype == UILabel)) {
-			RECT rect;
-			HWND h = w->handle;
-			GetClientRect(w->handle, &rect);
-			if (!w->brush) do {
-				if (!h)
-					return -1;
-				h = GetParent(w->handle);
-				w = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA);
-			} while (!w->brush);
-			FillRect((HDC)wParam, &rect, w->brush);
-			return TRUE;
-		}
-		break;	
 		case WM_CTLCOLOREDIT: 
 			*result = TRUE;
 			if (DarkMode) {
 				SetBkMode((HDC)wParam, OPAQUE);
 				SetTextColor((HDC)wParam, 0xFFFFFF);
 				SetBkColor((HDC)wParam, 0x181818);
-				if (!w->brush)
-					w->brush = CreateSolidBrush(0x181818);
-				return (LRESULT)w->brush;
+				return (LRESULT)CreateSolidBrush(0x181818);
 			}
 			return (LRESULT)GetStockObject(WHITE_BRUSH);
 		case WM_CTLCOLORBTN:
@@ -1009,7 +995,7 @@ LUA_PROPERTY_GET(Widget, tooltip) {
 	ti.cbSize = TTTOOLINFOW_V2_SIZE;
     ti.uId = (UINT_PTR)w->handle;
 	ti.lpszText = text;
-	ti.hwnd = w->handle;
+	ti.hwnd = w->wtype == UICombo ? (HWND)SendMessage(w->handle, CBEM_GETEDITCONTROL, 0, 0) : w->handle;
 	SendMessageW(w->tooltip, TTM_GETTEXTW, 512, (LPARAM)&ti);
 	lua_pushwstring(L, text);
 	return 1;
@@ -1021,9 +1007,10 @@ LUA_PROPERTY_SET(Widget, tooltip) {
 	RECT rect = {0};
 	TOOLINFOW ti;
 	wchar_t *str = lua_towstring(L, 2);
+	HWND h =  w->wtype == UICombo ? (HWND)SendMessage(w->handle, CBEM_GETEDITCONTROL, 0, 0) : w->handle;
 	
 	if (!t) {
-		t = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, NULL,WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, 0, 0, 0, 0, w->handle, NULL, NULL, NULL );
+		t = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, NULL,WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, 0, 0, 0, 0, h, NULL, NULL, NULL );
 		SetWindowPos(t, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 		w->tooltip = t;
 	}
@@ -1033,7 +1020,7 @@ LUA_PROPERTY_SET(Widget, tooltip) {
     ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS | TTF_TRANSPARENT;
     ti.hwnd = w->handle;
     ti.hinst = NULL;
-    ti.uId = (UINT_PTR)w->handle;
+    ti.uId = (UINT_PTR)h;
     ti.lpszText = str;
     ti.rect = rect;
 	SendMessageW(t, TTM_ADDTOOLW, 0, (LPARAM) (LPTOOLINFOW) &ti);	
@@ -1325,6 +1312,7 @@ LUA_METHOD(Picture, load) {
 		w->status = h;
 		GetObject(h, sizeof(BITMAP), &bm);
 		SetWindowPos(w->handle, NULL, 0, 0, luaL_optinteger(L, 3, bm.bmWidth), luaL_optinteger(L, 4, bm.bmHeight),SWP_NOZORDER | SWP_NOMOVE);
+		SendMessage(w->handle, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)w->status);
 	}
 	lua_pushboolean(L, h != 0);
 	do_align(w);
@@ -1340,10 +1328,10 @@ LUA_METHOD(Picture, save) {
 LUA_METHOD(Picture, resize) {
 	Widget *w = lua_self(L, 1, Widget);
 	if (w->status) {
-		lua_Number n = luaL_checknumber(L, 2);
-		BITMAP bm;
-		GetObject(w->status, sizeof(BITMAP), &bm);
-		SetWindowPos(w->handle, NULL, 0, 0,bm.bmWidth*n, bm.bmHeight*n, SWP_NOZORDER | SWP_NOMOVE | SWP_NOCOPYBITS);
+		RECT r;
+		double n = luaL_checknumber(L, 2);
+		GetClientRect(w->handle, &r);
+		SetWindowPos(w->handle, NULL, 0, 0, (r.right-r.left)*n, (r.bottom-r.top)*n, SWP_NOZORDER | SWP_NOMOVE | SWP_NOCOPYBITS);
 	}
 	return 0;
 }
