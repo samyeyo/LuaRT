@@ -19,7 +19,7 @@ ifneq ("$(wildcard $(PATH_TO_FILE))","")
 endif
 
 MODULE=canvas
-VERSION=0.5
+VERSION=1.0
 
 SRC= src\Canvas.o src\Direct2D.o src\Image.o src\Gradient.o
 

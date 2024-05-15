@@ -19,7 +19,9 @@
 #include <wchar.h>
 #include <stdlib.h>
 #include <shlwapi.h>
-#include <shlobj_core.h>
+#ifndef __GNUC__
+	#include <shlobj_core.h>
+#endif
 #include <ui\ui.h>
 
 
@@ -282,7 +284,7 @@ int main() {
 					goto error;
 				}
 			} else { 
-execscript:		if (luaL_loadfile(L, __argv[argfile]) == LUA_OK) {
+				if (luaL_loadfile(L, __argv[argfile]) == LUA_OK) {
 compiledscript:		t = (Task*)lua_pushinstance(L, Task, 1);
 					t->status = TRunning;
 					if (lua_pcall(L, 0, 0, 0) > 1) {
@@ -301,7 +303,8 @@ error:
 							}
 							lua_pushstring(L, err);							
 							wchar_t *msg = lua_towstring(L, -1);		
-							ThemedMsgBox(L"Runtime error", msg, MB_ICONERROR | MB_OK);
+							ThemedMsgBox(L"Runtime error", msg, MB_ICONERROR | MB_OK
+							);
 							free(msg);					
 						}
 #else

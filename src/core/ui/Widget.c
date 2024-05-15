@@ -21,6 +21,9 @@
 #include <windowsx.h>
 #include "DarkMode.h"
 
+#ifdef __GNUC__
+	#define WICBitmapInterpolationModeHighQualityCubic 0x1
+#endif
 
 const char *luart_wtypes[] = {
 	"Window", "Button", "Label", "Entry", "Edit", "Status", "Checkbox", "Radiobutton", "Groupbox", "Calendar", "List", "Combobox", "Tree", "Tab", "Item", "Menu", "MenuItem", "Picture", "Progressbar", "Panel"
@@ -37,13 +40,13 @@ static const char *align[] = {"left", "right", "center", NULL};
 static const int align_values[] = {SS_LEFT, SS_RIGHT, SS_CENTER | SS_CENTERIMAGE};
 static const int align_valuesB[] = {BS_LEFT, BS_RIGHT, BS_CENTER};
 
-void widget_noinherit(lua_State *L, int *type, char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
-	lua_registerobject(L, type, typename, constructor, methods, mt);
+void widget_noinherit(lua_State *L, int *type, char *_typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt) {
+	lua_registerobject(L, type, _typename, constructor, methods, mt);
 }
 
-void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip, BOOL is_parent, BOOL do_pop) {
-	lua_registerobject(L, type, typename, constructor, Widget_methods, mt ? mt : Widget_metafields);
-	lua_getfield(L, LUA_REGISTRYINDEX, typename);
+void widget_type_new(lua_State *L, int *type, const char *_typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip, BOOL is_parent, BOOL do_pop) {
+	lua_registerobject(L, type, _typename, constructor, Widget_methods, mt ? mt : Widget_metafields);
+	lua_getfield(L, LUA_REGISTRYINDEX, _typename);
 	if (methods)
 		luaL_setrawfuncs(L, methods);	
 	if (has_text)
@@ -66,7 +69,7 @@ void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunctio
 		luaL_setrawfuncs(L, WidgetTextAlign_methods);
 	if (has_tooltip)
 		luaL_setrawfuncs(L, WidgetTooltip_methods);
-	if ((methods == ItemWidget_methods) && ((strcmp(typename, "List") == 0 || strcmp(typename, "Tree") == 0)))
+	if ((methods == ItemWidget_methods) && ((strcmp(_typename, "List") == 0 || strcmp(_typename, "Tree") == 0)))
 		luaL_setrawfuncs(L, sort_methods);
 	if (is_parent)
 		luaL_setrawfuncs(L, parent_methods);
@@ -369,7 +372,7 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				RedrawWindow(w->handle, NULL, NULL, RDW_ALLCHILDREN | RDW_INVALIDATE | RDW_UPDATENOW);
 			} else if ((w->wtype == UIPicture) && (w->status)) {
 				IWICBitmapScaler *scaler;
-				if (SUCCEEDED(ui_factory->lpVtbl->CreateBitmapScaler(ui_factory, &scaler))) {
+				if (SUCCEEDED(ui_factory->lpVtbl->CreateBitmapScaler(ui_factory, &scaler))) { 
 					IWICBitmap *bmp; 
 					if (SUCCEEDED(ui_factory->lpVtbl->CreateBitmapFromHBITMAP(ui_factory, (HBITMAP)w->status, NULL, WICBitmapUsePremultipliedAlpha, &bmp) && SUCCEEDED(scaler->lpVtbl->Initialize(scaler, (IWICBitmapSource *)bmp, LOWORD(lParam), HIWORD(lParam), WICBitmapInterpolationModeHighQualityCubic)))) {
 						w->status = ConvertToBitmap(bmp);

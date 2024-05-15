@@ -19,9 +19,10 @@
 extern "C" {
 #endif
 
-void widget_type_new(lua_State *L, int *type, const char *typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip, BOOL is_parent, BOOL do_pop);
-#define RegisterWidget(L, type, typename, constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_autosize, has_textalign, has_tooltip, is_parent) widget_type_new(L, type, typename, constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_autosize, has_textalign, has_tooltip, is_parent, TRUE)
+void widget_type_new(lua_State *L, int *type, const char *_typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt, BOOL has_text, BOOL has_font, BOOL has_cursor, BOOL has_icon, BOOL has_autosize, BOOL has_textalign, BOOL has_tooltip, BOOL is_parent, BOOL do_pop);
+#define RegisterWidget(L, type, _typename, constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_autosize, has_textalign, has_tooltip, is_parent) widget_type_new(L, type, _typename, constructor, methods, mt, has_text, has_font, has_cursor, has_icon, has_autosize, has_textalign, has_tooltip, is_parent, TRUE)
 
+void widget_noinherit(lua_State *L, int *type, char *_typename, lua_CFunction constructor, const luaL_Reg *methods, const luaL_Reg *mt);
 void *Widget_init(lua_State *L, Widget **wp, double *dpi, BOOL *isdark);
 Widget *Widget__constructor(lua_State *L, HWND h, WidgetType type, Widget *wp, SUBCLASSPROC proc);
 Widget *Widget_destructor(lua_State *L);
@@ -167,7 +168,7 @@ void remove_menuitem(lua_State *L, Widget *w, int idx);
 int adjust_listvscroll(Widget *w, int start, int end);
 void page_resize(Widget *w, BOOL isfocused);
 BOOL CALLBACK AdjustThemeProc(HWND h, LPARAM isDark);
-int ThemedMsgBox(wchar_t *title, wchar_t *msg, UINT options);
+int ThemedMsgBox(const wchar_t *title, wchar_t *msg, UINT options);
 
 LUA_CONSTRUCTOR(Item);
 LUA_CONSTRUCTOR(Menu);

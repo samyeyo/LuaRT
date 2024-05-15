@@ -248,11 +248,11 @@ DWORD WINAPI CreateMessageBox(LPVOID lpParam) {
 	return 0;
 }
 
-int ThemedMsgBox(wchar_t *title, wchar_t *msg, UINT options) {
+int ThemedMsgBox(const wchar_t *title, wchar_t *msg, UINT options) {
 	MsgParam mp;
 	hMsgIcon =  (HICON)SendMessage(GetMainWindow(), WM_GETICON, 0, 0);
 	hMsgIcon = hMsgIcon ? hMsgIcon : LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(101));
-	mp.title = title;
+	mp.title = (wchar_t*)title;
 	mp.options = options | MB_SYSTEMMODAL;
 	mp.msg = msg;
 	WaitForSingleObject(CreateThread(NULL, 0, &CreateMessageBox, &mp, 0, NULL), INFINITE);
@@ -264,7 +264,7 @@ static int MsgBox(lua_State *L, UINT options, wchar_t *def) {
 	wchar_t *title = lua_gettop(L) > 1 ? lua_towstring(L, 2) : def;
 	luaL_tolstring(L, 1, NULL);
 	wchar_t *msg = lua_towstring(L, -1);
-	int result = ThemedMsgBox(title, msg, options);
+	int result = ThemedMsgBox((const wchar_t*)title, msg, options);
 	if (title != def)
 		free(title);
 	free(msg);
@@ -326,7 +326,7 @@ static int dialog(lua_State *L, BOOL save, DWORD flags) {
 		}
 	}
 	ofn.lpstrInitialDir = NULL;
-	ofn.lpfnHook = WndProc;
+	ofn.lpfnHook = (LPOFNHOOKPROC)WndProc;
 	ofn.Flags = ismultiple ? flags|OFN_ALLOWMULTISELECT : flags;
 	if (DarkMode & !g_darkModeEnabled)
 		FixDarkScrollBar(FALSE);
@@ -674,12 +674,12 @@ LUA_METHOD(ui, fontdialog) {
 }
 
 LUA_CONSTRUCTOR(Button) {
-	Widget *w = Widget_create(L, UIButton, 0, WC_BUTTONW, WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER, TRUE, TRUE);
+	Widget_create(L, UIButton, 0, WC_BUTTONW, WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER, TRUE, TRUE);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Label) {
-	Widget *w = Widget_create(L, UILabel, 0, WC_STATICW, SS_NOTIFY | SS_LEFT, TRUE, TRUE);
+	Widget_create(L, UILabel, 0, WC_STATICW, SS_NOTIFY | SS_LEFT, TRUE, TRUE);
 	return 1;
 }
 
@@ -687,7 +687,6 @@ LUA_CONSTRUCTOR(Picture) {
 	int nargs = lua_gettop(L);
 	Widget *w = Widget_create(L, UIPicture, 0, WC_STATICW, SS_NOTIFY | SS_BITMAP | SS_REALSIZECONTROL | WS_CHILD, TRUE, TRUE);
 	BITMAP bm;
-	double dpi = GetDPIForSystem();
 	w->status = (HANDLE)LoadImg(luaL_checkFilename(L, 3));
 	GetObject(w->status, sizeof(BITMAP), &bm);
 	if (nargs > 5) {
@@ -733,12 +732,12 @@ LUA_CONSTRUCTOR(Radiobutton) {
 }
 
 LUA_CONSTRUCTOR(Groupbox) {
-	Widget *w = Widget_create(L, UIGroup, 0, WC_BUTTONW, ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE);
+	Widget_create(L, UIGroup, 0, WC_BUTTONW, ES_LEFT | BS_GROUPBOX | BS_FLAT, TRUE, FALSE);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Calendar) {
-	Widget *w = Widget_create(L, UIDate, 0, MONTHCAL_CLASSW, WS_TABSTOP | WS_CHILD | MCS_NOTODAYCIRCLE, FALSE, TRUE);
+	Widget_create(L, UIDate, 0, MONTHCAL_CLASSW, WS_TABSTOP | WS_CHILD | MCS_NOTODAYCIRCLE, FALSE, TRUE);
 	return 1;
 }
 
@@ -760,10 +759,10 @@ LUA_CONSTRUCTOR(Listbox) {
 }
 
 LUA_CONSTRUCTOR(Tree) {
-	extern Tree_geteditable(lua_State *L);
-	extern Tree_seteditable(lua_State *L);
+	extern int Tree_geteditable(lua_State *L);
+	extern int Tree_seteditable(lua_State *L);
 	luaL_checktype(L, 3, LUA_TTABLE);
-	Widget *w = Widget_create(L, UITree, 0, WC_TREEVIEWW, WS_BORDER | WS_TABSTOP | WS_CHILD | WS_HSCROLL | WS_VSCROLL | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | TVS_LINESATROOT | TVS_HASLINES, TRUE, FALSE);
+	Widget_create(L, UITree, 0, WC_TREEVIEWW, WS_BORDER | WS_TABSTOP | WS_CHILD | WS_HSCROLL | WS_VSCROLL | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | TVS_LINESATROOT | TVS_HASLINES, TRUE, FALSE);
 	lua_pushstring(L, "get_readonly");
 	lua_pushcfunction(L, Tree_geteditable);
 	lua_rawset(L, -3);

@@ -19,7 +19,7 @@ ifneq ("$(wildcard $(PATH_TO_FILE))","")
 endif
 
 MODULE=webview
-VERSION=0.7
+VERSION=1.0
 
 SRC= src\handler.o src\webview.o src\WebView2Loader.o
 

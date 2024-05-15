@@ -27,8 +27,8 @@ PLATFORM ?= x64
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 7
-LUART_RELEASE= 1
+LUART_MINOR= 8
+LUART_RELEASE= 0
 VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
 CLEAN=clean
 CODEPAGE := $(shell chcp 65001)
@@ -64,21 +64,21 @@ DEFINES_RES= --target=$(TARGET) -D LUART_MINOR=$(LUART_MINOR) -D LUART_MAJOR=$(L
 BUILD := release
 
 DEST= ..\..\bin
-cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -O2 -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" $(LUA_API) -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\include" -Wall -Wextra -I"." -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough
+cflags.release = $(DEFINES) $(ARCH) -s -static-libgcc -O2 -mfpmath=sse -mieee-fp -DLUA_ARCH=\"$(_ARCH)\" $(LUA_API) -D__MINGW64__ -D_WIN32_WINNT=0x0603 -DLUA_COMPAT_5_3 -I"..\..\include" -Wall -Wextra -I"." -fno-exceptions -fdata-sections -ffunction-sections -fipa-pta -ffreestanding -fno-stack-check -fno-ident -fomit-frame-pointer -Wl,--gc-sections -Wl,--build-id=none -Wl,-O1 -Wl,--as-needed -Wl,--no-insert-timestamp -Wl,--no-seh -Wno-maybe-uninitialized -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-parameter -Wno-implicit-fallthrough -Wno-missing-field-initializers
 ldflags.release= -static-libgcc -lm -Wl,--no-insert-timestamp -lgdi32 -L"." 
-cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" $(LUA_API) -D__MINGW64__ -D_WIN32_WINNT=0x0600 -DLUA_COMPAT_5_3 -I"..\..\include" -I"." 
+cflags.debug = $(DEFINES) $(ARCH) -static-libgcc -g -O0 -mfpmath=sse -mieee-fp -mmmx -msse -msse2 -DDEBUG -DLUA_ARCH=\"$(_ARCH)\" $(LUA_API) -D__MINGW64__ -D_WIN32_WINNT=0x0603 -DLUA_COMPAT_5_3 -I"..\..\include" -I"." -Wno-missing-field-initializers
 ldflags.debug= -g -static-libgcc -lm -lgdi32 -L"."
 
 CC= gcc
 CFLAGS := ${cflags.${BUILD}}
 LDFLAGS := ${ldflags.${BUILD}}
-LIBS= -lshlwapi -lcomctl32 -lcrypt32 -lcredui -luxtheme -loleaut32 -lole32 -lwindowscodecs -ldwmapi -lsensapi -lcomdlg32 -luuid -lwininet -lws2_32 -lSecur32 -ldnsapi -liphlpapi -lurlmon
+LIBS= -lshlwapi -lcomctl32 -lcrypt32 -lcredui -luxtheme -loleaut32 -lole32 -lshcore -lwindowscodecs -ldwmapi -lsensapi -lcomdlg32 -luuid -lwininet -lws2_32 -lSecur32 -ldnsapi -liphlpapi -lurlmon
 RM= del /Q
 
 LUA_A=		lua54.dll
 LUA_O=		lua\lapi.o lua\lcode.o lua\lctype.o lua\ldebug.o lua\ldo.o lua\ldump.o lua\lfunc.o lua\lgc.o lua\llex.o lua\lmem.o lua\lobject.o lua\lopcodes.o lua\lparser.o lua\lstate.o lua\lstring.o lua\ltable.o lua\ltm.o lua\lundump.o lua\lvm.o lua\lzio.o	
 LIB_O=		lua\lauxlib.o lua\lbaselib.o lua\lcorolib.o lua\ldblib.o lua\lmathlib.o lua\loadlib.o lua\ltablib.o string\string.o string\lstrlib.o sys\sys.o console\console.o lua\liolib.o lua\loslib.o lua\lutf8lib.o compression\compression.o compression\Zip.o compression\lib\miniz.o compression\lib\zip.o lrtapi.o lrtobject.o sys\Date.o sys\File.o sys\Pipe.o sys\Directory.o sys\Buffer.o sys\Com.o lembed.o sys\async.o sys\Task.o
-UI_O=  		ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o
+UI_O=  		ui\ui.o ui\Widget.o ui\Entry.o ui\Items.o ui\Menu.o ui\Window.o ui\DarkMode.o
 
 BASE_O= 	$(LUA_O) $(LIB_O)
 STATIC_O=	..\modules\net\src\Socket.o ..\modules\net\src\Http.o ..\modules\net\src\Ftp.o ..\modules\net\src\net.o ..\modules\crypto\src\Cipher.o ..\modules\crypto\src\crypto.o

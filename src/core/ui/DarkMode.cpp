@@ -1,4 +1,3 @@
-#define WIDGET_IMPLEMENTATION
 #include <Widget.h>
 #include "DarkMode.h"
 #include "IatHook.h"
@@ -9,9 +8,11 @@
 #include <map>
 #include <string>
 #include <Richedit.h>
-#include <shellscalingapi.h>
+#ifndef __GNUC__
+	#include <shellscalingapi.h>
+	#pragma comment(lib, "Shcore.lib")
+#endif
 
-#pragma comment(lib, "Shcore.lib")
 
 extern "C" {
 	BOOL g_darkModeSupported = FALSE;
@@ -51,7 +52,6 @@ fnSetPreferredAppMode _SetPreferredAppMode = NULL;
 extern "C" {
 
 	double GetDPIForSystem() {
-		double scMon = 1.0;
 		HWND activeWindow = GetActiveWindow();
 		HMONITOR monitor = MonitorFromWindow(activeWindow, MONITOR_DEFAULTTONEAREST);
 		UINT x, y;
@@ -326,7 +326,6 @@ extern "C" {
 	}
 
 	LRESULT CALLBACK StatusProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
-		PAINTSTRUCT ps;
 		Widget *w = (Widget*)dwRefData;
 		RECT r;
 
@@ -383,7 +382,7 @@ extern "C" {
 						DWORD cchText = 0;
 						cchText = LOWORD(SendMessage(hwnd, SB_GETTEXTLENGTH, i, 0));
 						wchar_t *str = (wchar_t*)calloc(1, sizeof(wchar_t)*(cchText+1));
-						LRESULT lr = SendMessageW(hwnd, SB_GETTEXTW, i, (LPARAM)str);
+						SendMessageW(hwnd, SB_GETTEXTW, i, (LPARAM)str);
 
 						SetBkMode(hdc, TRANSPARENT);
 						SetTextColor(hdc, 0xC0C0C0);
@@ -482,7 +481,6 @@ extern "C" {
 
 	LRESULT GroupBoxSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
 		PAINTSTRUCT ps;
-		HWND h;
 		HDC hdc = BeginPaint(hwnd, &ps);
 		Widget *w = (Widget*)dwRefData;
 		RECT r = {0}, rt;
@@ -554,7 +552,6 @@ extern "C" {
 	LRESULT TabSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
 		PAINTSTRUCT ps;
 		RECT rc;
-		DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
 		Widget *w= (Widget*)dwRefData;
 		Widget *wp = (Widget*)GetWindowLongPtr(GetParent((HWND)w->handle), GWLP_USERDATA);
 		HBRUSH pbrush = wp->brush ? wp->brush : w->brush;

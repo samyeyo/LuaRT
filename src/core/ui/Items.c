@@ -1114,7 +1114,6 @@ LUA_PROPERTY_GET(Tree, editable) {
 LUA_PROPERTY_SET(Tree, editable) {
 	HWND h = lua_self(L, 1, Widget)->handle;
 	DWORD style = GetWindowLongPtr(h, GWL_STYLE);
-	DWORD border = style & WS_BORDER ? WS_BORDER : 0;
 	SetWindowLongPtr(h, GWL_STYLE, lua_toboolean(L, 2) ? (style & ~TVS_EDITLABELS) : style | TVS_EDITLABELS);
 	RedrawWindow(h, NULL, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE | RDW_ALLCHILDREN);
 	return 0;

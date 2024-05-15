@@ -79,7 +79,7 @@ LUA_METHOD(sys, cmd) {
 			AssignProcessToJobObject(hJob, procInfo.hProcess);
 		WaitForSingleObject(procInfo.hProcess, INFINITE);
 		Sleep(100);
-		int i = GetExitCodeProcess(procInfo.hProcess,&status);
+		GetExitCodeProcess(procInfo.hProcess,&status);
 		CloseHandle(procInfo.hProcess);
 		CloseHandle(procInfo.hThread);
 		lua_pushboolean(L, !status);

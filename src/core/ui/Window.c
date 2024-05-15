@@ -697,7 +697,7 @@ LUA_PROPERTY_GET(Window, parent) {
 
 	if (!parent && !(parent = GetAncestor(h, GA_ROOT)))
 		lua_pushnil(L);
-	else if (wp = (Widget*)GetWindowLongPtr(parent, GWLP_USERDATA))
+	else if ((wp = (Widget*)GetWindowLongPtr(parent, GWLP_USERDATA)))
 		lua_rawgeti(L, LUA_REGISTRYINDEX, wp->ref);
 	return 1;
 }
