@@ -43,74 +43,126 @@ struct zip_t *open_fs(void *ptr, size_t size) {
 	return zip;
 }
 
-//-------------------------------------------------[luaRT embeded package loader]
-static void *fsload(lua_State *L, const char *fname) {
-	 char *buff = NULL; 
-	 int idx = 0;
-	 size_t size;
-
-	 if (zip_entry_open(fs, fname) == 0) {
-        zip_entry_read(fs, (void**)&buff, &size);
-		if (memcmp(buff, "\xEF\xBB\xBF", 3)==0)
-			idx = 3;
-		if (luaL_loadbuffer(L, (const char*)(buff+idx), size-idx, fname))
-			lua_error(L);
-		zip_entry_close(fs);
-		return buff;
-    }
-	return NULL;
+static const char *getnextfilename (char **path, char *end) {
+  char *sep;
+  char *name = *path;
+  if (name == end)
+    return NULL;  /* no more names */
+  else if (*name == '\0') {  /* from previous iteration? */
+    *name = *LUA_PATH_SEP;  /* restore separator */
+    name++;  /* skip it */
+  }
+  sep = strchr(name, *LUA_PATH_SEP);  /* find next separator */
+  if (sep == NULL)  /* separator not found? */
+    sep = end;  /* name goes until the end */
+  *sep = '\0';  /* finish file name */
+  *path = sep;  /* will start next search from here */
+  return name;
 }
 
-static int luart_fsloader(lua_State *L) {
-	const char *modname = luaL_gsub(L, luaL_checkstring(L, 1), ".", "/");
-	size_t len = strlen(modname)+MAX_PATH;
-	void *buff;
-	char *fname;
+static void pusherrornotfound (lua_State *L, const char *path) {
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  luaL_addstring(&b, "no file '");
+  luaL_addgsub(&b, path, LUA_PATH_SEP, "'\n\tno file '");
+  luaL_addstring(&b, "'");
+  luaL_pushresult(&b);
+}
 
-	fname = (char *)calloc(1, len);
-	_snprintf(fname, len, "%s.lua", modname);
-	if ( !(buff = fsload(L, fname)) ) {
-    lua_pushfstring(L, "no embedded module '%s' found", fname);
-		_snprintf(fname, len, "%s.wlua", modname);
-    if (!(buff = fsload(L, fname))) {
-      lua_pushfstring(L, "no embedded module '%s' found", fname);
-      _snprintf(fname, len, "%s\\init.lua", modname);
-      if (!(buff = fsload(L, fname))) {
-        lua_pushfstring(L, "no embedded module '%s\\init.lua' found", fname);
-        _snprintf(fname, len, "%s.dll", modname);
-        if (zip_entry_open(fs, fname) == 0) {
-          lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS);
-          lua_pushwstring(L, temp_path);
-          lua_pushstring(L, fname);
-          lua_concat(L, 2);
-          wchar_t *tmp = lua_towstring(L, -1);
-          if ((zip_entry_fread(fs, tmp) == 0) || (GetFileAttributesW(tmp) != 0xFFFFFFFF)) {
-            HMODULE hm;
-            if ( (hm = LoadLibraryW(tmp)) ) {
-              _snprintf(fname, len, "luaopen_%s", PathFindFileNameA(modname));
-              lua_CFunction f = (lua_CFunction)(voidf)GetProcAddress(hm, fname);
-              if (f) {
-                lua_pushlightuserdata(L, (void*)hm);
-                lua_rawset(L, -3);
-                lua_pushcfunction(L, f);
-                free(tmp);  
-                zip_entry_close(fs);
-                goto done;          
-              } else FreeLibrary(hm);
-            }
-          }
-          free(tmp);
+static const char *searchpath (lua_State *L, const char *name,
+                                             const char *path,
+                                             const char *sep,
+                                             const char *dirsep) {
+  luaL_Buffer buff;
+  char *pathname;  /* path with name inserted */
+  char *endpathname;  /* its end */
+  const char *filename;
+  /* separator is non-empty and appears in 'name'? */
+  if (*sep != '\0' && strchr(name, *sep) != NULL)
+    name = luaL_gsub(L, name, sep, dirsep);  /* replace it by 'dirsep' */
+  luaL_buffinit(L, &buff);
+  /* add path to the buffer, replacing marks ('?') with the file name */
+  luaL_addgsub(&buff, path, LUA_PATH_MARK, name);
+  luaL_addchar(&buff, '\0');
+  pathname = luaL_buffaddr(&buff);  /* writable list of file names */
+  endpathname = pathname + luaL_bufflen(&buff) - 1;
+  while ((filename = getnextfilename(&pathname, endpathname)) != NULL) {
+    if (filename[0] == '.' && filename[1] == '\\')
+      filename += 2; 
+    if ((zip_entry_open(fs, filename) == 0))  /* does file exist and is readable? */
+      return lua_pushstring(L, filename);  /* save and return name */
+  }
+  luaL_pushresult(&buff);  /* push path to create error message */
+  pusherrornotfound(L, lua_tostring(L, -1));
+  return NULL;  /* not found */
+}
+
+static const char *findfile (lua_State *L, const char *name,
+                                           const char *pname,
+                                           const char *dirsep) {
+  const char *path;
+  lua_getfield(L, lua_upvalueindex(1), pname);
+  path = lua_tostring(L, -1);
+  if (l_unlikely(path == NULL))
+    luaL_error(L, "'package.%s' must be a string", pname);
+  return searchpath(L, name, path, ".", dirsep);
+}
+
+static int searcher_embedded_Lua (lua_State *L) {
+  const char *name = luaL_checkstring(L, 1);
+  const char *filename = findfile(L, name, "path", "/");
+  if (filename) {
+    char *buff = NULL; 
+	  int idx = 0;
+	  size_t size;
+
+    zip_entry_read(fs, (void**)&buff, &size);
+    if (memcmp(buff, "\xEF\xBB\xBF", 3)==0)
+      idx = 3;
+    if (luaL_loadbuffer(L, (const char*)(buff+idx), size-idx, filename))
+      luaL_error(L, "error loading module '%s' from embedded file '%s':\n\t%s", lua_tostring(L, 1), filename, lua_tostring(L, -1));
+    zip_entry_close(fs);
+    lua_pushstring(L, filename); 
+    return 2;   
+  }
+  return 1;
+}
+
+static int searcher_embedded_C (lua_State *L) {
+  const char *name = luaL_checkstring(L, 1);
+  const char *filename = findfile(L, name, "cpath", "/");
+  if (filename) {
+    lua_getfield(L, LUA_REGISTRYINDEX, CMEMLIBS);
+    lua_pushwstring(L, temp_path);
+    lua_pushstring(L, filename);
+    lua_concat(L, 2);
+    wchar_t *tmp = lua_towstring(L, -1);
+    if ((zip_entry_fread(fs, tmp) == 0) || (GetFileAttributesW(tmp) != 0xFFFFFFFF)) {
+      HMODULE hm;
+      char funcname[MAX_PATH];
+      if ( (hm = LoadLibraryW(tmp)) ) {
+        _snprintf(funcname, MAX_PATH, "luaopen_%s", name);
+        lua_CFunction f = (lua_CFunction)(voidf)GetProcAddress(hm, funcname);
+        if (f) {
+          lua_pushlightuserdata(L, (void*)hm);
+          lua_rawset(L, -3);
+          lua_pushcfunction(L, f);
           zip_entry_close(fs);
-        }
-        lua_pushfstring(L, "no embedded module '%s.dll' found", modname);
+          goto done;
+        } else FreeLibrary(hm);
       }
     }
-	}
+    luaL_error(L, "error loading module '%s' from embedded file '%s'", lua_tostring(L, 1), filename);
 done:
- 	free(fname);
-	free(buff);
-	return 1;
- }
+    free(tmp);
+    zip_entry_close(fs);
+    lua_pushstring(L, filename); 
+    return 2;   
+  }
+  return 1;
+}
+
+
 
 //-------------------------------------------------[luaL_embedclose() luaRT C API]
 LUA_API int luaL_embedclose(lua_State *L) {
@@ -136,10 +188,16 @@ LUA_API BYTE *luaL_embedopen(lua_State *L) {
     datafs = LockResource(hdata);
     size_t size = SizeofResource(NULL, hres);
     if (datafs && (size > 2) && (fs = open_fs(datafs, size))) {
+      lua_Integer len;
       lua_getglobal(L, "package");
       lua_getfield(L, -1, "searchers");
-      lua_pushcfunction(L, luart_fsloader);
-      lua_rawseti(L, -2, luaL_len(L, -2)+1);
+      len = luaL_len(L, -1);
+      lua_pushvalue(L, -2);
+      lua_pushcclosure(L, searcher_embedded_Lua, 1);
+      lua_rawseti(L, -2, ++len);
+      lua_pushvalue(L, -2);
+      lua_pushcclosure(L, searcher_embedded_C, 1);
+      lua_rawseti(L, -2, ++len);
       lua_pop(L, 2);
     } else fs = NULL;
   }
