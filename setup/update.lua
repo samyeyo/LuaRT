@@ -10,15 +10,32 @@ local File = embed == nil and sys.File or embed.File
 local github = net.Http("https://github.com")
 
 local win = ui.Window("", "raw", 320, 240)
+win.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
 
-local x = ui.Label(win, "\xc3\x97", 378, -4)
+local factor
+if ui.dpi < 1.5 then
+    factor = 1
+elseif ui.dpi < 1.75 then
+    factor = 1.5
+elseif ui.dpi >= 1.75 then
+    factor = 2
+end
+
+local img = ui.Picture(win, File(("img/logo x"..factor..".png"):gsub(",", ".")).fullpath)
+win.width = img.width
+img:center()
+img.y = 20
+win:center()
+
+local x = ui.Label(win, "\xc3\x97", win.width-22, -4)
 x.fontsize = 16
 x.fgcolor = 0x808080
-x.bgcolor = 0xFFFFFF
+x.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
 x.cursor = "hand"
+win.bgcolor = x.bgcolor
 
 function x:onHover()
-    x.fgcolor = 0x202020
+    x.fgcolor = 0x404040
 end
 
 function x:onLeave()
@@ -29,9 +46,19 @@ function x:onClick()
     win:hide()
 end
 
-local img = ui.Picture(win, File("luaRT.png").fullpath, 0, 20)
+local factor
+if ui.dpi < 1.5 then
+    factor = 1
+elseif ui.dpi < 1.75 then
+    factor = 1.5
+elseif ui.dpi >= 1.75 then
+    factor = 2
+end
+
+local img = ui.Picture(win, File(("img/logo x"..factor..".png"):gsub(",", ".")).fullpath)
 win.width = img.width
-win.bgcolor = 0xFFFFFF
+img:center()
+img.y = 20
 win:center()
 
 local button = ui.Button(win, "")
@@ -39,17 +66,22 @@ button:loadicon(File("install.ico"))
 button.cursor = "hand"
 button:hide()
 
-local label = ui.Label(win, "Checking for update...", 40, 190)
+local label = ui.Label(win, "Checking for update...")
+label:center()
+label.y = 200
 label.autosize = false   
 label.fontsize = 8
-label.width = 312
-label.textalign = "center"
-label.fgcolor = 0x002A5A
 
-local bar = ui.Progressbar(win, 40, 170, 306)
+label.textalign = "center"
+label.fgcolor = 0x2B6096
+
+local bar = ui.Progressbar(win)
 bar.themed = false
+bar.width = win.width-80
+bar:center()
+bar.y = 180
 bar.fgcolor = 0xEFB42C
-bar.bgcolor = 0xFFFFFF
+bar.bgcolor = win.bgcolor
 bar.range = {0, 100}
 bar:hide()
 

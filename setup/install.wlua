@@ -1,4 +1,4 @@
-﻿local VERSION = '1.7.1'
+﻿local VERSION = '1.8.0'
 
 --[[
     | LuaRT - A Windows programming framework for Lua
@@ -15,29 +15,10 @@ local compression = require "compression"
 
 local File = embed == nil and sys.File  or embed.File
 
-local win = ui.Window("", "raw", 320, 240)
+local win = ui.Window("", "raw", 400, 240)
 win.font = "Segoe UI"
 win.installation = false
 
-local x = ui.Label(win, "\xc3\x97", 378, -4)
-x.fontsize = 16
-x.fgcolor = 0x808080
-x.bgcolor = 0xFFFFFF
-x.cursor = "hand"
-
-function x:onHover()
-    x.fgcolor = 0x202020
-end
-
-function x:onLeave()
-    x.fgcolor = 0x808080
-end
-
-function x:onClick()
-    if not (win.installation and ui.confirm("Installation is in progress. Are you really want to quit ?", "LuaRT installation") ~= "yes" or false) then
-        sys.exit()
-    end
-end
 
 local caption = "Install"
 local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LuaRT", "InstallLocation") or false
@@ -60,10 +41,41 @@ if update then
     end
 end
 
-local img = ui.Picture(win, File("img/luaRT.png").fullpath, 0, 20)
+local factor
+if ui.dpi < 1.5 then
+    factor = 1
+elseif ui.dpi < 1.75 then
+    factor = 1.5
+elseif ui.dpi >= 1.75 then
+    factor = 2
+end
+
+local img = ui.Picture(win, File(("img/logo x"..factor..".png"):gsub(",", ".")).fullpath)
 win.width = img.width
-win.bgcolor = 0xFFFFFF
+img:center()
+img.y = 20
 win:center()
+
+local x = ui.Label(win, "\xc3\x97", win.width-22, -4)
+x.fontsize = 16
+x.fgcolor = 0x808080
+x.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
+x.cursor = "hand"
+win.bgcolor = x.bgcolor
+
+function x:onHover()
+    x.fgcolor = 0x404040
+end
+
+function x:onLeave()
+    x.fgcolor = 0x808080
+end
+
+function x:onClick()
+    if not (win.installation and ui.confirm("Installation is in progress. Are you really want to quit ?", "LuaRT installation") ~= "yes" or false) then
+        sys.exit()
+    end
+end
 
 local button = ui.Button(win, caption.." LuaRT "..VERSION.." for "..(arg[-1]:find("x64") and "x64" or "x86"))
 button:loadicon(File("img/install.ico"))
@@ -120,15 +132,22 @@ function button:onClick()
         isopen(dir.fullpath.."/QuickRT/QuickRT.exe", "QuickRT")      
         isopen(dir.fullpath.."/RTBuilder/RTBuilder.exe", "RTBuilder")      
         win.installation = true
-        local label = ui.Label(win, "", 40, 190, 312)
+        local label = ui.Label(win, "")
+        label.width = label.width-80
+        label:center()
+        label.y = 200
         label.autosize = false        
         label.fontsize = 8
         label.textalign = "left"
-        label.fgcolor = 0x002A5A
-        local bar = ui.Progressbar(win, 40, 170, 306)
+        label.fgcolor = ui.theme == "light" and 0x002A5A or 0xEFB42C
+        local bar = ui.Progressbar(win)
+        bar.width = win.width-80
+        bar:center()
+        bar.y = 180
+        bar.position = 75
         bar.themed = false
         bar.fgcolor = 0xEFB42C
-        bar.bgcolor = 0xFFFFFF
+        bar.bgcolor = win.bgcolor
         local archive = compression.Zip(File("luaRT.zip"))
         bar.range = {0, archive.count}
         local size = 0
@@ -143,7 +162,6 @@ function button:onClick()
                 end
             end
             bar:advance(1)
-            ui.update()
         end
         archive:close()
         local user_path = sys.registry.read("HKEY_CURRENT_USER", "Environment", "Path", false) or ""

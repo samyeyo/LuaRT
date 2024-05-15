@@ -1,14 +1,14 @@
-﻿local VERSION = '1.7.1'
+﻿local VERSION = '1.8.0'
 --[[
- | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2023.
- | See Copyright Notice in LICENSE.TXT
- |--------------------------------------------------
- | uninstall.wlua | LuaRT installation remove script
---]]
-
-
-
+    | LuaRT - A Windows programming framework for Lua
+    | Luart.org, Copyright (c) Tine Samir 2023.
+    | See Copyright Notice in LICENSE.TXT
+    |--------------------------------------------------
+    | uninstall.wlua | LuaRT installation remove script
+    --]]
+    
+    
+    
 local ui = require "ui"
 
 local File = embed and embed.File or sys.File
@@ -24,17 +24,34 @@ if exe.fullpath ~= tmpexe.fullpath then
 end
 
 local win = ui.Window("", "raw", 320, 200)
-win.bgcolor = 0xFFFFFF
+win.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
 win.font = "Segoe UI"
 win.installation = false
 
-local x = ui.Label(win, "\xe2\x9c\x95", 378, 2)
-x.fontsize = 12
+local factor
+if ui.dpi < 1.5 then
+    factor = 1
+elseif ui.dpi < 1.75 then
+    factor = 1.5
+elseif ui.dpi >= 1.75 then
+    factor = 2
+end
+
+local img = ui.Picture(win, File(("img/logo x"..factor..".png"):gsub(",", ".")).fullpath)
+win.width = img.width
+img:center()
+img.y = 20
+win:center()
+
+local x = ui.Label(win, "\xc3\x97", win.width-22, -4)
+x.fontsize = 16
 x.fgcolor = 0x808080
+x.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
 x.cursor = "hand"
+win.bgcolor = x.bgcolor
 
 function x:onHover()
-    x.fgcolor = 0x202020
+    x.fgcolor = 0x404040
 end
 
 function x:onLeave()
@@ -44,10 +61,6 @@ end
 function x:onClick()
     win.visible = win.installation and ui.confirm("LuaRT uninstall is in progress. Are you really want to quit ?", "LuaRT uninstall") ~= "yes" or false
 end
-
-local img = ui.Picture(win, File("LuaRT.png").fullpath, 0, 0)
-win.width = img.width
-win:center()
 
 local button = ui.Button(win, "Uninstall LuaRT "..VERSION)
 button:center()
