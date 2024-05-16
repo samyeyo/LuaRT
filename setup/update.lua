@@ -7,6 +7,17 @@ local ui = require "ui"
 local compression = require "compression"
 
 local File = embed == nil and sys.File or embed.File
+
+local exe = sys.File(arg[-1])
+local tmpexe = sys.File(sys.env.TEMP..'\\'..exe.name)
+
+if exe.fullpath ~= tmpexe.fullpath then
+    tmpexe:remove()
+    exe:copy(tmpexe.fullpath)
+    sys.cmd('start '..tmpexe.fullpath, true, true)
+    sys.exit()
+end
+
 local github = net.Http("https://github.com")
 
 local win = ui.Window("", "raw", 320, 240)
