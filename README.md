@@ -70,6 +70,11 @@ Go to the ```\src``` directory and type ```nmake```:
 
 #### Method 3 : Building from sources (Mingw-w64) :gear:
 
+> [!CAUTION]  
+> Building LuaRT with Mingw-w64 toolchain is now deprecated since LuaRT 1.8.0
+>
+> This compiler cannot be used to build LuaRT anymore
+
 Building LuaRT from sources using the Mingw-w64 GCC compiler is deprecated and might be removed in next releases.
 Compilation have been successfully reported for Mingw-w64 GCC 8.1.0, Mingw-w64 GCC 11.2.0 and Mingw-w64 GCC 12.2.0 (ie the latest Mingw-w64 10.0.0 runtime).
 
