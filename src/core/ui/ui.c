@@ -866,9 +866,7 @@ LUA_PROPERTY_GET(ui, dpi) {
 }
 
 LUA_PROPERTY_GET(ui, theme) {
-	if (g_darkModeSupported)
-		lua_pushstring(L, themes[DarkMode]);
-	else lua_pushnil(L);
+	lua_pushstring(L, themes[DarkMode]);
 	return 1;
 }
 

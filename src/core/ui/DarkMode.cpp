@@ -1,3 +1,6 @@
+#ifndef __GNUC__
+	#define WIDGET_IMPLEMENTATION
+#endif
 #include <Widget.h>
 #include "DarkMode.h"
 #include "IatHook.h"
@@ -14,7 +17,7 @@
 #endif
 
 
-extern "C" {
+extern "C" {	
 	BOOL g_darkModeSupported = FALSE;
 	BOOL g_darkModeEnabled = FALSE;
 	DWORD g_buildNumber = 0;
@@ -65,13 +68,11 @@ extern "C" {
 	}
 
 	BOOL ShouldAppUseDarkMode() {
-		return _ShouldAppsUseDarkMode();
+		return _ShouldAppsUseDarkMode ? _ShouldAppsUseDarkMode() : FALSE;
 	}
 
 	BOOL AllowDarkModeForWindow(HWND hWnd, BOOL allow) {
-		if (g_darkModeSupported)
-			return _AllowDarkModeForWindow(hWnd, allow);
-		return FALSE;
+		return _AllowDarkModeForWindow ? _AllowDarkModeForWindow(hWnd, allow) : FALSE;
 	}
 
 	WidgetType GetWidgetTypeFromHWND(HWND h) {
@@ -107,7 +108,8 @@ extern "C" {
 	}
 
 	void FlushMenuThemes(void) {
-		_FlushMenuThemes();
+		if (_FlushMenuThemes)
+			_FlushMenuThemes();
 	}
 
 	BOOL IsHighContrast()
@@ -132,10 +134,12 @@ extern "C" {
 		BOOL is = FALSE;
 		if (lParam && CompareStringOrdinal(reinterpret_cast<LPCWCH>(lParam), -1, L"ImmersiveColorSet", -1, TRUE) == CSTR_EQUAL)
 		{
-			_RefreshImmersiveColorPolicyState();
+			if (_RefreshImmersiveColorPolicyState)
+				_RefreshImmersiveColorPolicyState();
 			is = TRUE;
 		}
-		_GetIsImmersiveColorUsingHighContrast(IHCM_REFRESH);
+		if (_GetIsImmersiveColorUsingHighContrast)
+			_GetIsImmersiveColorUsingHighContrast(IHCM_REFRESH);
 		return is;
 	}
 
@@ -191,7 +195,7 @@ extern "C" {
 			DWORD major, minor;
 			RtlGetNtVersionNumbers(&major, &minor, &g_buildNumber);
 			g_buildNumber &= ~0xF0000000;
-			if (major == 10 && minor == 0 && g_buildNumber >= 17763)
+			if (major == 10 && minor == 0)
 			{
 				HMODULE hUxtheme = GetModuleHandleW(L"uxtheme.dll");
 				if (hUxtheme)
