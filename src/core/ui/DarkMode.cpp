@@ -226,11 +226,11 @@ extern "C" {
 						(_AllowDarkModeForApp || _SetPreferredAppMode) &&
 						_IsDarkModeAllowedForWindow)
 					{
-						// g_darkModeSupported = TRUE;
-						// _RefreshImmersiveColorPolicyState();
+						g_darkModeSupported = TRUE;
+						_RefreshImmersiveColorPolicyState();
 				
-						// DarkMode = IsDarkModeEnabled();
-						// isdarkScrollBar = DarkMode;
+						DarkMode = IsDarkModeEnabled();
+						isdarkScrollBar = DarkMode;
 					}
 				}
 			}
