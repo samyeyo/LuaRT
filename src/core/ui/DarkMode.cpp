@@ -122,11 +122,13 @@ extern "C" {
 
 	void RefreshTitleBarThemeColor(HWND hWnd, BOOL dark)
 	{
-		BOOL isvisible = IsWindowVisible(hWnd);
-		DwmSetWindowAttribute(hWnd, (int)(g_buildNumber > 18985 ? DWMWA_USE_IMMERSIVE_DARK_MODE : DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1), &dark, sizeof(int));					
-		SetWindowPos(hWnd, 0, 0, 0, 0, 0,  SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOMOVE | SWP_HIDEWINDOW);
-		if (isvisible)
-			SetWindowPos(hWnd, 0, 0, 0, 0, 0,  SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
+		if (g_buildNumber >= 17763) {
+			BOOL isvisible = IsWindowVisible(hWnd);
+			DwmSetWindowAttribute(hWnd, (int)(g_buildNumber > 18985 ? DWMWA_USE_IMMERSIVE_DARK_MODE : DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1), &dark, sizeof(int));					
+			SetWindowPos(hWnd, 0, 0, 0, 0, 0,  SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOMOVE | SWP_HIDEWINDOW);
+			if (isvisible)
+				SetWindowPos(hWnd, 0, 0, 0, 0, 0,  SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
+		}
     }	
 
 	BOOL IsColorSchemeChangeMessageLParam(LPARAM lParam)
@@ -224,11 +226,11 @@ extern "C" {
 						(_AllowDarkModeForApp || _SetPreferredAppMode) &&
 						_IsDarkModeAllowedForWindow)
 					{
-						g_darkModeSupported = TRUE;
-						_RefreshImmersiveColorPolicyState();
+						// g_darkModeSupported = TRUE;
+						// _RefreshImmersiveColorPolicyState();
 				
-						DarkMode = IsDarkModeEnabled();
-						isdarkScrollBar = DarkMode;
+						// DarkMode = IsDarkModeEnabled();
+						// isdarkScrollBar = DarkMode;
 					}
 				}
 			}
