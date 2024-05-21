@@ -219,7 +219,7 @@ extern "C" {
 
 					_SetWindowCompositionAttribute = reinterpret_cast<fnSetWindowCompositionAttribute>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetWindowCompositionAttribute"));
 
-					if (_OpenNcThemeData &&
+					if ((g_buildNumber > 17763) &&_OpenNcThemeData &&
 						_RefreshImmersiveColorPolicyState &&
 						_ShouldAppsUseDarkMode &&
 						_AllowDarkModeForWindow &&
