@@ -1,4 +1,4 @@
-﻿local VERSION = '1.8.0'
+﻿local VERSION = '1.9.0'
 --[[
     | LuaRT - A Windows programming framework for Lua
     | Luart.org, Copyright (c) Tine Samir 2023.

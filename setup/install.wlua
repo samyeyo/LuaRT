@@ -1,4 +1,4 @@
-﻿local VERSION = '1.8.0'
+﻿local VERSION = '1.9.0'
 
 --[[
     | LuaRT - A Windows programming framework for Lua
@@ -26,7 +26,7 @@ local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Wind
 if update then
     local p = sys.Pipe('luart -e print(_VERSION)') or false
     if p then
-        local current = (await(p:read()) or VERSION):match("%d%.%d%.%d")
+        local current = (await(p:read(300)) or VERSION):match("%d%.%d%.%d")
         local numver = VERSION:gsub("%.", "")
         local numcurr = current:gsub("%.", "")
         if current == VERSION then
