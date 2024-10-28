@@ -192,8 +192,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 					lua_callevent(w, onMaximize);
 				else if (wParam == SC_MINIMIZE)
 					lua_callevent(w, onMinimize);
-				else if (wParam == SC_RESTORE)
+				else if (wParam == SC_RESTORE) {
 					lua_callevent(w, onRestore);
+					InvalidateRect(hWnd, NULL, TRUE);
+				}
 				break;
 			case WM_COMMAND:
 				if (lParam) {
@@ -249,7 +251,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 						PostMessage(hwndPrevious, WM_MOUSELEAVE,0,0);
 					hwndPrevious = hWnd;
 				}
-				lua_paramevent(w, onHover, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				lua_paramevent(w, onHover, wParam, lParam);
 				if (w->status)
 					BringWindowToTop(w->status);
 				return 0;
@@ -293,6 +295,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 					sbheight = sbRect.bottom - sbRect.top;
 					SetWindowPos(w->status, HWND_TOP, 0, HIWORD(lParam)-sbheight, LOWORD(lParam), sbheight, SWP_SHOWWINDOW);
 				}
+				InvalidateRect(w->handle, NULL, TRUE);
 				return 0;
              }
 			case WM_NCHITTEST:
@@ -316,21 +319,29 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				}
 				break;
 			case WM_APP:
-				switch (lParam) {
+				switch (LOWORD(lParam)) {				
 					case WM_RBUTTONUP:		lua_callevent(w, onTrayContext);
 											break;
-					case WM_LBUTTONDOWN:	lua_callevent(w, onTrayClick);
+					case WM_LBUTTONUP:		lua_callevent(w, onTrayClick);
 											break;
 					case WM_LBUTTONDBLCLK:	lua_callevent(w, onTrayDoubleClick);
 											break;
 					case WM_MOUSEMOVE:		lua_callevent(w, onTrayHover);
+											break;
+					case NIN_BALLOONTIMEOUT:if (!w->imglist)
+												notify(NULL, w, NIM_DELETE, NIF_ICON, NULL, NULL, 0);
+											break;
+					case NIN_BALLOONUSERCLICK:
+											lua_callevent(w, onNotificationClick);
 											break;
 				} return 0;
 			case WM_SYSKEYDOWN:
 			case WM_KEYDOWN:
 				lua_paramevent(w, onKey, VKString(wParam), wParam);
 				break;
+				
 			case WM_ERASEBKGND: return FALSE;
+
 			case WM_PAINT:	{
 				PAINTSTRUCT ps;
 				RECT rc;
@@ -352,7 +363,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				} break;
 			case WM_CTLCOLOREDIT:	
 			case WM_CTLCOLORBTN:
-			case WM_CTLCOLORSTATIC: return  WidgetProc(hWnd, Msg, wParam, lParam, (UINT_PTR)NULL, (DWORD_PTR)NULL);
+			case WM_CTLCOLORSTATIC: return WidgetProc(hWnd, Msg, wParam, lParam, (UINT_PTR)NULL, (DWORD_PTR)NULL);
 		}
 	}
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
@@ -384,7 +395,6 @@ LUA_CONSTRUCTOR(Window) {
 	int i;
 	DWORD style; RECT r = {0};
 	static HINSTANCE hInstance = NULL;
-	NOTIFYICONDATAW *nid;
 	NONCLIENTMETRICS ncm;
 	int start = 2;
 	Widget *wp;
@@ -402,7 +412,7 @@ LUA_CONSTRUCTOR(Window) {
 	style = i == start+2 ? luaL_checkoption(L, start+1, "dialog", styles) : 0;
 	r.bottom = luaL_optinteger(L, i+1, 480)*dpi;
 	r.right = luaL_optinteger(L, i, 640)*dpi;
-	w->handle = CreateWindowExW(uiLayout | WS_EX_LAYERED | WS_EX_COMPOSITED, L"Window", title, style_values[style] | WS_EX_CONTROLPARENT | DS_CONTROL, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, wp ?  wp->handle : NULL, NULL, hInstance, NULL);
+	w->handle = CreateWindowExW(uiLayout | WS_EX_LAYERED | WS_EX_COMPOSITED | WS_EX_CONTROLPARENT, L"Window", title, style_values[style] | DS_CONTROL | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT, r.right, r.bottom, wp ?  wp->handle : NULL, NULL, hInstance, NULL);
 	switch(style) {
 		case 3: 	{
 						DWM_WINDOW_CORNER_PREFERENCE d = DWMWCP_ROUND;
@@ -431,14 +441,10 @@ LUA_CONSTRUCTOR(Window) {
 	lua_newinstance(L, w, Widget);
 	lua_pushvalue(L, 1);
 	w->ref = luaL_ref(L, LUA_REGISTRYINDEX);
-	nid = calloc(1, sizeof(NOTIFYICONDATAW));
-	nid->hWnd = w->handle;
-	nid->uID  = (UINT)w->ref;
-	nid->uCallbackMessage = WM_APP;
-	w->imglist =  (HIMAGELIST)nid;
 	w->index = 255;
 	AdjustThemeProc(w->handle, DarkMode);
 	w->user = CreateSolidBrush(0x303030);
+	w->icon = (HICON)GetClassLongPtr(w->handle, GCLP_HICONSM);
 	lua_callevent(w, onCreate);
 	return 1;
 }
@@ -514,18 +520,68 @@ LUA_PROPERTY_SET(Window, fullscreen) {
 	return 0;
 }
 
+static int notify(lua_State *L, Widget *w, DWORD action, UINT flags, void *tip, wchar_t *info, DWORD niif) {
+	NOTIFYICONDATAW nid = {0};
+	BOOL result = FALSE;
+
+	nid.cbSize = sizeof(nid);
+	nid.uFlags = flags;
+	nid.hWnd 	= w->handle;
+	nid.uID 	= (UINT)w->ref;
+	nid.uCallbackMessage = WM_APP;
+	nid.uVersion = NOTIFYICON_VERSION_4;
+
+	if ((flags & NIF_TIP) && !(flags & NIF_ICON)) {
+		free(w->item.listitem);
+		wcsncpy(nid.szTip, (wchar_t*)tip, 64);
+		w->item.listitem = (LVITEMW*)wcsdup(tip);
+		free(tip);	
+	}
+	if (flags & NIF_INFO) {
+		nid.dwInfoFlags = niif;
+		wcsncpy(nid.szInfoTitle, (wchar_t*)tip, 64);
+		wcsncpy(nid.szInfo, info, 256);
+		free(info);
+		free(tip);
+	} 
+	if (flags & NIF_ICON) {
+		nid.hIcon = (HICON)tip;
+		result = Shell_NotifyIconW(action, &nid);
+	}
+	if (Shell_NotifyIconW(NIM_SETVERSION, &nid))
+		if (action != NIM_ADD)
+			result = Shell_NotifyIconW(action, &nid);
+	if (L)
+		lua_pushboolean(L, result);
+	return 1;
+}
+
 LUA_METHOD(Window, loadtrayicon) {
 	Widget *w = lua_self(L, 1, Widget);
-	NOTIFYICONDATAW *nid = (NOTIFYICONDATAW *)w->imglist;
-	DWORD action = NIM_DELETE;
+	BOOL has_arg = lua_gettop(L) > 1;
 	
-	if (lua_gettop(L) > 1) {		
-		action = NIM_ADD;
-		nid->uFlags           = NIF_ICON | NIF_MESSAGE;
-		nid->hIcon			 = widget_loadicon(L);
-	}
-	Shell_NotifyIconW(action, nid);
+	notify(L, w, has_arg ? (w->imglist ? NIM_MODIFY : NIM_ADD) : NIM_DELETE, NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP, has_arg ? widget_loadicon(L, TRUE): NULL, NULL, 0);
+	w->imglist = has_arg ? (void*)1 : NULL;
 	return 0;
+}
+
+LUA_PROPERTY_SET(Window, traytooltip) {
+	return notify(L, lua_self(L, 1, Widget), NIM_MODIFY, NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP, lua_towstring(L, 2), NULL, 0);
+}
+
+LUA_METHOD(Window, notify) {
+	Widget *w = lua_self(L, 1, Widget);
+	static const char *niiftypes[] = {"window", "none", "info", "warning", "error", NULL };
+	static const DWORD niifvalues[] = {NIIF_USER, NIIF_NONE, NIIF_INFO, NIIF_WARNING, NIIF_ERROR};
+	if (!w->imglist)
+		notify(NULL, w, NIM_ADD, NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP | NIF_STATE, w->icon, NULL, 0);
+	return notify(L, w, NIM_MODIFY, NIF_MESSAGE | NIF_INFO, lua_towstring(L, 2), lua_towstring(L, 3), niifvalues[luaL_checkoption(L, 4, "window", niiftypes)]);
+}
+
+LUA_PROPERTY_GET(Window, traytooltip) {
+	Widget *w = lua_self(L, 1, Widget);
+	lua_pushwstring(L, w->item.listitem ? (wchar_t *)w->item.listitem : L"");
+	return 1;
 }
 
 LUA_METHOD(Window, status) {
@@ -574,23 +630,6 @@ LUA_METHOD(Window, status) {
 	return 0;
 }
 
-LUA_PROPERTY_SET(Window, traytooltip) {
-	Widget *w = lua_self(L, 1, Widget);
-	wchar_t *tip = lua_towstring(L, 2);
-
-	((NOTIFYICONDATAW *)w->imglist)->uFlags = NIF_TIP;
-	wcsncpy(((NOTIFYICONDATAW *)w->imglist)->szTip, tip, 64);
-	free(tip);	
-	Shell_NotifyIconW(NIM_MODIFY, (NOTIFYICONDATAW *)w->imglist);
-	return 0;
-}
-
-LUA_PROPERTY_GET(Window, traytooltip) {
-	Widget *w = lua_self(L, 1, Widget);
-
-	lua_pushwstring(L, ((NOTIFYICONDATAW *)w->imglist)->szTip);
-	return 1;
-}
 LUA_PROPERTY_GET(Window, menu) {
 	Widget *w = lua_self(L, 1, Widget);
 	
@@ -691,15 +730,18 @@ LUA_METHOD(Window, shortcut) {
 
 //-------------------------------------[ Window.parent ]
 LUA_PROPERTY_GET(Window, parent) {
-	Widget *wp;
-	HWND h = lua_self(L, 1, Widget)->handle;
-	HWND parent = GetParent(h);
+	Widget *w = lua_self(L, 1, Widget);
 
-	if (!parent && !(parent = GetAncestor(h, GA_ROOT)))
-		lua_pushnil(L);
-	else if ((wp = (Widget*)GetWindowLongPtr(parent, GWLP_USERDATA)))
-		lua_rawgeti(L, LUA_REGISTRYINDEX, wp->ref);
-	return 1;
+	if (w->wtype == UIWindow) {
+		Widget *wp;
+		HWND parent = GetParent(w->handle);
+
+		if (!parent && !(parent = GetAncestor(w->handle, GA_ROOT)))
+			lua_pushnil(L);
+		else if ((wp = (Widget*)GetWindowLongPtr(parent, GWLP_USERDATA)))
+			lua_rawgeti(L, LUA_REGISTRYINDEX, wp->ref);
+		return 1;
+	} else return Widget_getparent(L);
 }
 
 //-------------------------------------[ Window.childs ]
@@ -727,7 +769,9 @@ LUA_METHOD(Window, __gc) {
 	Widget *w = lua_self(L, 1, Widget);
 	SendMessage(w->handle, WM_CLOSE, 0, 0);
 	DestroyWindow(w->status);
-	free(w->imglist);
+	notify(L, w, NIM_DELETE, NIF_ICON, NULL, NULL, 0);
+	if (w->imglist)
+		free(w->item.listitem);
 	w->imglist = NULL;
 	return Widget___gc(L);
 }
@@ -753,6 +797,7 @@ OBJECT_MEMBERS(Window)
 	METHOD(Window, shortcut)
 	METHOD(Window, popup)
 	METHOD(Widget, center)
+	METHOD(Window, notify)
 	READWRITE_PROPERTY(Window, traytooltip)
 	READWRITE_PROPERTY(Window, fullscreen)
 	READWRITE_PROPERTY(Window, topmost)
@@ -762,4 +807,6 @@ OBJECT_MEMBERS(Window)
 	READONLY_PROPERTY(Window, monitor)
  	{"set_title",		Widget_settext},
  	{"get_title",		Widget_gettext},
+	READWRITE_PROPERTY(Widget, cursor)
+	READWRITE_PROPERTY(Widget, allowdrop)
 END
