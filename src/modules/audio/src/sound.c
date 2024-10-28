@@ -177,12 +177,21 @@ LUA_METHOD(Sound, seek) {
   return 0; 
 }
 
+static int PlayTaskContinue(lua_State* L, int status, lua_KContext ctx) {	
+	Sound *s = (Sound *)ctx;
+
+	if (!ma_sound_is_playing(&s->sound))
+		return 0;
+  return lua_yieldk(L, 0, ctx, PlayTaskContinue);
+}
+
 LUA_METHOD(Sound, play) {
   Sound *s = lua_self(L, 1, Sound);
   if (lua_gettop(L) > 1)
     ma_sound_set_start_time_in_milliseconds(&s->sound, ma_engine_get_time(engine)+luaL_checkinteger(L, 2));
   ma_sound_start(&s->sound);
-  return 0; 
+  lua_pushtask(L, PlayTaskContinue, s, NULL);
+  return 1; 
 }
 
 LUA_METHOD(Sound, stop) {  
