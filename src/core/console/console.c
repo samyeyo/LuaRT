@@ -18,7 +18,7 @@
 
 
 /* ------------------------------------------------------------------------ */
-const char* colors[] = { "black", "blue", "green", "cyan", "red", "purple", "yellow", "white", "gray", "lightblue", "lightgreen", "lightcyan", "lightred", "lightpurple", "lightyellow", "brightwhite"};
+const char* colors[] = { "black", "blue", "green", "cyan", "red", "purple", "yellow", "white", "gray", "lightblue", "lightgreen", "lightcyan", "lightred", "lightpurple", "lightyellow", "brightwhite", NULL};
 const unsigned long colors_values[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 static WORD reset;
 static HANDLE std;
@@ -95,7 +95,7 @@ LUA_METHOD(console, getx)
 {
 	CONSOLE_SCREEN_BUFFER_INFO info = {0};
 	GetConsoleScreenBufferInfo(std, &info);
-	lua_pushinteger(L, info.dwCursorPosition.X);
+	lua_pushinteger(L, info.dwCursorPosition.X+1);
     return 1;
 }
 
@@ -114,7 +114,7 @@ LUA_METHOD(console, gety)
 {
 	CONSOLE_SCREEN_BUFFER_INFO info = {0};
 	GetConsoleScreenBufferInfo(std, &info);
-	lua_pushinteger(L, info.dwCursorPosition.Y);
+	lua_pushinteger(L, info.dwCursorPosition.Y+1);
     return 1;
 }
 
