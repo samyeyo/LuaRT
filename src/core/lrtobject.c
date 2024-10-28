@@ -37,17 +37,8 @@ static void call_field(lua_State *L, int nargs, int nresults, const char *type, 
 				_type = lua_tostring(L, -1);
 				lua_pop(L, 1);
 			}
-			if (!(errmsg = strstr(err, "'?'")))
-				sprintf_s(buff, 256, "%s '%s.%s' : ", msg[cm], _type, field);
-			else {
-				sprintf_s(buff, 256, "%s '%s.%s'", msg[cm], _type, field);
-				err = errmsg+3;
-			}
-			if (!strstr(err, buff)) {
-				lua_pushstring(L, buff);
-				lua_concat(L, 2);
-			}
-			lua_pushstring(L, err);
+			sprintf_s(buff, 256, "%s '%s.%s'", msg[cm], _type, field);
+			luaL_gsub(L, err, "to '?'", buff);
 			lua_concat(L, 2);
 			lua_error(L);
 		} else luaL_error(L, msg[cm], field);
@@ -255,7 +246,7 @@ LUA_API void *lua_pushnewinstance(lua_State *L, const char *typename, int narg) 
 	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 	for (int i = 0; i < narg; i++) 
 		lua_pushvalue(L, -narg-1);
-	call_field(L, narg, 1, typename, "constructor", Method); 
+	call_field(L, narg, 1, typename, "constructor", Method); 	
 	return lua_tocinstance(L, -1, NULL);
 }
 

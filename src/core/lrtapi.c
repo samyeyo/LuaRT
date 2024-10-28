@@ -64,9 +64,18 @@ LUA_API int lua_optstring(lua_State *L, int idx, const char *options[], int def)
 	return def;
 } 
 
-LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs) {
-	lua_pushcclosure(L, taskfunc, nargs);
-	lua_pushinstance(L, Task, 1);
+static int WaitTask(lua_State *L) {
+	return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), (lua_KFunction)lua_touserdata(L, lua_upvalueindex(2)));
+}
+
+LUA_API int lua_pushtask(lua_State *L, lua_KFunction taskfunc, void *userdata, lua_CFunction gc) {
+	lua_pushlightuserdata(L, userdata);
+	lua_pushlightuserdata(L, taskfunc);
+	lua_pushcclosure(L, WaitTask, 2);
+	Task *t = lua_pushinstance(L, Task, 1);
+	t->userdata = userdata;
+	if (gc)
+		t->gc_func = gc;
 	lua_pushvalue(L, -1);
 	lua_call(L, 0, 0);
 	return 1;	
@@ -90,9 +99,14 @@ LUALIB_API void luaL_require(lua_State *L, const char *modname) {
 	luaL_requiref(L, modname, module_error, 0);
 }
 
-//-------------------------------------------------[LuaL_require alternative with luaL_requiref]
-int lua_schedule(lua_State *L) {
+//-------------------------------------------------[lua_schedule() function]
+LUA_API int lua_schedule(lua_State *L) {
 	return update_tasks(L);
+}
+
+//-------------------------------------------------[lua_schedule() function]
+LUA_API int lua_wait(lua_State *L, int idx) {
+	return waitfor_task(L, idx);
 }
 
 //-------------------------------------------------[lua_sleep() function]
@@ -102,7 +116,6 @@ int do_sleep(lua_State *L, lua_Integer delay) {
 	if ((t = search_task(L)) && !t->isevent) {
 		t->sleep =  GetTickCount64() + delay;
 		t->status = TSleep;
-		Sleep(1);
 		if (lua_isyieldable(L))
 			return lua_yield(L, 0);		
 	} else {
