@@ -9,7 +9,7 @@ local canvas = ui.Canvas(win)
 canvas.align = "all"
 
 -- create a linear gradient
-local gradient = canvas:LinearGradient { [0] = 0xE30940FF, [0.33] = 0xE7D702FF, [0.66] = 0x0FA895FF, [1] = 0x1373E8FF }
+local gradient = canvas:LinearGradient { [0] = 0xE30940FF, [0.25] = 0xE7D702FF, [0.75] = 0x0FA895FF, [1] = 0x1373E8FF }
 gradient.start = { 0, 0 }
 gradient.stop = { canvas.width, 0 }
 
@@ -19,9 +19,9 @@ local dir = 4
 function canvas:onPaint()
   gradient.start = {pos, 0}
   self:fillrect(0, 0, canvas.width, canvas.height, gradient)
-  if pos > canvas.width-200 then
+  if pos > canvas.width-100 then
     dir = -4
-  elseif pos < 30 then
+  elseif pos < -canvas.width then
     dir = 4
   end
   pos = pos + dir

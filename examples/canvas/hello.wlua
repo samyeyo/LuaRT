@@ -1,7 +1,7 @@
 local ui = require "ui"
 require "canvas"
 
-local win = ui.Window("Canvas - Hello world example", "fixed", 320, 240)
+local win = ui.Window("Canvas - example", 800, 600)
 
 local c = ui.Canvas(win)
 c.align = "all"
@@ -9,15 +9,18 @@ c.pos = -100
 c.font = "Impact"
 c.fontsize = 24
 c.color = 0xA2D2FFFF
+c.bgcolor = 0x000000FF
 
-local x = 125
-local y = 100
+function win:onKey(key)
+	if key == "VK_RETURN" then
+		win.fullscreen = not win.fullscreen
+	end
+end
 
--- Uses internal timer for 30fps drawing
 function c:onPaint()
-	self:clear(0xffffffff)	
-	c:print("Hello World !", c.pos, 20)
-	c.pos = c.pos + 3
+	self:clear()	
+	c:print("Press RETURN Key", c.pos, 20)
+	c.pos = c.pos + 2
 	if c.pos > win.width then
 		c.pos = -100
 	end
