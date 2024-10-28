@@ -105,7 +105,9 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			return FALSE;		
 		case WM_SETFOCUS:
 			SetFocus(GetNextDlgTabItem(hWnd, (HWND)wParam, FALSE));
-
+		case WM_LUADROP:
+			SendMessage(GetParent(w->handle), WM_LUADROP, wParam, lParam);
+			return FALSE;
 	}
 	return WindowProc(hWnd, Msg, wParam, lParam);
 }
@@ -897,7 +899,7 @@ LUA_METHOD(Item, edit) {
 LUA_METHOD(Item, loadicon) {	
 	Widget *w = lua_self(L, 1, Widget);
 	HANDLE h = w->handle;
-	HICON icon = widget_loadicon(L);
+	HICON icon = widget_loadicon(L, FALSE);
 	void *item = NULL;
 	UINT msg = 0;
 	int idx = w->index;

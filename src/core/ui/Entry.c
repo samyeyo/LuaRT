@@ -29,13 +29,6 @@ LUA_METHOD(Edit, append) {
  	return 0;
 }
 
-LUA_METHOD(Edit, scroll) {
-	static const char *values[] = { "top", "bottom", "lineup", "linedown", "pageup", "pagedown", NULL };
-	static const WPARAM sb[] = { SB_TOP, SB_BOTTOM, SB_LINEUP, SB_LINEDOWN, SB_PAGEUP, SB_PAGEDOWN };
-	SendMessage(lua_self(L, 1, Widget)->handle, WM_VSCROLL, sb[luaL_checkoption(L, 2, "bottom", values)], 0);
-	return 0;
-}
-
 LUA_METHOD(Entry, redo) {
 	SendMessage(lua_self(L, 1, Widget)->handle, EM_REDO, 0, 0);
 	return 0;
@@ -81,6 +74,24 @@ LUA_PROPERTY_SET(Edit, line) {
 		SetFocus(h);
 	}
 	return 0;
+}
+
+LUA_PROPERTY_GET(Edit, mousepos) {
+	HWND h = lua_self(L, 1, Widget)->handle;
+	POINT p;
+	lua_Integer pos = -1;
+	RECT r;
+	POINTL pl;
+
+	GetClientRect(h, &r);
+	GetCursorPos(&p);
+	ScreenToClient(h, &p);
+	if (p.x > 0 && p.y < (r.bottom-r.top) ) {
+		POINTL pl = {p.x, p.y};
+		pos = SendMessage(h, EM_CHARFROMPOS, 0, (LPARAM)&pl);
+	}
+	lua_pushinteger(L, pos+1);
+	return 1;
 }
 
 LUA_PROPERTY_GET(Edit, line) {
@@ -148,7 +159,7 @@ static Encoding detectBOM(FILE *f) {
 	_fseeki64(f, 0, SEEK_SET);
 	fread(b, 1, 2, f);
 	if( b[0] == 0xFF && b[1] == 0xFE)
-		return UNICODE;
+		return _UNICODE;
 	if (b[0] == 0xEF && b[1] == 0xBB) {
 		fread(b, 1, 1, f);
 		if (b[0] == 0xBF)
@@ -157,10 +168,6 @@ static Encoding detectBOM(FILE *f) {
 	_fseeki64(f, 0, SEEK_SET);
 	return ASCII;;
 }
-
-#ifdef __GNUC__
-_Pragma("GCC diagnostic ignored \"-Wint-in-bool-context\"")
-#endif
 
 static int do_file_operation(lua_State *L, const wchar_t *mode) {
 	HANDLE handle = lua_self(L, 1, Widget)->handle;
@@ -177,9 +184,9 @@ static int do_file_operation(lua_State *L, const wchar_t *mode) {
 	es.dwCookie = (DWORD_PTR)f;
 	es.pfnCallback = iswrite ? WriteStreamCB : ReadStreamCB;
 	if (((lua_gettop(L) == 3) && lua_toboolean(L, 3)) || (SendMessage(handle, EM_GETTEXTMODE, 0, 0) & TM_RICHTEXT))
-		type = SF_RTF | (!iswrite && (detectBOM(f) == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16))));
+		type = SF_RTF | (!iswrite && (detectBOM(f) == _UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16))));
 	else 
-		type = SF_TEXT | (!iswrite && (detectBOM(f) == UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16))));
+		type = SF_TEXT | (!iswrite && (detectBOM(f) == _UNICODE ? SF_UNICODE : (SF_USECODEPAGE | (CP_UTF8 << 16))));
 	if ( (result = SendMessageW(handle, iswrite ? EM_STREAMOUT : EM_STREAMIN, type, (LPARAM)&es)) && es.dwError == 0) 
 		SendMessage(handle, EM_SETMODIFY, !iswrite, 0);
 	lua_pushboolean(L, result); 
@@ -942,7 +949,8 @@ luaL_Reg Edit_methods[] = {
 	{"load",			Edit_loadfrom},
 	{"save",			Edit_saveto},
 	{"append",			Edit_append},
-	{"scroll",			Edit_scroll},
+	{"vscroll",			Widget_vscroll},
+	{"hscroll",			Widget_hscroll},
 	{"get_selection",	Edit_getselection},
 	{"set_font",		Edit_setfont},
 	{"get_font",		Edit_getfont},
@@ -986,6 +994,7 @@ luaL_Reg Edit_methods[] = {
 	{"get_rtf",			Edit_getrtf},
 	{"get_canundo",		Entry_getcanundo},
 	{"get_canredo",		Entry_getcanredo},
+	{"get_mousepos",	Edit_getmousepos},
 	{NULL, NULL}
 };
 
