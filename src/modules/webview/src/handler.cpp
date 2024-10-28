@@ -111,8 +111,8 @@ static HRESULT STDMETHODCALLTYPE EventInterfaces_WebResourceRequested_Invoke(ICo
 					args->lpVtbl->put_Response(args, response);
 					result = S_OK;
 					free(buffer);
-					free(uri);
 				}  		
+				free(uri);
 				GlobalFree(wuri);
 			}
 		}

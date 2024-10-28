@@ -59,19 +59,13 @@ static int EvalTaskContinue(lua_State* L, int status, lua_KContext ctx) {
     return lua_yieldk(L, 0, ctx, EvalTaskContinue);
 }
 
-static int WaitTask(lua_State *L) {	
-    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), EvalTaskContinue);
-}
-
 LUA_METHOD(Webview, eval) {
    	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
 	wchar_t *js = lua_towstring(L, 2);
 	ExecuteScriptCompletedCallback *ExecCB = new ExecuteScriptCompletedCallback();
   	if (wv->webview2)
 		wv->webview2->lpVtbl->ExecuteScript(wv->webview2, js, ExecCB); 
-	lua_pushlightuserdata(L, ExecCB);
-	lua_pushcclosure(L, WaitTask, 1);
-	lua_pushinstance(L, Task, 1);
+	lua_pushtask(L, EvalTaskContinue, ExecCB, NULL);
 	lua_pushvalue(L, -1);
 	lua_call(L, 0, 0); 
 	free(js);
@@ -306,9 +300,31 @@ LUA_PROPERTY_SET(Webview, statusbar) {
 	return 0;
 }
 
+LUA_PROPERTY_GET(Webview, useragent) {
+	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
+	if (wv->settings) {
+	wchar_t *result = NULL;
+	wv->settings->lpVtbl->get_UserAgent(wv->settings, &result);
+	lua_pushwstring(L, result);
+	CoTaskMemFree(result);
+	} else lua_pushnil(L);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Webview, useragent) {
+	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
+	int result = FALSE;
+	if (wv->settings) {
+		wchar_t *ua = toUTF16(lua_tostring(L, 2));
+		result = SUCCEEDED(wv->settings->lpVtbl->put_UserAgent(wv->settings, ua));
+		GlobalFree(ua);
+	}
+	lua_pushboolean(L, result);
+	return 1;
+}
+
 LUA_METHOD(Webview, __gc) {
   Widget *w = lua_widgetdestructor(L);
-
   delete (WebviewHandler *)w->user;
   free(w);
   return 0;
@@ -335,6 +351,7 @@ OBJECT_MEMBERS(Webview)
   READONLY_PROPERTY(Webview, title)
   READONLY_PROPERTY(Webview, cangoback)
   READONLY_PROPERTY(Webview, cangoforward)
+  READWRITE_PROPERTY(Webview, useragent)
 END
 
 OBJECT_METAFIELDS(Webview)
