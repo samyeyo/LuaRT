@@ -7,14 +7,31 @@
 
 
 //------------------------------------ ini.decode() function
+static char *trim(char *str) {
+  char *end;
+
+  while(isspace((unsigned char)*str)) str++;
+
+  if(*str == 0)
+    return str;
+  end = str + strlen(str) - 1;
+  while(end > str && isspace((unsigned char)*end)) end--;
+  end[1] = '\0';
+
+  return str;
+}
 static void push_section(lua_State *L, ini_t *ini, int section) {
   int count = ini_property_count(ini, section);
   
   lua_createtable(L, 0, count);
   for (int i = 0; i < count; i++) {
-    lua_pushstring(L, ini_property_name(ini, section, i));
-    lua_pushstring(L, ini_property_value(ini, section, i));
+    char *name = strdup(ini_property_name(ini, section, i));
+    char *value = strdup(ini_property_value(ini, section, i));
+    lua_pushstring(L, trim(name));
+    lua_pushstring(L, trim(value));
     lua_rawset(L, -3);
+    free(name);
+    free(value);
   }
 }
 
@@ -129,12 +146,8 @@ LUA_METHOD(Ini, save)
     return 1;
 }
 
-//--- luaL_Reg array for module properties, postfixed by "_properties"          
-static const luaL_Reg ini_properties[] = {
-  {NULL, NULL}
-};
-
-//--- luaL_Reg array for module functions, postfixed by "lib"  
+MODULE_PROPERTIES(ini)
+END
 
 MODULE_FUNCTIONS(ini)
   METHOD(Ini, decode)
@@ -143,7 +156,7 @@ MODULE_FUNCTIONS(ini)
   METHOD(Ini, save)
 END
 
-//----- "calc" module registration function
+//----- "ini" module registration function
 int __declspec(dllexport) luaopen_ini(lua_State *L)
 {
     lua_regmodule(L, ini);
