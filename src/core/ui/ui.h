@@ -34,6 +34,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 extern IWICImagingFactory *ui_factory;
 extern HBITMAP ConvertToBitmap(void *pSource);
 extern const char *cursors[], *luart_wtypes[], *events[];
+extern HBRUSH DARK_BRUSH;
+extern HBRUSH CBDARK_BRUSH;
 
 #define NCURSORS 14
 static const PSTR cursors_values[] = {
@@ -106,7 +108,11 @@ LUA_PROPERTY_GET(Widget, bgcolor);
 LUA_PROPERTY_SET(Widget, bgcolor);
 LUA_PROPERTY_GET(Panel, border);
 LUA_PROPERTY_SET(Panel, border);
+LUA_PROPERTY_GET(Widget, allowdrop);
+LUA_PROPERTY_SET(Widget, allowdrop);
 LUA_METHOD(Widget, center);
+LUA_METHOD(Widget, vscroll);
+LUA_METHOD(Widget, hscroll);
 
 LUA_CONSTRUCTOR(Window);
 LUA_PROPERTY_GET(Window, childs);
@@ -155,7 +161,7 @@ extern void pushDate(lua_State *L, HANDLE h);
 INT_PTR widget_setcolors(Widget *w, HDC dc, HWND h);
 Widget *check_widget(lua_State *L, int idx, WidgetType t);
 Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_t *classname, DWORD style, int caption, int autosize);
-HICON widget_loadicon(lua_State *L);
+HICON widget_loadicon(lua_State *L, BOOL islarge);
 void fontstyle_createtable(lua_State *L, LOGFONTW *l);
 void fontstyle_fromtable(lua_State *L, int idx, LOGFONTW *l);
 LUA_API int fontsize_fromheight(int height);
@@ -196,13 +202,15 @@ LUA_METHOD(Widget, __gc);
 #define WM_LUATRAYDBLCLICK	(WM_LUAMIN + 15)
 #define WM_LUATRAYCONTEXT 	(WM_LUAMIN + 16)
 #define WM_LUATRAYHOVER 	(WM_LUAMIN + 17)
-#define WM_LUAMENU 			(WM_LUAMIN + 18)
-#define WM_LUAKEY 			(WM_LUAMIN + 19)
-#define WM_LUAMOUSEUP 		(WM_LUAMIN + 20)
-#define WM_LUAMOUSEDOWN 	(WM_LUAMIN + 21)
-#define WM_LUAMAXIMIZE  	(WM_LUAMIN + 22)
-#define WM_LUAMINIMIZE   	(WM_LUAMIN + 23)
-#define WM_LUARESTORE    	(WM_LUAMIN + 24)
+#define WM_LUANOTIFYCLICK 	(WM_LUAMIN + 18)
+#define WM_LUAMENU 			(WM_LUAMIN + 19)
+#define WM_LUAKEY 			(WM_LUAMIN + 20)
+#define WM_LUAMOUSEUP 		(WM_LUAMIN + 21)
+#define WM_LUAMOUSEDOWN 	(WM_LUAMIN + 22)
+#define WM_LUAMAXIMIZE  	(WM_LUAMIN + 23)
+#define WM_LUAMINIMIZE   	(WM_LUAMIN + 24)
+#define WM_LUARESTORE    	(WM_LUAMIN + 25)
+#define WM_LUADROP    	    (WM_LUAMIN + 26)
 
 typedef enum {
 	onHide			= WM_LUAHIDE,
@@ -223,6 +231,7 @@ typedef enum {
     onTrayDoubleClick=WM_LUATRAYDBLCLICK,
     onTrayContext 	= WM_LUATRAYCONTEXT,
     onTrayHover 	= WM_LUATRAYHOVER,
+    onNotificationClick	= WM_LUANOTIFYCLICK,
 	onMenu			= WM_LUAMENU,
 	onKey			= WM_LUAKEY,
     onMouseUp       = WM_LUAMOUSEUP,
@@ -230,6 +239,7 @@ typedef enum {
     onMaximize      = WM_LUAMAXIMIZE,
     onMinimize      = WM_LUAMINIMIZE,
     onRestore       = WM_LUARESTORE,
+    onDrop          = WM_LUADROP,
 } WidgetEvent;
 
 //---- call close event a associated with window w
