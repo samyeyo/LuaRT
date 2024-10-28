@@ -23,6 +23,9 @@ typedef struct {
     luart_type  type;
     Direct2D    *d;
 	ID2D1Bitmap *Bitmap;
+    IWICBitmapDecoder	  *IWICDecoder;
+    IWICBitmapFrameDecode *IWICFrame;
+    IWICFormatConverter	  *IWICConverter;
 } Image;
 
 extern luart_type TImage;

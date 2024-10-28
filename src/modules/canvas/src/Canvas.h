@@ -20,6 +20,7 @@
 
 #define RGBA(r,g,b,a) ((r << 24) | (g << 16) | (b << 8) | a)
 
+float checkFloat(lua_State *L, int idx, double dpi);
 
 extern luart_type TCanvas;
 

@@ -16,47 +16,41 @@
 #else
 #include "d2d1.h"
 #endif
+#include "Direct2D.h"
 #include "Gradient.h"
 #include "Canvas.h"
-#include "Direct2D.h"
 
 luart_type TLinearGradient, TRadialGradient;
-static std::vector<D2D1_GRADIENT_STOP> stops;
 
 
-static D2D1_GRADIENT_STOP *table_togradient(lua_State *L, int idx, UINT *count) {
+static void table_togradient(lua_State *L, int idx, LinearGradient *g, BOOL isLinear) {    
     D2D1_GRADIENT_STOP stop;
     UINT32 rgba;
     double dpi;
     
     lua_uigetinfo(&dpi, NULL);
-    stops.clear();
     lua_pushnil(L);
 	while (lua_next(L, idx)) {
 		if (lua_type(L, -2) != LUA_TNUMBER)
 			luaL_error(L, "invalid gradient table (number expected found %s)", luaL_typename(L, -1));
-        stop.position = (float)(lua_tonumber(L, -2)*dpi);
+        stop.position = (float)(lua_tonumber(L, -2));
         rgba = (UINT32) lua_tointeger(L, -1);
         stop.color = D2D1::ColorF(GetR(rgba)/255, GetG(rgba)/255, GetB(rgba)/255, GetA(rgba)/255);		
-        stops.push_back(stop);
+        g->stops.push_back(stop);
 		lua_pop(L, 1);
 	}
-    *count = stops.size();
-    return &stops[0];
+    g->d->DCRender->CreateGradientStopCollection(g->stops.data(), g->stops.size(), &g->collection);    
 }
 
 //-------------------------------------[ LinearGradient Constructor ]
 LUA_CONSTRUCTOR(LinearGradient) {
-	LinearGradient *g = (LinearGradient *)calloc(1, sizeof(LinearGradient));
-    ID2D1GradientStopCollection *collection;
+	LinearGradient *g = new LinearGradient();
     D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES props = {};
-    UINT count;
-    D2D1_GRADIENT_STOP *stops = table_togradient(L, 3, &count);
     
     g->d = (Direct2D *)lua_touserdata(L, 2);
-    g->d->Render->CreateGradientStopCollection(stops, count, &collection);
-    g->d->Render->CreateLinearGradientBrush(props, collection, &g->linear);
-    collection->Release();
+    table_togradient(L, 3, g, TRUE);
+    g->d->DCRender->CreateLinearGradientBrush(props, g->collection, &g->linear);
+    g->d->gradients.push_back(g);
 	lua_newinstance(L, g, LinearGradient);
 	return 1;
 }
@@ -64,15 +58,12 @@ LUA_CONSTRUCTOR(LinearGradient) {
 //-------------------------------------[ RadialGradient Constructor ]
 LUA_CONSTRUCTOR(RadialGradient) {
 	RadialGradient *g = (RadialGradient *)calloc(1, sizeof(RadialGradient));
-    ID2D1GradientStopCollection *collection;
     D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES props = {};
-    UINT count;
-    D2D1_GRADIENT_STOP *stops = table_togradient(L, 3, &count);
     
     g->d = (Direct2D *)lua_touserdata(L, 2);
-    g->d->Render->CreateGradientStopCollection(stops, count, &collection);
-    g->d->Render->CreateRadialGradientBrush(props, collection, &g->radial);
-    collection->Release();
+    table_togradient(L, 3, (LinearGradient *)g, FALSE);
+    g->d->DCRender->CreateRadialGradientBrush(props, g->collection, &g->radial);
+    g->d->gradients.push_back((LinearGradient*)g);
 	lua_newinstance(L, g, RadialGradient);
 	return 1;
 }
@@ -170,7 +161,8 @@ END
 LUA_METHOD(LinearGradient, __gc) {
     LinearGradient *g = lua_self(L, 1, LinearGradient);
     g->linear->Release();
-    free(g);
+    g->d->gradients.erase(std::remove(g->d->gradients.begin(), g->d->gradients.end(), g), g->d->gradients.end());
+    delete g;
     return 0;
 }
 
@@ -187,7 +179,7 @@ END
 LUA_METHOD(RadialGradient, __gc) {
     RadialGradient *g = lua_self(L, 1, RadialGradient);
     g->radial->Release();
-    free(g);
+    delete g;
     return 0;
 }
 
