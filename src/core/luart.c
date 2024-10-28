@@ -67,6 +67,7 @@ int link(lua_State *L) {
 	free(pBuffer);
 	free(fname);
 	free(fexe);
+	lua_pushboolean(L, result);
 	return result;
 }
 

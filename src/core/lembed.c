@@ -13,6 +13,9 @@
 
 #include <File.h>
 #include <shlwapi.h>
+#include <DbgHelp.h>
+
+#pragma comment(lib, "Dbghelp.lib")
 
 #define MINIZ_HEADER_FILE_ONLY
 #include <compression\lib\zip.h>
@@ -139,23 +142,50 @@ found:
     lua_pushwstring(L, temp_path);
     lua_pushstring(L, filename);
     lua_concat(L, 2);
-    if (zip_entry_open(fs, filename) == 0) {
+    if (zip_entry_open(fs, filename) == 0) { 
       wchar_t *tmp = lua_towstring(L, -1);
       if ((GetFileAttributesW(tmp) != 0xFFFFFFFF) || (make_path(tmp) && (zip_entry_fread(fs, tmp) == 0))) {
         HMODULE hm;
-        char funcname[MAX_PATH];
-        if ( (hm = LoadLibraryW(tmp)) ) {
-          _snprintf(funcname, MAX_PATH, "luaopen_%s", luaL_gsub(L, name, ".", "_"));
-          lua_pop(L, 1);
-          lua_CFunction f = (lua_CFunction)(voidf)GetProcAddress(hm, funcname);
-          if (f) {
-            lua_pushlightuserdata(L, (void*)hm);
-            lua_rawset(L, -3);
-            lua_pushcfunction(L, f);
-          } else FreeLibrary(hm);
-        } else {
-          luaL_getlasterror(L, GetLastError());
-          luaL_error(L, "error loading module '%s' from embedded file '%s' : %s", lua_tostring(L, 1), filename, lua_tostring(L, -1));
+              
+        if ( (hm = LoadLibraryExW(tmp, NULL, DONT_RESOLVE_DLL_REFERENCES)) ) {
+          ULONG size;
+          PIMAGE_IMPORT_DESCRIPTOR importDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)ImageDirectoryEntryToDataEx(hm, TRUE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size, NULL);
+
+          if (importDescriptor)
+            while (importDescriptor->Characteristics && importDescriptor->Name) {
+                PSTR importName = (PSTR)((PBYTE)hm + importDescriptor->Name);
+                if (zip_entry_open(fs, importName) == 0) {
+                  wchar_t *dllpath;
+                  lua_pushwstring(L, temp_path);
+                  lua_pushstring(L, importName);
+                  lua_concat(L, 2);
+                  dllpath = lua_towstring(L, -1);
+                  lua_pop(L, 1);
+                  if (GetFileAttributesW(dllpath) == INVALID_FILE_ATTRIBUTES) {
+                    make_path(dllpath); 
+                    zip_entry_fread(fs, dllpath);
+                    zip_entry_close(fs);
+                  }
+                  free(dllpath);
+                }
+                importDescriptor++;
+            }
+          FreeLibrary(hm);
+          zip_entry_open(fs, filename);
+          if ( (hm = LoadLibraryW(tmp)) ) {
+            char funcname[MAX_PATH];
+            _snprintf(funcname, MAX_PATH, "luaopen_%s", luaL_gsub(L, name, ".", "_"));
+            lua_pop(L, 1);
+            lua_CFunction f = (lua_CFunction)(voidf)GetProcAddress(hm, funcname);
+            if (f) {
+              lua_pushlightuserdata(L, (void*)hm);
+              lua_rawset(L, -3);
+              lua_pushcfunction(L, f);
+            } else FreeLibrary(hm);
+          } else {
+            luaL_getlasterror(L, GetLastError());
+            luaL_error(L, "error loading module '%s' from embedded file '%s' : %s", lua_tostring(L, 1), filename, lua_tostring(L, -1));
+          }
         }
       }
       free(tmp);
@@ -229,6 +259,15 @@ LUA_METHOD(embed, File) {
     return 1;
 }
 
+LUA_METHOD(embed, sysFile) {
+  embed_File(L);
+  if (!lua_toboolean(L, -1)) {
+    lua_pushvalue(L, 1);
+    lua_pushinstance(L, File, 1);
+  }
+  return 1;
+}
+
 static const luaL_Reg embedlib[] = {
 	{"File",	embed_File},
 	{NULL, NULL}
@@ -250,6 +289,10 @@ LUAMOD_API int luaopen_embed(lua_State *L) {
   lua_pushlightuserdata(L, fs);
   lua_pcall(L, 1, 1, 0);
   lua_rawset(L, -6);
+  lua_pop(L, 1);
+  lua_getfield(L, -1, "sys");
+  lua_pushcfunction(L, embed_sysFile);
+  lua_setfield(L, -2, "File");
   lua_pop(L, 3);
 	return 1;
 };
