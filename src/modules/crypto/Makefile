@@ -11,9 +11,6 @@
 # |-------------------------------------------------------------
 VERBOSE= >nul 2>&1
 
-#---- LuaRT toolchain path
-LUART_PATH=..\..\..
-
 MODULE=		crypto
 VERSION=	1.0
 SRC= 		src\Cipher.obj src\crypto.obj
@@ -23,9 +20,11 @@ SRC= 		src\Cipher.obj src\crypto.obj
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG
 VERBOSE=
+PROGRESS= 
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"." /MD /Gy /GR- /GL /GS- /GF /Oi /O2
 LDFLAGS= /nologo /OPT:REF /OPT:ICF /LTCG
+PROGRESS= "■"
 !endif
 
 LIBS= "$(LUART_PATH)\lib\lua54.lib" crypt32.lib advapi32.lib
@@ -45,7 +44,7 @@ infomodule:
 
 .c.obj: 
 	@$(CC) $(CFLAGS) /c /Fo$@ $< $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 
 $(MODULE).dll: infomodule $(SRC)
 	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ $(VERBOSE)
