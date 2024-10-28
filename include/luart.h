@@ -178,14 +178,17 @@ LUA_API void luaL_setrawfuncs(lua_State *L, const luaL_Reg *l);
 //--- luaL_require() alternative to luaL_requiref()
 LUA_API void luaL_require(lua_State *L, const char *modname);
 
-//--- Push a task with the provided C function and starts it, with the number of arguments provided (arguments will be popped from the stack)
+//--- Push a task with the provided continuation C function and starts it, with a context and optional cleanup lua_CFunction
 //--- Always returns 1
-LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs);
+LUA_API int lua_pushtask(lua_State *L, lua_KFunction taskfunc, void *userdata, lua_CFunction gc);
 
 #include <Task.h>
 
 //--- Sleeps the current task or the current Lua state for the provided delay
 LUA_API void lua_sleep(lua_State *L, lua_Integer delay);
+
+//--- Wait for the Task at index idx to terminate
+LUA_API int lua_wait(lua_State *L, int idx);
 
 //--- Get the current executing Task
 LUA_API Task *lua_gettask(lua_State *L);

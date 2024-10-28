@@ -21,6 +21,8 @@
 #include <Com.h>
 #include <wininet.h>
 #include <winreg.h>
+#include <shlobj.h>
+#include <shlwapi.h>
 
 /* ------------------------------------------------------------------------ */
 
@@ -170,7 +172,7 @@ LUA_API int luaL_getlasterror(lua_State *L, DWORD err) {
     		mod = GetModuleHandle("wininet.dll");
     		flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_MAX_WIDTH_MASK;			
     	}
-		DWORD size = FormatMessageA(flags, mod, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&msg, 0, NULL);
+		DWORD size = FormatMessageA(flags, mod, err, locale, (LPSTR)&msg, 0, NULL);
 		int len = MultiByteToWideChar(CP_ACP, 0, msg, size, NULL, 0);
 		wchar_t *buff = (wchar_t*)malloc(len*sizeof(wchar_t*));
 		MultiByteToWideChar(CP_ACP, 0, msg, size, buff, size);
@@ -199,29 +201,122 @@ LUA_PROPERTY_SET(sys, atexit) {
 	return 0;
 }
 
-LUA_PROPERTY_GET(sys, clipboard) {
-	HANDLE hData;
-	wchar_t *str;
+LUA_API HGLOBAL table_to_HDROPFormat(lua_State *L, int idx) {
+    luaL_checktype(L, idx, LUA_TTABLE);
+    size_t totalLength = sizeof(DROPFILES) + 1; // +1 for the double null terminator
+    int numFiles = lua_rawlen(L, idx);
 
-	lua_pushnil(L);
-	if (OpenClipboard(NULL) && (hData = GetClipboardData(CF_UNICODETEXT)) && (str = GlobalLock(hData))) {
-		lua_pushwstring(L, str);
-		GlobalUnlock(hData);
+    for (int i = 1; i <= numFiles; ++i) {
+        lua_rawgeti(L, idx, i);
+        wchar_t *path = luaL_checkFilename(L, -1);
+		totalLength += (wcslen(path)+1) * sizeof(wchar_t); // +1 for the null terminator
+		free(path);
+        lua_pop(L, 1);
+    }
+
+    // Allocate global memory for the DROPFILES structure
+    HGLOBAL hGlobal;
+    if (!(hGlobal = GlobalAlloc(GHND | GMEM_SHARE, totalLength)))
+memerr:	luaL_error(L, "memory allocation failed");
+
+    DROPFILES* dropFiles = (DROPFILES*)GlobalLock(hGlobal);
+    if (!dropFiles) {
+        GlobalFree(hGlobal);
+        goto memerr;
+    }
+
+    dropFiles->pFiles = sizeof(DROPFILES);
+    dropFiles->fWide = TRUE;
+
+    wchar_t* dest = (wchar_t*)((BYTE*)dropFiles + sizeof(DROPFILES));
+    for (int i = 1; i <= numFiles; ++i) {
+        wchar_t* path = (lua_rawgeti(L, idx, i) == LUA_TSTRING) ? lua_towstring(L, -1) : luaL_checkFilename(L, -1);
+		size_t length = wcslen(path);
+		wcscpy_s(dest, length + 1, path);
+		free(path);
+		dest += length + 1;
+        lua_pop(L, 1);
+    }
+    *dest = L'\0';
+    GlobalUnlock(hGlobal);
+    return hGlobal;
+}
+
+LUA_PROPERTY_GET(sys, clipboard) {
+	HANDLE hData = NULL;
+	char *kind = "unknown";
+
+    if (OpenClipboard(NULL)) {
+        if (IsClipboardFormatAvailable(CF_UNICODETEXT) && (hData = GetClipboardData(CF_UNICODETEXT))) {
+            wchar_t* pszText = GlobalLock(hData); 
+            if (pszText) {
+				lua_pushwstring(L, pszText);
+				kind = "text";
+                GlobalUnlock(hData);
+            }		
+    	} else if (IsClipboardFormatAvailable(CF_TEXT) && (hData = GetClipboardData(CF_TEXT))) {
+            char* pszText = GlobalLock(hData); 
+            if (pszText) {
+				lua_pushstring(L, pszText);
+				kind = "text";
+                GlobalUnlock(hData);
+            }
+		} else if (IsClipboardFormatAvailable(CF_HDROP) && (hData = GetClipboardData(CF_HDROP))) {
+            UINT fileCount = DragQueryFileW((HDROP)hData, 0xFFFFFFFF, NULL, 0);
+			kind = "files";
+			lua_createtable(L, 0, fileCount);
+            for (UINT i = 0; i < fileCount; ++i) {
+                UINT pathLength = DragQueryFileW((HDROP)hData, i, NULL, 0) + 1;
+                wchar_t* filePath = calloc(pathLength, sizeof(wchar_t));;
+                DragQueryFileW((HDROP)hData, i, filePath, pathLength);
+				lua_pushwstring(L, filePath);
+				if ((PathIsDirectoryW(filePath) == FILE_ATTRIBUTE_DIRECTORY) || (filePath[pathLength-1] == L'\\'))
+					lua_pushinstance(L, Directory, 1);
+				else lua_pushinstance(L, File, 1);
+				lua_remove(L, -2);
+				lua_rawseti(L, -2, i+1);
+                free(filePath);
+            }
+		}
+    }
+	lua_createtable(L, 2, 0);
+	lua_pushstring(L, kind);
+	lua_setfield(L, -2, "kind");
+	if (hData) {
+		lua_pushvalue(L, -2);
+		lua_setfield(L, -2, "content");
 	}
 	CloseClipboard();
 	return 1;
 }
 
 LUA_PROPERTY_SET(sys, clipboard) {
-	int len;
-	wchar_t *str = lua_tolwstring(L, 1, &len);
-	HGLOBAL hMem =  GlobalAlloc(GMEM_MOVEABLE, (++len)*sizeof(wchar_t));
-	memcpy(GlobalLock(hMem), str, len*sizeof(wchar_t));
-	GlobalUnlock(hMem);
-	OpenClipboard(0);
-	EmptyClipboard();
-	SetClipboardData(CF_UNICODETEXT, hMem);
-	CloseClipboard();
+	int type = lua_type(L, 1);
+
+    if (OpenClipboard(NULL)) {
+		switch (lua_type(L, 1)) {
+			case LUA_TSTRING:	if (EmptyClipboard()) {
+									int length;
+									wchar_t *pGlobal, *text = lua_tolwstring(L, 1, &length);
+								    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, length * sizeof(wchar_t));
+									if (hGlobal) {
+										if (pGlobal = (wchar_t*)GlobalLock(hGlobal)) {
+											wcscpy(pGlobal, text);
+											GlobalUnlock(hGlobal);
+											SetClipboardData(CF_UNICODETEXT, hGlobal);
+										}
+										GlobalFree(hGlobal);
+									}
+								} break;
+			case LUA_TTABLE:	if (EmptyClipboard()) {
+									HGLOBAL hGlobal = table_to_HDROPFormat(L, 1);
+									SetClipboardData(CF_HDROP, hGlobal);
+									GlobalFree(hGlobal);
+								} break;
+			case LUA_TNIL:		EmptyClipboard();
+		}
+	}
+    CloseClipboard();
 	return 0;
 }
 
@@ -283,6 +378,44 @@ LUA_PROPERTY_GET(sys, env) {
 	luaL_newlib(L, sys_env);
 	lua_setmetatable(L, -2);
 	return 1;
+}
+
+static int get_locale(lua_State *L, LCTYPE lc) {
+	wchar_t localeName[LOCALE_NAME_MAX_LENGTH];
+
+    if (LCIDToLocaleName(locale, localeName, LOCALE_NAME_MAX_LENGTH, 0)) {
+		int len = GetLocaleInfoEx(localeName, lc, NULL, 0);
+  		wchar_t *localeData = calloc(len, sizeof(wchar_t));
+
+		if (GetLocaleInfoEx(localeName, lc, localeData, len)) {
+			lua_pushlwstring(L, localeData, len-1);
+  			free(localeData);
+			return 1;
+		}
+		free(localeData);
+	}
+	lua_pushnil(L);
+  	return 1;
+}
+
+//------------------------------------ sys.language property
+LUA_PROPERTY_GET(sysutils, language) {
+  return get_locale(L, LOCALE_SLOCALIZEDDISPLAYNAME);
+}
+
+//------------------------------------ sys.locale property
+LUA_PROPERTY_GET(sysutils, locale) {
+  return get_locale(L, LOCALE_SNAME);
+}
+
+LUA_PROPERTY_SET(sysutils, locale) {
+	wchar_t* lname = lua_towstring(L, 1);
+	
+	locale = LocaleNameToLCID(lname, 0);
+    if (!locale)
+		luaL_error(L, "unknown locale '%s'", lname);
+    free(lname);
+	return 0;
 }
 
 #define RRF_SUBKEY_WOW6464KEY 0x00010000
@@ -445,6 +578,8 @@ MODULE_PROPERTIES(sys)
 	READWRITE_PROPERTY(sys, currentdir)
 	READWRITE_PROPERTY(sys, clipboard)
 	READWRITE_PROPERTY(sys, atexit)
+	READWRITE_PROPERTY(sysutils, locale)
+  	READONLY_PROPERTY(sysutils, language)
 END
 
 LUAMOD_API int luaopen_sys(lua_State *L) {

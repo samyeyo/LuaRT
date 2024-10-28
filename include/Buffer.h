@@ -20,6 +20,7 @@ typedef struct {
 	luart_type		type;
 	size_t			size;
 	BYTE			*bytes;
+	int				encoding;
 } Buffer;
 
 LUA_API luart_type TBuffer;

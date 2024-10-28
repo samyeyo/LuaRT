@@ -93,7 +93,7 @@ LUA_API Encoding detectBOM(FILE *f) {
 	_fseeki64(f, 0, SEEK_SET);
 	fread(b, 1, 2, f);
 	if( b[0] == 0xFF && b[1] == 0xFE)
-		return UNICODE;
+		return _UNICODE;
 	if (b[0] == 0xEF && b[1] == 0xBB) {
 		fread(b, 1, 1, f);
 		if (b[0] == 0xBF)
@@ -152,7 +152,7 @@ LUA_METHOD(File, write) {
 		size_t r, done = 0;
 		if (!f->mode)
 			luaL_error(L, "error: File not opened for writing");
-		if (f->encoding == UNICODE) {
+		if (f->encoding == _UNICODE) {
 			if (!lua_isstring(L, 2))
 				buf = (char*)luaL_tolstring(L, 2, &wsize);
 			else {
@@ -164,7 +164,7 @@ LUA_METHOD(File, write) {
 			buf = (char*)luaL_tolstring(L, 2, &wsize);
 		while (done < wsize && (r = fwrite(buf + done, 1, wsize - done, f->stream)))
 			done += r;
-		if (f->encoding == UNICODE)
+		if (f->encoding == _UNICODE)
 			free(buf);
 		lua_pushinteger(L, done);
 		if (f->std)
@@ -178,7 +178,7 @@ LUA_METHOD(File, writeln) {
 	File *f = lua_self(L, 1, File);
 	if (lua_gettop(L) > 1)
 		File_write(L);
-	if (f->encoding == UNICODE)
+	if (f->encoding == _UNICODE)
 		fputws(L"\r\n", f->stream);
 	else
 		fputs("\r\n", f->stream);
@@ -296,7 +296,7 @@ readstd:
 	if (b.n == 0 && !line) {
 		return FALSE;
 	}
-	if (f->encoding == UNICODE || f->std) {
+	if (f->encoding == _UNICODE || f->std) {
 		wchar_t *str = (wchar_t*)lua_tolstring(L, -1, &size);
 		lua_pushlwstring(L, str, size/sizeof(wchar_t));
 	}
@@ -363,13 +363,79 @@ LUA_METHOD(File, remove) {
 }
 
 //-------------------------------------[ File.copy ]
-LUA_METHOD(File, copy) {
+int IOTaskContinue(lua_State* L, int status, lua_KContext ctx) {
+    AsyncIO *async = (AsyncIO*)ctx;
+	DWORD result;
+
+	if (async->cancel)
+		return 0;
+    if (WaitForSingleObject(async->thread, 0) == WAIT_OBJECT_0) {
+        GetExitCodeThread(async->thread, &result); 
+		lua_pushboolean(L, result);
+        return 1;
+    }
+	if (async->ref) {
+		if (lua_rawgeti(L, LUA_REGISTRYINDEX, async->ref)) {
+			lua_pushnumber(L, async->totalfilesize.QuadPart);
+			lua_pushnumber(L, async->transferred.QuadPart);
+			lua_call(L, 2, 1);
+			async->cancel = lua_isnil(L, -1) ? FALSE : !lua_toboolean(L, -1);
+			lua_pop(L, 1);
+		}
+	}
+    return lua_yieldk(L, 0, ctx, IOTaskContinue);
+}
+
+int gc_asyncTask(lua_State *L) {
+    AsyncIO *async = (AsyncIO*)lua_self(L, 1, Task)->userdata;
+    CloseHandle(async->thread);
+    free(async->to);
+    free(async);
+    return 0;
+}
+
+static COPYFILE2_MESSAGE_ACTION CALLBACK CopyProgressRoutine(const COPYFILE2_MESSAGE *cpm, PVOID ctx) {
+    AsyncIO *async = (AsyncIO *)ctx;
+	
+	if (async->cancel)
+		return COPYFILE2_PROGRESS_CANCEL;
+	if (cpm->Type == COPYFILE2_CALLBACK_CHUNK_FINISHED) {
+		async->transferred.QuadPart += cpm->Info.ChunkFinished.uliChunkSize.QuadPart;
+		async->totalfilesize = cpm->Info.StreamFinished.uliTotalFileSize;
+	}
+    return COPYFILE2_PROGRESS_CONTINUE;
+}
+
+static DWORD __stdcall FileCopy(LPVOID data) {
+    AsyncIO *async = (AsyncIO*)data;
+
+	COPYFILE2_EXTENDED_PARAMETERS cpp = {sizeof(COPYFILE2_EXTENDED_PARAMETERS), COPY_FILE_FAIL_IF_EXISTS | COPY_FILE_NO_BUFFERING, NULL, CopyProgressRoutine, async};
+	return SUCCEEDED(CopyFile2(async->from, async->to, &cpp));
+}
+
+//-------------------------------------[ File.copytask ]
+LUA_METHOD(File, copytask) {
 	File *f = lua_self(L, 1, File);
+	AsyncIO *async = calloc(1, sizeof(AsyncIO));
+	
+	async->from = f->fullpath;
+	async->to = lua_towstring(L, 2);
+	if (lua_isfunction(L, 3)) {
+		lua_pushvalue(L, 3);
+		async->ref = luaL_ref(L, LUA_REGISTRYINDEX);
+	}
+	lua_pushtask(L, IOTaskContinue, async, gc_asyncTask);
+    lua_pushvalue(L, -1);
+    if ((async->thread = CreateThread(NULL, 0, FileCopy, async, 0, NULL)))
+        lua_call(L, 0, 0);
+	else luaL_error(L, "new thread creation failed");
+	return 1;
+}
+
+//-------------------------------------[ File.copy ]
+LUA_METHOD(File, copy) {
 	wchar_t *new_name = lua_towstring(L, 2);
-	if (CopyFileW(f->fullpath, new_name, TRUE)) {
-		lua_pushwstring(L, new_name);
-		lua_pushinstance(L, File, 1);
-	} else lua_pushnil(L);
+	lua_pushboolean(L, CopyFileW(lua_self(L, 1, File)->fullpath, new_name, TRUE));
 	free(new_name);
 	return 1;
 }
@@ -625,6 +691,7 @@ const luaL_Reg File_methods[] = {
 	{"flush",			File_flush},
 	{"remove",			File_remove},
 	{"copy",			File_copy},
+	{"copytask",		File_copytask},
 	{"move",			File_move},
 	{"get_fullpath",	File_getfullpath},
 	{"get_size",		File_getsize},

@@ -30,6 +30,7 @@ typedef struct {
 } Datetime;
 
 LUA_API luart_type TDatetime;
+LUA_API LCID locale;
 
 LUA_CONSTRUCTOR(Datetime);
 extern const luaL_Reg Datetime_methods[];

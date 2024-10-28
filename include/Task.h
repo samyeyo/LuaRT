@@ -29,9 +29,11 @@ typedef struct _Task {
 	Task 		*waiting;
 	BOOL		isevent;
 	ULONGLONG	sleep;
+	void		*userdata;
+	lua_CFunction gc_func;
  } Task;
 
-extern luart_type TTask;
+LUA_API luart_type TTask;
 
 //---------------------------------------- Task object
 LUA_CONSTRUCTOR(Task);

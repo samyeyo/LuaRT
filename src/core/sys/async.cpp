@@ -58,18 +58,6 @@ int start_task(lua_State *L, Task *t, int nargs) {
 	return t->status == TTerminated ? nargs : 0;
 }
 
-//-------- Close a Task
-void close_task(lua_State *L, Task *t) {
-	t->status = TTerminated;
-	if ((t->ref > 0) && Tasks.size()) {
-		for (auto it = Tasks.begin(); it != Tasks.end(); ++it) {
-			Task *tt = *it;
-			if (t->from && tt->from == t)
-				tt->status = TTerminated;
-		}
-	}	
-}
-
 //-------- Resume a Task
 int resume_task(lua_State *L, Task *t, int args) {
 	int nresults = 0, status;
@@ -82,19 +70,21 @@ int resume_task(lua_State *L, Task *t, int args) {
 		lua_xmove(t->L, from, nresults);
 		t->status = TSleep;	
 	} else if (status == LUA_OK) {
-		if (lua_rawgeti(t->L, LUA_REGISTRYINDEX, t->taskref)) {
-			if (lua_getfield(t->L, -1, "after") == LUA_TFUNCTION) {
-				lua_insert(t->L, -nresults-2);
-				lua_insert(t->L, -nresults-2);
-				lua_call(t->L, nresults, LUA_MULTRET);
-				close_task(L, t);
-				return 0;
+		if (nresults) {
+			if (lua_rawgeti(t->L, LUA_REGISTRYINDEX, t->taskref)) {
+				if (lua_getfield(t->L, -1, "after") == LUA_TFUNCTION) {
+					lua_insert(t->L, -nresults-2);
+					lua_insert(t->L, -nresults-2);
+					lua_call(t->L, nresults, LUA_MULTRET);
+					close_task(t);
+					return 0;
+				} 
+				lua_pop(t->L, 1);
 			} 
 			lua_pop(t->L, 1);
-		} 
-		lua_pop(t->L, 1);
-		lua_xmove(t->L, from, nresults);
-		close_task(L, t);
+			lua_xmove(t->L, from, nresults);
+		}
+		close_task(t);
 	} 
 	return nresults;
 }
@@ -142,9 +132,22 @@ int update_tasks(lua_State *L) {
 	return 0;
 }
 
-//-------- Wait for all tasks
+//-------- Wait for a Task at specific index
+int waitfor_task(lua_State *L, int idx) {
+	Task *t = lua_self(L, idx, Task);
+	int nresults = lua_gettop(L);
+
+	t->waiting = search_task(L);
+	t->waiting->status = TWaiting;	
+	do
+		nresults = update_tasks(L);
+	while(t->status != TTerminated);	
+	return nresults;
+}
+
+//-------- Wait for all Tasks
 int waitall_tasks(lua_State *L) {
-    do 
+    do
 		update_tasks(L);
 	while (Tasks.size() > 1);		
     return 0;

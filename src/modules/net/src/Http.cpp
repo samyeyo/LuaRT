@@ -367,8 +367,14 @@ static int WaitTask(lua_State *L) {
             char *pos;
             if (header && (pos = strchr(header, '=')+1))
                 h->fname = pos;
-            else h->fname = PathFindFileNameA(h->url.c_str());
+            else
+                h->fname = PathFindFileNameA(h->url.c_str());
             h->file = fopen(h->fname.c_str(), "wb");
+            if (!h->file) {
+                h->fname = "download.bin";
+                if ( !(h->file = fopen(h->fname.c_str(), "wb")) )
+                    luaL_error(L, "failed to create downloaded file on disk");
+            }
             free(header);
         }
     }   				
@@ -548,6 +554,10 @@ LUA_METHOD(Http, post) {
 LUA_METHOD(Http, download) {
     Http *h = lua_self(L, 1, Http);
     h->download = true;
+    if (lua_gettop(L) > 2) {
+        h->fname = luaL_checkstring(L, 3);
+        h->file = fopen(h->fname.c_str(), "wb");
+    }
     return do_request(L, h, "GET");
 }
 

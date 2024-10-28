@@ -34,7 +34,7 @@ typedef struct {
 
 LUA_API luart_type TFile;
 
-typedef enum { ASCII, UTF8, UNICODE } Encoding;
+typedef enum { ASCII, UTF8, _UNICODE } Encoding;
 
 //---------------------------------------- Console.stdout get property
 extern int console_getstdout(lua_State *L);
@@ -44,6 +44,20 @@ LUA_CONSTRUCTOR(File);
 extern const luaL_Reg File_methods[];
 extern const luaL_Reg File_metafields[];
 
+//---------------------------------------- Asynchronous IO
+typedef struct {
+	HANDLE 	thread;
+	wchar_t *from;
+	wchar_t *to;
+	BOOL	cancel;
+	int		ref;
+	ULARGE_INTEGER	totalfilesize;
+	ULARGE_INTEGER	transferred;
+} AsyncIO;
+int gc_asyncTask(lua_State *L);
+int IOTaskContinue(lua_State* L, int status, lua_KContext ctx);
+
+//---------------------------------------- File members declaration
 LUA_METHOD(File, gc);
 LUA_METHOD(File, move);
 LUA_METHOD(File, remove);

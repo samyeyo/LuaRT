@@ -38,7 +38,7 @@ LUA_CONSTRUCTOR(Pipe) {
 	si.cb = sizeof(STARTUPINFOW);
     si.dwFlags |= STARTF_USESTDHANDLES;
 	si.hStdInput = p->in_read;
-    si.hStdError = p->err_write;
+    si.hStdError = p->out_write;
     si.hStdOutput = p->out_write;
 	if (CreateProcessW(NULL, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &p->pi) == FALSE) {
 		free(p);
@@ -71,15 +71,16 @@ LUA_METHOD(Pipe, write) {
 static int pipe_read(lua_State *L, HANDLE h) {
 	DWORD read, done, avail = 1;
 	char *buff;
-	if (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) && avail) {	
-		buff = calloc(1, avail);
+
+	while (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) && avail) {	
+		buff = calloc(1, avail+1);
 		done = 0;
 		while (!ReadFile(h, buff+done, avail-done, &read, NULL) || read == 0)
 			done += read;
 		int size = MultiByteToWideChar(CP_OEMCP, 0, buff, avail, NULL, 0);
 		wchar_t *newbuff = (wchar_t *)malloc(size*sizeof(wchar_t));
 		MultiByteToWideChar(CP_OEMCP, 0, buff, avail, newbuff, size);
-		lua_pushwstring(L, newbuff);
+		lua_pushlwstring(L, newbuff, avail);
 		free(newbuff);			
 		free(buff);
 		return 1;
@@ -88,27 +89,20 @@ static int pipe_read(lua_State *L, HANDLE h) {
 }
 
 static int PipeReadTaskContinue(lua_State* L, int status, lua_KContext ctx) {	
-	HANDLE h = (HANDLE)ctx;
+	Pipe *p = (Pipe*)ctx;
+	int count;
 
-	Sleep(1);
-	if (pipe_read(L, h))
-		return 1;
-    return lua_yieldk(L, 0, (lua_KContext)h, PipeReadTaskContinue);
-}
-
-static int PipeReadTask(lua_State *L) {	
-    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), PipeReadTaskContinue);
+	if (!p->out_read)
+		return 0;
+	count = pipe_read(L, p->out_read);
+	count += pipe_read(L, p->err_read);
+    return count ? count : lua_yieldk(L, 0, ctx, PipeReadTaskContinue);
 }
 
 LUA_METHOD(Pipe, read) {
-	lua_pushlightuserdata(L, (void*)lua_self(L, 1, Pipe)->out_read);
-	return lua_pushtask(L, PipeReadTask, 1);
-}
-
-//-------------------------------------[ Pipe.readerror ]
-LUA_METHOD(Pipe, readerror) {
-	lua_pushlightuserdata(L, (void*)lua_self(L, 1, Pipe)->err_read);
-	return lua_pushtask(L, PipeReadTask, 1);
+	lua_pushtask(L, PipeReadTaskContinue, lua_self(L, 1, Pipe), NULL);
+	Sleep(luaL_optinteger(L, 2, 100));
+	return 1;
 }
 
 //-------------------------------------[ Pipe.close() ]
@@ -141,7 +135,6 @@ const luaL_Reg Pipe_metafields[] = {
 const luaL_Reg Pipe_methods[] = {
 	{"write",		Pipe_write},
 	{"read",		Pipe_read},
-	{"readerror",	Pipe_readerror},
 	{"close",		Pipe_close},
 	{NULL, NULL}
 };
