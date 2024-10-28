@@ -223,6 +223,7 @@
 		LUA_SHRDIR"?\\?.dll;"  \
 		LUA_CDIR"loadall.dll;" ".\\?.dll;"
 #endif
+
 #else			/* }{ */
 
 #define LUA_ROOT	"/usr/local/"
@@ -259,6 +260,15 @@
 
 #endif
 
+
+/*
+** LUA_IGMARK is a mark to ignore all after it when building the
+** module name (e.g., used to build the luaopen_ function name).
+** Typically, the suffix after the mark is the module version,
+** as in "mod-v1.2.so".
+*/
+#define LUA_IGMARK		"-"
+
 /* }================================================================== */
 
 
@@ -286,11 +296,7 @@
 #endif
 
 #else				/* }{ */
-#ifdef _MSC_VER
 #define LUA_API		 __declspec(dllimport)
-#else
-#define LUA_API extern
-#endif
 #endif	
 
 
