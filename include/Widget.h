@@ -6,17 +6,18 @@
  | Widget.h | LuaRT Widget object header
 */
 
-#define LUA_LIB
-
-#include <luart.h>
-#include <commctrl.h>
-#include <windows.h>
-
 #pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <luart.h>
+#define LUA_LIB
+
+
+#include <windows.h>
+#include <commctrl.h>
 
 extern int UIWindow;
 extern int UIButton;
@@ -83,6 +84,7 @@ typedef struct Widget {
 	void		*user;
 	BOOL		ismain;
 	BOOL		isactive;
+	BOOL 		allowdrop;
 } Widget;
 
 //--- Register a widget type
