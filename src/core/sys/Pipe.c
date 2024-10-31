@@ -100,8 +100,8 @@ static int PipeReadTaskContinue(lua_State* L, int status, lua_KContext ctx) {
 }
 
 LUA_METHOD(Pipe, read) {
-	lua_pushtask(L, PipeReadTaskContinue, lua_self(L, 1, Pipe), NULL);
 	Sleep(luaL_optinteger(L, 2, 100));
+	lua_pushtask(L, PipeReadTaskContinue, lua_self(L, 1, Pipe), NULL);
 	return 1;
 }
 
