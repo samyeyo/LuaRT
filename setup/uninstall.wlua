@@ -23,7 +23,7 @@ if exe.fullpath ~= tmpexe.fullpath then
     sys.exit()
 end
 
-local win = ui.Window("", "raw", 320, 200)
+local win = ui.Window("Remove LuaRT", "raw", 320, 200)
 win.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
 win.font = "Segoe UI"
 win.installation = false

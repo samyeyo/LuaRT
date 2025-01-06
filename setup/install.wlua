@@ -15,7 +15,7 @@ local compression = require "compression"
 
 local File = embed == nil and sys.File  or embed.File
 
-local win = ui.Window("", "raw", 400, 240)
+local win = ui.Window("LuaRt Installer", "raw", 400, 240)
 win.font = "Segoe UI"
 win.installation = false
 
