@@ -4,39 +4,27 @@
 local ui = require "ui"
 require "canvas"
 
-local win = ui.Window("Canvas stamp example")
+local win = ui.Window("Canvas stamp example", 640, 480)
+
 local c = ui.Canvas(win)
 c.align = "all"
 c.cursor = "cross"
-c.sync = false
+c.bgcolor = 0x000000FF
 
 -- Create an Image instance from file
 local img = c:Image(sys.File(arg[0]).path.."\\LuaRT.png")
+img.centerx = img.width*0.5/2
+img.centery = img.height*0.5/2
 
--- Flag to draw on the canvas or not
-c.drawing = false
-
--- Canvas:onRelease() event handler
--- Thrown when user releases the left mouse button
-function c:onRelease()
-	self.drawing = false
-end
-
--- Canvas:onClick() event handler
--- Thrown when user clicks on the canvas with the left mouse button
-function c:onClick(x, y)
-	self.drawing = true
-	self:onHover(x, y)
-end
-
-function c:onHover(x, y)
-    -- draws only when a previous mouse click occured
-	if self.drawing then
-		self:begin()
-		img:draw(x-img.width/2*0.4, y-img.height/2*0.4, 0.4, 0.6)
-		self:flip()		
+function c:onHover(x, y, buttons)
+	c:begin()
+	if not buttons or buttons.left then		
+		img:draw(x - img.centerx, y - img.centery, 0.5, 0.3)
 	end
+	c:flip()
 end
+
+c.onClick = c.onHover
 
 ui.run(win):wait()
 

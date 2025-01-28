@@ -5,6 +5,7 @@ local win = ui.Window("Canvas - Mandelbrot fractal example", "fixed", 512, 360)
 local c = ui.Canvas(win)
 c.align = "all"
 c.bgcolor = 0x000000FF
+c:clear()
 
 win:center()
 
@@ -12,9 +13,10 @@ local max_iterations = 64
 
 -- Uses internal timer for 30fps drawing
 function c:onPaint()
+  self:begin()
   self:clear()	
   local row = 0
-  local height = self.height
+  local height = self.height-60
   local width = self.width
   
   while row < height do
@@ -44,6 +46,7 @@ function c:onPaint()
     end
     row = row + 1
   end
+  self:flip()
 end
 
 ui.run(win):wait()

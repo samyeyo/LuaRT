@@ -1,31 +1,37 @@
 local ui = require "ui"
 require "canvas"
 
-local win = ui.Window("Canvas - Hello world example", "fixed", 320, 240)
+local win = ui.Window("Canvas - Transformation example", 400, 360)
 
 local c = ui.Canvas(win)
 c.align = "all"
-c.pos = -100
-c.font = "Segoe Script"
-c.fontsize = 24
 c.color = 0xffcc00ff
 
 local degree = 0
 local scale = 1
 local delta = 0.1
-local centerx = c.width/2-65
-local centery = c.height/2-20
 
--- Uses internal timer for 30fps drawing
-function c:onPaint()
-	self:clear(0xffffffff)
-	c:rotate(degree)
-	c:scale(scale, scale)
-	c:print("Hello LuaRT !", centerx, centery)
-	degree = degree + 2
-	scale = scale + delta
-	delta = (scale > 2.5 and delta == 0.1) and -0.1 or ((scale < 1 and delta == -0.1) and 0.1) or delta
+local img = c:Image(sys.File(arg[0]).path.."LuaRT.png")
+
+function win:onKey(key)
+	if key == "VK_RETURN" then
+		win.fullscreen = not win.fullscreen
+	end
 end
 
+function c:onPaint()
+	c:begin()
+	c:clear()
+	c:identity()
+	c:rotate(degree)
+	c:scale(scale, scale)
+	img:draw((c.width-img.width)/2, (c.height-img.height)/2, 1, 1, "linear")
+	degree = degree + 0.5
+	scale = scale + delta
+	delta = (scale > 2.5 and delta == 0.1) and -0.1 or ((scale < 1 and delta == -0.1) and 0.1) or delta
+	sleep()
+	c:flip()
+end
 
 ui.run(win):wait()
+
