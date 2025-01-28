@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Buffer.h | LuaRT Buffer object header
@@ -20,6 +20,7 @@ typedef struct {
 	luart_type		type;
 	size_t			size;
 	BYTE			*bytes;
+	int				encoding;
 } Buffer;
 
 LUA_API luart_type TBuffer;

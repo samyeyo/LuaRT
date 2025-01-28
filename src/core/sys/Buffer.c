@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Buffer.c | LuaRT Buffer object implementation
@@ -122,24 +122,25 @@ static void buff_init(lua_State *L, int idx, Buffer *b) {
 	BOOL free_src = FALSE;
 
 	free(b->bytes);
+	b->encoding = luaL_checkoption(L, idx+1, "utf8", encodings);
 	switch(lua_type(L, idx)) {
 		case LUA_TNUMBER:	if ( (b->size = (size_t)luaL_checkinteger(L, idx)) == 0 ) luaL_error(L, "cannot create Buffer with zero length"); break;
 		case LUA_TSTRING:	src = (BYTE*)luaL_checklstring(L, idx, &b->size); 
 							if ( (idx > 0) && (lua_gettop(L) > 2) ){
-								int encoding = luaL_checkoption(L, idx+1, "utf8", encodings);
-								int len;
-								switch (encoding) {
+								int len = b->size;								
+								switch (b->encoding) {
 									case 0: break;
 									case 1: free_src = TRUE;
 											src = (BYTE*)utf8_towchar((const char *)src, &len);
-											b->size = len; break;
+											b->size = len*sizeof(wchar_t);
+											break;
 									case 2: b->bytes = src;
 											base64_decode(b);
 											return;
 									case 3: b->bytes = src;
 											hex_decode(L, b);
 											return;
-									default:luaL_error(L, "unknown encoding '%s'", encodings[encoding]);  
+									default:luaL_error(L, "unknown encoding '%s'", lua_tostring(L, idx+1));  
 								}
 								
 							}
@@ -251,6 +252,15 @@ LUA_METHOD(Buffer, contains) {
 	return 2;
 }
 
+LUA_PROPERTY_GET(Buffer, encoding) {
+	lua_pushstring(L, encodings[lua_self(L, 1, Buffer)->encoding]);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Buffer, encoding) {
+	return lua_self(L, 1, Buffer)->encoding = luaL_checkoption(L, 2, NULL, encodings);
+}
+
 LUA_PROPERTY_GET(Buffer, len) {
 	lua_pushinteger(L, lua_self(L, 1, Buffer)->size);
 	return 1;
@@ -293,11 +303,6 @@ LUA_METHOD(Buffer, __metanewindex) {
 	return 0;
 }
 
-LUA_METHOD(Buffer, __tostring) {
-	Buffer *b = lua_self(L, 1, Buffer);
-	lua_pushlstring(L, (const char*)b->bytes, b->size);
-	return 1;
-}
 
 int hex_encode(lua_State *L, const char *bb, size_t len) {
     static const char xx[]= "0123456789ABCDEF";
@@ -310,18 +315,24 @@ int hex_encode(lua_State *L, const char *bb, size_t len) {
 	return 1;
 }
 
-LUA_METHOD(Buffer, encode) {
-	int encoding = luaL_checkoption(L, 2, "utf8", encodings);
+static int do_encode(lua_State *L, int encoding) {
 	Buffer *b = lua_self(L, 1, Buffer);
-
 	switch(encoding) {
-		case 0:		lua_pushlstring(L, (const char *)b->bytes, b->size); break;
-		case 1:		lua_pushlwstring(L, (wchar_t*)b->bytes, b->size/2); break;
+		case 0:		lua_pushstring(L, (const char *)b->bytes); break;
+		case 1:		lua_pushwstring(L, (wchar_t*)b->bytes); break;
 		case 2:		base64_encode(L, b); break;
 		case 3:		hex_encode(L, (const char *)b->bytes, b->size); break;
 		default:	luaL_error(L, "unknown encoding '%s'", encodings[encoding]); 
 	}		
 	return 1;
+}
+
+LUA_METHOD(Buffer, encode) {
+	return do_encode(L, luaL_checkoption(L, 2, "utf8", encodings));
+}
+
+LUA_METHOD(Buffer, __tostring) {
+	return do_encode(L, lua_self(L, 1, Buffer)->encoding);
 }
 
 LUA_METHOD(Buffer, __len) {
@@ -395,5 +406,7 @@ const luaL_Reg Buffer_methods[] = {
 	{"encode",		Buffer_encode},
 	{"set_size",	Buffer_setlen},
 	{"get_size",	Buffer_getlen},
+	{"set_encoding",Buffer_setencoding},
+	{"get_encoding",Buffer_getencoding},
 	{NULL, NULL}
 };
