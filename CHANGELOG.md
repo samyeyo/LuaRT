@@ -1,3 +1,146 @@
+## LuaRT v1.9.0 (January 27 2025)
+
+#### Highlights 
+- New `C` module for C FFI (foreign functions interface)
+- New `keyboard` module to read or send keys
+- New `sysutils` module for various Windows functionalities, including `Process` launch and control
+- LuaRT now uses the latest Lua 5.4.7 VM
+- Drag and drop operations are now implemented in desktop applications (text and file list format)
+- Better Windows clipboard support (text and file list format)
+- Record sounds with various encodings in `audio` module
+- Compiled executables with `rtc` can now embed and use DLL dependencies seamlessly
+- Faster `canvas` module with lots of bugfixes
+
+#### LuaRT interpreter
+- Console `luart.exe` and desktop `wluart.exe` interpreters now use latest Lua 5.4.7 VM
+
+#### LuaRT Studio
+- Updated: LuaRT Studio is now using the LuaRT 1.9.0 toolchain
+- Fixed: Task function can now be debugged (Fixes #237)
+
+#### rtc
+- New: `sys.File()` constructor now checks for files embedded in the compiled executable if they do not exist
+- Updated: DLL binary modules dependencies are now resolved transparently in the embedded content
+- Fixed: `sleep()` now waits for the provided delay to elapse in compiled executables (Fixes #226)
+
+#### QuickRT
+- New: QuickRT uses now an asynchronous loop, to use `Task` instances and any other asynchronous functions
+- Fixed: Objets are now correctly pretty printed (Fixes #221)
+
+#### LuaRT C API
+- New: `lua_wait()` to wait for a Task to finish from the C side
+- New: `lua_throwevent()` to launch a new ui event when implementing third party widgets
+- Updated: `lua_pushTask()` now push a Task with the provided continuation C function and starts it, with a context and optional cleanup `lua_CFunction`
+
+#### `C` module
+- New `C` module for foreign functions interface (FFI)
+- Still a work in progress (bugs may occur)
+- Call C functions directly from Lua using `Library` object and functions prototypes definition
+- Define C data structures with `Struct` and `Union` objects
+- Automatic type conversion between Lua and C types with `Value` object
+- Manipulate C pointers with the `Pointer` object
+- Use C arrays as if you were using Lua tables with the `Array` object
+
+#### `sysutils` module
+- New `sysutils` module that provides various system utility functions and properties
+- New `Process` object to start and manage a new process
+
+#### `keyboard` module
+- New `keyboard` module with keyboard management functions and properties
+- Get keyboard status, wait for keypress asynchronously, bind Lua functions to key presses
+- Send virtual key presses to any Windows application
+
+#### `debug` module
+- New `debug.settaskhook()` function to set debug hook for all new Tasks
+
+#### `string` module
+- New: `string.normalize()` function to replace accentued characters by non accentued ones in a string
+
+#### `sys` module
+- New: `Buffer.encoding` property to specify an encoding value, to be used when converting the `Buffer` to a `string`
+- New: `sys.locale` property to get/set current locale for `Datetime` format and error messages from `sys.error` and `net.error`
+- New: `COM` objects now support calling items-like properties to access sub items (as `Range`, `Cells` and so on...)
+- New: `File:copytask()` and `Directory:copytask()` methods to copy files and directories asynchronously (without blocking)
+- Updated: `sys.clipboard` property now returns the kind of clipboard data and its content
+- Updated: `File:copy()` and `Directory:copy()` now returns a `boolean`value indicating if the operation succeeded or not
+- Updated: `Pipe:read()` now returns both `stderr` and `stdout` output (`Pipe:readerror()` have been removed)
+- Fixed:  `Task.after` is now called even if the Task returns no result (Fixes #233)
+- Fixed: `Task` switching is now faster (Fixes #210)
+- Fixed: `Task` objects don't cause memory leaks anymore (Fixes #209)
+- Fixed: errors thrown inside a running `Task` don't cause a `PANIC: unprotected error in call to Lua API` error anymore (Fixes #228)
+- Fixed: `COM` objects methods now uses more than one argument (Fixes #205)
+
+#### `console` module
+- Fixed: Using an unknown color with `console.bgcolor`, `console.color`, `console.clear()` and `console.writecolor()` won't crash anymore (Fixes #211)
+- Fixed: `Console.x` and `Console.y` properties now return a correct cursor position (Fixes #212)
+
+#### `compression` module
+- New: `Zip.async.extractall()` and `Zip.async.extract()` to extract ZIP archives asynchronously
+
+#### `crypto` module
+- Fixed : `Cipher.constructor()` won't crash anymore if the `mode` parameter is invalid
+
+#### `ini` module
+- Updated : INI property names and values are now trimmed
+
+#### `json` module
+- Fixed : JSON numbers are now correctly parsed (Fixes #217)
+- Fixed : `json.decode()` don't unescape escaped characters from json strings (Fixes #227)
+
+#### `webview` module
+- New : `Webview.useragent` property to get/set the user agent string
+
+#### `sqlite` module
+- Fixed : module functions `query()` and `exec()` now set column values correctly (Fixes #234)
+
+#### `canvas` module
+- New: `canvas:onMouseDown()`, `canvas:onMouseUp()` events
+- Updated : Changing `canvas.bgcolor()` don't clears the canvas anymore
+- Updated : `canvas.begin()` and `canvas.flip()` are now required before and after drawing content in event and Tasks.
+- Updated: `canvas.onPaint()` event is now called constantly, providing faster drawing operations
+- Updated: `Image.draw()` and `Image.drawrect()` now accept an image interpolation mode argument
+- Removed: `canvas.sync` property have been removed
+- Removed : `canvas.map()` function has been removed
+- Removed : `canvas.onLeave()` event has been removed
+- Fixed: `Canvas` dpi support don't use wrong pixel coordinates anymore but DIP instead (Fixes #224)
+- Fixed: `Canvas` rendering is now way faster (Fixes #207)
+- Fixed: `Canvas` widget don't blinks anymore when parent Windows goes fullscreen (Fixes #206)
+- Fixed: `LinearGradient`, `RadialGradient` and `Image` objects are now drawn correctly when the Canvas is resized
+- Fixed: `Canvas:fillrect()`and `Canvas:fillroundrect()` won't crash anymore if the `brush` parameter is omitted (Fixes #236)
+
+#### `audio` module
+- New: `audio.playdevice` and `audio.recdevice` properties to set/get the current playback and record devices
+- New: `audio.devices` property to enumerate audio devices
+- New: `audio.record.start()` and `audio.record.stop()` methods to record and encode audio 
+- Updated: `Sound.play()` now returns a `Task` that will complete once the sound has finished playing.
+- Removed: `audio.device` property have been removed.
+
+#### `ui` module
+- New: `Window.notify()` to send Windows toast notifications
+- New: `ui.drag()` function to start a drag and drop operation
+- New: `allowdrop` property to set the widget as a drop target
+- New: `onDrop()` event, thrown when the user dropped the mouse on the widget
+- New: `Edit.hscroll()` and `Edit.vscroll()` horizontal and vertical scrolling functions
+- New: `Edit.mousepos` property to get the nearest character position from the current mouse screen coordinates
+- New: `ui.selectdir()` uses the previous shell directory selection dialog
+- Removed: `Edit.scroll()` method have been removed (replaced by the `vscroll()` and `hscroll()` methods)
+- Updated: GUI events are now thrown asynchronously as Tasks
+- Updated: `ui` events responsiveness have been increased (as seen in the `examples\ui\balls.wlua`)
+- Updated: `ui.dirdialog()` now uses modern folder selection dialog
+- Updated: `onHover()` events now provides a third argument for mouse button status
+- Updated: `cursor` property now can be set/can return `nil` in case no cursor is displayed
+- Fixed: GUI won't freeze anymore when calling `sleep()` inside an event handler (Fixes #232)
+- Fixed : `Panel:onLeave()` event if now thrown as expected (Fixes #231)
+- Fixed : `Edit.cursor` now changes the cursor as expected (Fixes #228)
+- Fixed : `Groupbox.parent` property now returns `Tab` intead of `TabItem` (Fixes #225)
+- Fixed: `ui.opendialog()` and `ui.savedialog()` don't uses old Windows 3.1 theme anymore (Fixes #223)
+- Fixed: `Calendar` widget now supports `dark` mode (Fixes #218)
+- Fixed: `Combobox` won't draw white background in `dark` mode anymore (Fixes #202)
+- Fixed: Using `Entry` widget in `dark` mode won't crash application anymore (Fixes #201)
+- Fixed: `Picture.resize()` now works as expected (Fixed #213)
+- Fixed: `Label.textalign` property now is respected when Label text is changed (Fixes #208)
+
+
 ## LuaRT v1.8.0 (May 15 2024)
 
 #### Highlights 
@@ -26,6 +169,10 @@
 
 #### RTBuilder
 - New: Option to switch to dark/light theme
+
+#### `string` module
+- New: `string.split()` function to split a string in substrings using a separator
+
 
 #### LuaRT C API
 - New: `lua_uigetinfo()` to get current dpi and theme

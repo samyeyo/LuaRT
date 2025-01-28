@@ -2,7 +2,7 @@
 
 ![LuaRT][title] 
 
-[![Lua VM 5.4.6](https://badgen.net/badge/Lua%20VM/5.4/yellow)](https://www.lua.org/)
+[![Lua VM 5.4.7](https://badgen.net/badge/Lua%20VM/5.4/yellow)](https://www.lua.org/)
 ![Windows](https://badgen.net/badge/Windows/Windows%208.1+/blue?icon=windows)
 [![LuaRT license](https://badgen.net/badge/License/MIT/green)](#license)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af54881b3d764f5ea210a5419fb96086)](https://www.codacy.com/gh/samyeyo/LuaRT/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=samyeyo/LuaRT&amp;utm_campaign=Badge_Grade)  
@@ -28,7 +28,7 @@ Lua multipurpose programming framework to develop Windows applications
 - Build Windows desktop or console applications with Lua.
 - Lightweight with no other dependencies
 - Develop in Lua, C programming knowledge is not needed
-- Batteries included : UTF8 strings, sockets, GUI, compression, audio, graphics...
+- Batteries included : UTF8 strings, sockets, GUI, compression, audio, graphics, C FFI...
 - LuaRT runs on Windows 8.1, Windows 10 and Windows 11.
 
 #### Complete development environment 
@@ -37,13 +37,6 @@ Lua multipurpose programming framework to develop Windows applications
 - LuaRT Studio: a Lua/LuaRT IDE for Windows to develop and debug desktop/console applications
   
 ## :small_blue_diamond:Installation
-    
-> :arrows_clockwise: *Updating LuaRT*
-> 
-> *If you have already installed LuaRT and want to update to latest release version, you can use one of those two methods :*
-> - *Run the `LuaRT Update` application from the Windows Start menu*
-> - *From the `File` menu of `LuaRT Studio`, choose `Check for LuaRT update`*
-> 
 
 #### Method 1 : Release package :package:
 
@@ -51,15 +44,17 @@ The preferred way to install LuaRT is to download the latest release package ava
 It will install the LuaRT binaries, create the Windows Start menu shortcuts for the IDE and REPL, and update the PATH system variable. 
 It's the easiest and fastest way to start developing with LuaRT.
 
+> If you have already installed LuaRT and want to update to latest release version, you can run the `LuaRT Update` tool from the Windows Start menu.
+
 #### Method 2 : Building from sources (Visual C++) :gear:
 
-All you need to build LuaRT from sources is a valid installation of Visual C++ compiler (Mingw-w64 GCC compiler is supported but is deprecated and might be removed in next releases).
-Before proceeding, be sure to have a valid Visual Studio (Build Tools, Community, Professional or Enterprise) installation. Release packages are built using Visual Studio Build Tools 2022.
+All you need to build LuaRT from sources is a valid installation of Visual C++ compiler.
+Before proceeding, be sure to have a valid Visual Studio (Build Tools, Community, Professional or Enterprise) installation. Release packages are built using latest Visual Studio Enterprise version.
 
 First open a console using `x86 Native Tools Command Prompt` (for LuaRT x86) or `x64 Native Tools Command Prompt` (for LuaRT x64) shortcuts in your Windows Start menu.
-Then clone the LuaRT repository (or manualy download the repository but don't forget submodules in the `tools\` folder) :
+Then clone the LuaRT repository (or manualy download the repository) :
 ```
-git clone --recurse-submodules https://github.com/samyeyo/LuaRT.git
+git clone https://github.com/samyeyo/LuaRT.git
 ```
 
 Go to the ```\src``` directory and type ```nmake```:
@@ -67,32 +62,6 @@ Go to the ```\src``` directory and type ```nmake```:
 - `nmake` : Build LuaRT library and executable 
 - `nmake debug`: Build debug versions of LuaRT library and executables
 - `nmake clean` : Clean all the generated binaries
-
-#### Method 3 : Building from sources (Mingw-w64) :gear:
-
-> [!CAUTION]  
-> Building LuaRT with Mingw-w64 toolchain is now deprecated since LuaRT 1.8.0
->
-> This compiler cannot be used to build LuaRT anymore
-
-Building LuaRT from sources using the Mingw-w64 GCC compiler is deprecated and might be removed in next releases.
-Compilation have been successfully reported for Mingw-w64 GCC 8.1.0, Mingw-w64 GCC 11.2.0 and Mingw-w64 GCC 12.2.0 (ie the latest Mingw-w64 10.0.0 runtime).
-
-First clone the LuaRT repository (or manualy download the repository but don't forget submodules in the `tools\` folder) :
-```
-git clone --recurse-submodules https://github.com/samyeyo/LuaRT.git
-```
-
-Then go to the ```\src``` directory and type one of the following commands : ```make```, or ``make -j4`` to speed up the compilation on multicore CPU:
-
-- `make` : Build LuaRT library and executable using the default x64 platform
-- `make -j4` : Speed up building with multithreaded compilation
-- `make PLATFORM=x86`: Build LuaRT library and executable using the x86 platform
-- `make debug`: Build debug versions of LuaRT library and executable using the default x64 platform
-- `make PLATFORM=x86 debug`: Build debug versions of LuaRT library and executable using the default x86 platform
-- `make clean` : Clean all the generated binaries
-
-#### Update PATH environment variable
 
 If everything went right, the `\bin` folder will contain the LuaRT toolchain :
 - ```lua54.dll``` : the LuaRT shared library, ABI compatible with the standard lua54.dll
@@ -137,7 +106,7 @@ There have been many hours of hard work put into LuaRT. Your support will be gre
   
 ## :small_blue_diamond:License
   
-LuaRT is copyright (c) 2024 Samir Tine.
+LuaRT is copyright (c) 2025 Samir Tine.
 LuaRT is open source, released under the MIT License.
 See full copyright notice in the LICENSE.txt file.
 
