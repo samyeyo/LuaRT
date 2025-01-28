@@ -14,3 +14,4 @@ lib/*.lib
 .vscode/*.*
 setup/install.wlua
 setup/uninstall.wlua
+bin/*.*
