@@ -20,18 +20,17 @@ end
 img:load(sys.File(arg[0]).path.."\\LuaRT.png")
 win:center()
 button:hide()
-
+img:center()
 win:show()
 
 repeat
-    ui.update()
     if factor < 1 then 
-        factor = factor + 0.05
+        factor = factor + 0.02
         img:resize(factor)
-        img:center()
         if factor >= 1 then
             win:onResize()
             button:show()
         end
     end
+    sleep()
 until win.visible == false
