@@ -7,7 +7,7 @@
 local net = require "net" 
 local ui = require "ui"
 
-local win = ui.Window("QR Code Generator", 490, 240)
+local win = ui.Window("QR Code Generator", 510, 240)
 local img = ui.Picture(win, "", 170, 50)
 local label = ui.Label(win, "Enter the QR Code content :")
 local entry = ui.Entry(win, "https://www.luart.org", label.x + label.width + 4, label.y - 4, 200, 22)
@@ -20,8 +20,9 @@ function button:onClick()
       error(net.error)
     end
     img:load(response.file)
+    img:center()
     response.file:remove()
-    ui.Button(win, "Save QR Code...", 190, 50+img.height+6).onClick = function (self)
+    ui.Button(win, "Save QR Code...", 192, 60+img.height+6).onClick = function (self)
       local f = ui.savedialog("Save QR Code...", false, "PNG image files (*.png)|*.png|All files (*.*)|*.*") or false
       if f then
         img:save(f)
