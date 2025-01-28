@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Directory.c | LuaRT Directory object implementation
@@ -217,49 +217,67 @@ LUA_METHOD(Directory, removeall) {
     return 1;
 }
 
-static BOOL copyall_dir(wchar_t *from, wchar_t *to) { 
-	wchar_t *trailing = append_path(to, L"");
-	
-	make_path(trailing);
-	free(trailing);
-	if ( SetCurrentDirectoryW(from)) {
-		WIN32_FIND_DATAW fdata;
-		HANDLE h = FindFirstFileW(L"*.*", &fdata);
-		while (h != INVALID_HANDLE_VALUE) {
-			wchar_t *fname = fdata.cFileName;
-			if (wcscmp(fname, L".") && wcscmp(fname, L"..")) {
-				wchar_t *newentry = append_path(to, fname);
-				if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-					if (!copyall_dir(fname, newentry))
-						return FALSE;
-				} else { 
-					if (!CopyFileW(fname, newentry, TRUE))
-						return FALSE;
-				}
-				free(newentry);
-			}
-			if (!FindNextFileW(h, &fdata))
-				break;
-		}
-		FindClose(h);
-		SetCurrentDirectory("..");
-		RemoveDirectoryW(from);
-		return TRUE;
+BOOL DirectoryCopy(const wchar_t* sourceDir, const wchar_t* destDir) {
+    WIN32_FIND_DATAW findFileData;
+    HANDLE hFind;
+
+    CreateDirectoryW(destDir, NULL);
+    wchar_t searchPattern[1024];
+    _snwprintf(searchPattern, 1024, L"%s\\*.*", sourceDir);
+    hFind = FindFirstFileW(searchPattern, &findFileData);
+    if (hFind == INVALID_HANDLE_VALUE)
+       return FALSE;
+
+    do {
+        const wchar_t* name = findFileData.cFileName;
+        if (wcscmp(name, L".") == 0 || wcscmp(name, L"..") == 0)
+            continue;
+        wchar_t sourcePath[1024];
+        wchar_t destPath[1024];
+        _snwprintf(sourcePath, 1024, L"%s\\%s", sourceDir, name);
+        _snwprintf(destPath, 1024, L"%s\\%s", destDir, name);
+
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+           	if (!DirectoryCopy(sourcePath, destPath))
+				return FALSE;
+        } else {
+            if (!CopyFileW(sourcePath, destPath, FALSE)) 
+				return FALSE;
+        }
+    } while (FindNextFileW(hFind, &findFileData));
+
+    FindClose(hFind);
+	return TRUE;
+}
+
+static DWORD __stdcall DirCopy(LPVOID data) {
+	return DirectoryCopy(((AsyncIO*)data)->from, ((AsyncIO*)data)->to);
+}
+
+LUA_METHOD(Directory, copytask) {
+	if (lua_iscinstance(L, 2, TFile) )
+		luaL_typeerror(L, 2, "Directory");
+	else {
+		AsyncIO *async = calloc(1, sizeof(AsyncIO));
+		async->from = lua_self(L, 1, Directory)->fullpath;
+		async->to = luaL_checkFilename(L, 2);
+		lua_pushtask(L, IOTaskContinue, async, gc_asyncTask);
+		lua_pushvalue(L, -1);
+		if ((async->thread = CreateThread(NULL, 0, DirCopy, async, 0, NULL)))
+			lua_call(L, 0, 0);
+		else luaL_error(L, "new thread creation failed");
+		return 1;
 	}
-	return FALSE;
+	return 1;
 }
 
 LUA_METHOD(Directory, copy) {
 	if ( lua_iscinstance(L, 2, TFile) )
 		luaL_typeerror(L, 2, "Directory");
 	else {
-		wchar_t *current = GetCurrentDir();
-		wchar_t *to = luaL_checkFilename(L, 2);
-		
-		lua_pushboolean(L, copyall_dir(lua_self(L, 1, Directory)->fullpath, to));
-		SetCurrentDirectoryW(current);
+		wchar_t *to = luaL_checkFilename(L, 2);		
+		lua_pushboolean(L, DirectoryCopy(lua_self(L, 1, Directory)->fullpath, to));
 		free(to);
-		free(current);
 	}
 	return 1;
 }
@@ -302,6 +320,7 @@ const luaL_Reg Directory_methods[] = {
 	{"get_isempty",		Directory_getisempty},
 	{"move",			File_move},
 	{"copy",			Directory_copy},
+	{"copytask",		Directory_copytask},
 	{"list",			Directory_list},
 	{"get_name",		File_getfilename},
 	{"get_parent",		File_getparent},

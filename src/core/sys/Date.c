@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Date.c | LuaRT Date object implementation
@@ -18,6 +18,7 @@
 
 
 luart_type TDatetime;
+LCID locale = LOCALE_USER_DEFAULT;
 
 typedef union  {
 		FILETIME fTime;
@@ -45,7 +46,7 @@ LUA_CONSTRUCTOR(Datetime) {
 		else {
 			wchar_t *str = lua_towstring(L, 2);
 			DATE date;
-			if (FAILED(VarDateFromStr(str, LOCALE_USER_DEFAULT, 0, &date)))
+			if (FAILED(VarDateFromStr(str, locale, 0, &date)))
 				luaL_error(L, "Date format not recognized");
 			VariantTimeToSystemTime(date, d->st);
 			free(str);
@@ -65,9 +66,9 @@ typedef int (__stdcall *formatfunc)(LCID,  DWORD,  const SYSTEMTIME *, const WCH
 static void Datetimeformat(lua_State *L, wchar_t *format, formatfunc ffunc) {
 	wchar_t * buffer;
 	Datetime *d = lua_self(L, 1, Datetime);
-	int len = ffunc(LOCALE_USER_DEFAULT, 0, d->st, format, NULL, 0);
+	int len = ffunc(locale, 0, d->st, format, NULL, 0);
 	buffer = malloc(sizeof(wchar_t)*len);
-	ffunc(LOCALE_USER_DEFAULT, 0, d->st, format, buffer, len);
+	ffunc(locale, 0, d->st, format, buffer, len);
 	lua_pushlwstring(L, buffer, len-1);
 	free(buffer);
 	free(format);

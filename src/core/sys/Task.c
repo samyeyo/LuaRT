@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Task.c | LuaRT Task object implementation
@@ -15,7 +15,6 @@
 
 luart_type TTask;
 
-
 //----------------------------------[ Task constructor ]
 LUA_CONSTRUCTOR(Task) {
 	lua_newinstance(L, create_task(L), Task);
@@ -27,22 +26,14 @@ LUA_METHOD(Task, cancel) {
 	Task *t = lua_self(L, 1, Task);
 	if (t->status < TTerminated) {
 		lua_pushboolean(L, TRUE);
-		close_task(L, t);
+		close_task(t);
 	} else lua_pushboolean(L, FALSE); 
 	return 1;
 }
 
 //----------------------------------[ Task.wait() method ]
 LUA_METHOD(Task, wait) {
-	Task *t = lua_self(L, 1, Task);
-	int nresults = lua_gettop(L);
-
-	t->waiting = search_task(L);
-	t->waiting->status = TWaiting;	
-	do
-		update_tasks(L);
-	while(t->status != TTerminated);	
-	return lua_gettop(L)-nresults;
+	return waitfor_task(L, 1);
 }
 
 //----------------------------------[ Task.terminated property ]
@@ -75,7 +66,9 @@ LUA_METHOD(Task, __call) {
 LUA_METHOD(Task, __gc) {
 	Task *t = lua_self(L, 1, Task);
 	if (t->status != TTerminated)
-		close_task(L, t);
+		close_task(t);
+	if (t->gc_func)
+		t->gc_func(L);
 	free(t);
 	return 0;
 }

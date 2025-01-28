@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | COM.c | LuaRT COM Objects implementation
@@ -85,11 +85,6 @@ static int COM_method_call(lua_State *L) {
 	
 	if (method & DISPATCH_METHOD) {
 		obj = lua_self(L, 1, COM);
-		if (method & DISPATCH_PROPERTYGET) {
-			id_setprop = DISPID_VALUE;
-			params.cNamedArgs = 1;
-			params.rgdispidNamedArgs = &id_setprop;	
-		}
 		n--;
 		idx = 2;	
 	} else {
@@ -245,6 +240,8 @@ done:		case VT_NULL:		lua_pushnil(L); break;
 		lua_pushfstring(L, "COM error : no member '%s' found", lua_tostring(L, lua_upvalueindex(1)));
 	VariantClear(&result);
 cleanup:
+	if (method & DISPATCH_PROPERTYGET)
+		free(params.rgdispidNamedArgs);
 	if (attr)
 		ITypeInfo_ReleaseTypeAttr(t, attr);
 	if (t)
@@ -315,14 +312,14 @@ LUA_METHOD(COM, __index) {
 	if (SUCCEEDED(IDispatch_GetIDsOfNames(obj->this, &IID_NULL, &field, 1, 0, &id))) {
 		if (GetResultType(obj, field, &restype))
 			goto method;			
-		LONG value = IDispatch_Invoke(obj->this, id, &IID_NULL, 0, DISPATCH_PROPERTYGET, &params, &result, &execpInfo, &puArgErr);
+		HRESULT value = IDispatch_Invoke(obj->this, id, &IID_NULL, 0, DISPATCH_PROPERTYGET, &params, &result, &execpInfo, &puArgErr);
 		if (value == DISP_E_BADPARAMCOUNT) {
 			lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_PROPERTYGET | DISPATCH_METHOD);
 			lua_pushvalue(L, 1);
 			lua_pushinteger(L, restype);			
 			lua_pushcclosure(L, COM_method_call, 4);
-		} else if (value == 0) {		
+		} else if (value == S_OK) {		
 			VariantInit(&result);	
 			lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_PROPERTYGET);
@@ -330,6 +327,9 @@ LUA_METHOD(COM, __index) {
 			lua_pushinteger(L, restype);			
 			lua_pushcclosure(L, COM_method_call, 4);
 			lua_call(L, 0, 1);
+		} else if (value == DISP_E_EXCEPTION) {
+			lua_pushwstring(L, obj->name);
+			luaL_error(L, "'%s.%s' field not found", lua_tostring(L, -1), lua_tostring(L, 2));
 		} else {
 method:		lua_pushvalue(L, 2);
 			lua_pushinteger(L, DISPATCH_METHOD);
@@ -390,6 +390,18 @@ LUA_METHOD(COM, __tostring) {
 	return 1; 
 }
 
+LUA_METHOD(COM, __call) {
+	int narg = lua_gettop(L);
+	if (lua_getfield(L, 1, "Item") != LUA_TNIL) {
+		lua_insert(L, 1);
+		lua_call(L, narg, 1);
+		return 1;
+	}
+	lua_pushwstring(L, lua_self(L, 1, COM)->name);
+	luaL_error(L, "cannot call a %s object (Item property not found)", lua_tostring(L, -1));
+	return 0;
+}
+
 LUA_METHOD(COM, __gc) {
 	COM *obj = lua_self(L, 1, COM);
 	if (obj->typeinfo)
@@ -405,6 +417,7 @@ LUA_METHOD(COM, __gc) {
 
 const luaL_Reg COM_metafields[] = {
 	{"__gc", 			COM___gc},
+	{"__call", 			COM___call},
 	{"__metaindex", 	COM___index},
 	{"__metanewindex", 	COM___newindex},
 	{"__iterate", 		COM___iterate},
