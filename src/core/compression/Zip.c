@@ -1,7 +1,7 @@
 
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Zip.c | LuaRT Zip object implementation
@@ -268,7 +268,7 @@ LUA_METHOD(Zip, read) {
 
 extern BOOL make_path(wchar_t *folder);
 
-__int64 extract_zip(struct zip_t *z, const char *dir) {
+uint64_t extract_zip(struct zip_t *z, const char *dir) {
 	int	entry = 0, slen;
 	size_t size = 0, len = dir ? strlen(dir) : 0, count = 0;
 	BOOL success = TRUE;
@@ -304,7 +304,7 @@ next:
 		free(fname);
 		zip_entry_close(z);
 	}
-	return(__int64)count;
+	return count;
 }
 
 static wchar_t *prep_destdir(lua_State *L, int idx) {
@@ -377,6 +377,86 @@ LUA_METHOD(Zip, remove) {
 	return 1;
 }
 
+typedef struct {
+	HANDLE thread;
+	struct zip_t* zip;
+	uint64_t result;
+	const char *name;
+	BOOL extractall;
+	char *dir;
+	BOOL find_fname;
+	wchar_t *fname;
+	wchar_t *oldpath;
+} asyncZip;
+
+static Extract_gc(lua_State *L) {
+	asyncZip *z= (asyncZip*)lua_self(L, 1, Task)->userdata;
+	CloseHandle(z->thread);
+	free(z->dir);
+	free(z->fname);
+	free(z->oldpath);
+	free(z);
+	return 0;
+}
+
+static int ZipTaskContinue(lua_State* L, int status, lua_KContext ctx) {
+    asyncZip *z = (asyncZip *)ctx;
+
+    if ( WaitForSingleObject(z->thread, 0) == WAIT_OBJECT_0) {
+		lua_pushboolean(L, FALSE);
+		if (z->dir) {
+			if (z->result) {
+				lua_pushstring(L, z->dir);
+				lua_pushinstance(L, Directory, 1);
+				free(z->dir);
+			}
+		} else if (z->fname) {
+			if (z->result) {
+				lua_pushstring(L, z->name);
+				lua_pushinstance(L, File, 1);
+				free(z->fname);
+			}
+		} else {
+			if (z->result > INT64_MAX)
+				lua_pushnumber(L, z->result);
+			else
+				lua_pushinteger(L, z->result);
+		}
+		if (z->oldpath) {
+			SetCurrentDirectoryW(z->oldpath);
+			free(z->oldpath);
+		}
+		CloseHandle(z->thread);
+        return 1;
+    }
+    return lua_yieldk(L, 0, ctx, ZipTaskContinue);
+}
+
+static void push_ZipTask(lua_State *L, asyncZip *z, LPTHREAD_START_ROUTINE thread) {
+    lua_pushtask(L, ZipTaskContinue, z, gc_asyncTask);
+    lua_pushvalue(L, -1);
+    if ((z->thread = CreateThread(NULL, 0, thread, z, 0, NULL)))
+        lua_call(L, 0, 0); 
+    else {
+        luaL_getlasterror(L, GetLastError());
+        luaL_error(L, "async error : %s", lua_tostring(L, -1));
+    }   
+}
+
+static DWORD __stdcall extractThread(LPVOID data) {
+    asyncZip *z = (asyncZip*)data;
+
+	if (z->fname) {
+		z->result = !zip_entry_fread(z->zip, PathFindFileNameW(z->find_fname ? PathFindFileNameW(z->fname) : z->fname));
+		zip_entry_close(z->zip);
+	} else {
+		z->result = extract_zip(z->zip, z->dir);
+		if (!z->extractall)
+			zip_entry_close(z->zip);
+	}
+    return 0;
+}
+
 LUA_METHOD(Zip, extractall) {
 	wchar_t *oldpath = NULL;
 
@@ -389,6 +469,62 @@ LUA_METHOD(Zip, extractall) {
 	}
 	return 1;
 }
+
+LUA_METHOD(Zip, extractall_async) {
+	asyncZip *z = calloc(1, sizeof(asyncZip));
+
+	if (lua_gettop(L) > 1)
+		z->oldpath = prep_destdir(L, 2);	
+	z->zip = lua_self(L, lua_upvalueindex(1), Zip)->zip;
+	z->extractall = TRUE;
+	push_ZipTask(L, z, extractThread);
+	return 1;
+}
+
+LUA_METHOD(Zip, extract_async) {
+	asyncZip *z;
+	size_t len;
+	int narg = lua_gettop(L);
+	const char *name = lua_tolstring(L, 1, &len);
+	BOOL include_path = narg > 2 ? lua_toboolean(L, 3) : TRUE;
+	wchar_t *fname = lua_towstring(L, 1);
+	char *dname = calloc(1, len+2);
+	Zip *zip = lua_self(L, lua_upvalueindex(1), Zip);
+
+	if (zip->mode != 'r')
+		luaL_error(L, "cannot extract from a Zip archive opened in write/append mode");
+	z = calloc(1, sizeof(asyncZip));
+	z->zip = zip->zip;
+	strncpy(dname, name, len);
+	dname[len] = '/';	
+	if (narg > 2)
+		z->oldpath = prep_destdir(L, 2);
+	if (zip_entry_open(z->zip, name) == 0) {
+dir:	if (zip_entry_isdir(z->zip)) {
+
+			z->dir = dname;
+		}
+		else {
+			z->name = name;
+			if (include_path) {
+				if (make_path(fname))
+					z->fname = fname;
+			} else if (zip_entry_fread(z->zip, PathFindFileNameW(fname)) == 0) {
+				z->fname = fname;
+				z->find_fname = TRUE;
+			}
+		} 
+	} else if (zip_entry_open(z->zip, dname) == 0)
+		goto dir;
+	if (!z->dir && !z->fname) {
+		free(fname);
+		free(dname);
+		lua_pushboolean(L, FALSE);
+	} else 
+		push_ZipTask(L, z, extractThread);
+	return 1;
+}
+
 
 LUA_METHOD(Zip, isdirectory) {
 	Zip *z =lua_self(L, 1, Zip);
@@ -403,6 +539,24 @@ LUA_METHOD(Zip, isdirectory) {
 		zip_entry_close(z->zip);
 	}
 	free(tmp);
+	return 1;
+}
+
+static const luaL_Reg zip_async[] = {
+	{"extractall",	Zip_extractall_async},
+	{"extract",		Zip_extract_async},
+	{NULL, NULL}
+};
+
+LUA_PROPERTY_GET(Zip, async) {
+	luaL_newlib(L, zip_async);
+	lua_createtable(L, 0, 2);
+	lua_pushvalue(L, 1);
+	lua_pushcclosure(L, Zip_extractall_async, 1);
+	lua_setfield(L, -2, "extractall");
+	lua_pushvalue(L, 1);
+	lua_pushcclosure(L, Zip_extract_async, 1);
+	lua_setfield(L, -2, "extract");
 	return 1;
 }
 
@@ -442,19 +596,20 @@ const luaL_Reg Zip_metafields[] = {
 };
 
 const luaL_Reg Zip_methods[] = {
-	{"close",		Zip_close},
-	{"write",		Zip_write},
-	{"read",		Zip_read},
-	{"extract",		Zip_extract},
-	{"reopen",		Zip_reopen},
-	{"isdirectory",	Zip_isdirectory},
-	{"extractall",	Zip_extractall},
-	{"remove",		Zip_remove},
-	{"get_count",	Zip_getcount},
-	{"get_size",	Zip_getsize},
-	{"get_file",	Zip_getfile},
-	{"get_iszip64",	Zip_getiszip64},
-	{"get_error",	Zip_geterror},
+	METHOD(Zip, close)
+	METHOD(Zip, write)
+	METHOD(Zip, read)
+	METHOD(Zip, reopen)
+	METHOD(Zip, extract)
+	METHOD(Zip, extractall)
+	METHOD(Zip, isdirectory)
+	METHOD(Zip, remove)
+	READONLY_PROPERTY(Zip, count)
+	READONLY_PROPERTY(Zip, size)
+	READONLY_PROPERTY(Zip, file)
+	READONLY_PROPERTY(Zip, iszip64)
+	READONLY_PROPERTY(Zip, error)
+	READONLY_PROPERTY(Zip, async)
 	{NULL, NULL}
 };
 
