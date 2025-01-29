@@ -1,6 +1,7 @@
 #include "zzzJSON.h"
 #include <luart.h>
 #include <File.h>
+#include <math.h>
 
 static Allocator *A;
 
@@ -90,7 +91,7 @@ static void JsonToLua(lua_State *L, Value *v) {
 
         case JSONTypeString:
         {
-            const char *str = GetStr(v);
+            const char *str = GetUnEscapeStr(v);
             if (str == 0)
                 lua_pushnil(L);
             else
@@ -99,7 +100,10 @@ static void JsonToLua(lua_State *L, Value *v) {
         }
         case JSONTypeNumber:
         {
-            lua_pushnumber(L, *GetNum(v));
+            double num = *GetDouble(v);
+            if (fmod(num, 1) == 0.0)
+                lua_pushinteger(L, num);
+            else lua_pushnumber(L, num);
             break;
         }
     }
