@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | luart.c | LuaRT interpreter
@@ -67,6 +67,7 @@ int link(lua_State *L) {
 	free(pBuffer);
 	free(fname);
 	free(fexe);
+	lua_pushboolean(L, result);
 	return result;
 }
 
@@ -201,6 +202,10 @@ void lua_stop(void) {
 	}
 }
 
+#if defined(RTWIN) || defined(UI)
+extern int do_update(lua_State *L);
+#endif
+
 #ifdef RTWIN
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
 #else
@@ -248,7 +253,7 @@ int main() {
 	lua_register(L, "link", link);
 #endif
 	if (argc == 1 && !is_embeded)
-		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2024, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
+		puts(LUA_VERSION " " LUA_ARCH " - Windows programming framework for Lua.\nCopyright (c) 2025, Samir Tine.\nusage:\tluart.exe [-e statement] [script] [args]\n\n\t-e statement\tExecutes the given Lua statement\n\tscript\t\tRun a Lua script file\n\targs\t\tArguments for Lua interpreter");
 	else {
 		lua_createtable(L, argc, 0);	
 		lua_pushwstring(L, exename);
@@ -259,8 +264,11 @@ int main() {
 		}	
 		lua_setglobal(L, "arg");
 		lua_gc(L, LUA_GCGEN, 0, 0);
+#if defined(RTWIN) || defined(UI)
+		lua_setupdate(do_update);
+#endif
 		if (is_embeded) {	
-			if (luaL_loadstring(L, "require '__mainLuaRTStartup__'"))
+			if (luaL_loadstring(L, "load(embed.File('__mainLuaRTStartup__.lua'):open():read())()"))
 				goto error;
 			goto compiledscript;
 		}
@@ -286,45 +294,43 @@ int main() {
 			} else { 
 				if (luaL_loadfile(L, __argv[argfile]) == LUA_OK) {
 compiledscript:		t = (Task*)lua_pushinstance(L, Task, 1);
-					t->status = TRunning;
-					if (lua_pcall(L, 0, 0, 0) > 1) {
+					if (lua_pcall(L, 0, 0, 0))
+						goto error;
+					do {
+						if (lua_schedule(L) == -1) {
 error:			
-						{
 #ifdef RTWIN
-						size_t len;
-						const char *err = lua_tolstring(L, -1, &len);	
-						if (len)	{	
+							size_t len;
+							const char *err = lua_tolstring(L, -1, &len);	
+							if (len)	{	
+								if (is_embeded) {
+									if (strstr(err, "[string """) == err) {
+										const char *tmp = luaL_gsub(L, err, "[string \"", "");
+										err = luaL_gsub(L, tmp, "\"]:", ":");
+										len = strlen(err);
+									}
+								}
+								lua_pushstring(L, err);							
+								wchar_t *msg = lua_towstring(L, -1);		
+								ThemedMsgBox(L"Runtime error", msg, MB_ICONERROR | MB_OK);
+								free(msg);					
+							}
+#else
+							const char *err = lua_tostring(L, -1);
 							if (is_embeded) {
 								if (strstr(err, "[string """) == err) {
 									const char *tmp = luaL_gsub(L, err, "[string \"", "");
 									err = luaL_gsub(L, tmp, "\"]:", ":");
-									len = strlen(err);
 								}
 							}
-							lua_pushstring(L, err);							
-							wchar_t *msg = lua_towstring(L, -1);		
-							ThemedMsgBox(L"Runtime error", msg, MB_ICONERROR | MB_OK
-							);
-							free(msg);					
-						}
-#else
-						const char *err = lua_tostring(L, -1);
-						if (is_embeded) {
-							if (strstr(err, "[string """) == err) {
-								const char *tmp = luaL_gsub(L, err, "[string \"", "");
-								err = luaL_gsub(L, tmp, "\"]:", ":");
-							}
-						}
-						fputs(err, stderr);
-						fputs("\n", stderr);
+							fputs(err, stderr);
+							fputs("\n", stderr);
 #endif
-						result = EXIT_FAILURE;
-						}
-					} else 
-						do
-							lua_schedule(L);
-						while (t->status != TTerminated);
-					} else goto error;
+							result = EXIT_FAILURE;
+							break;
+						}				
+					} while (t->status != TTerminated);
+				} else goto error;
 			}
 		}
 	}

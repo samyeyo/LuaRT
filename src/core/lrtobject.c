@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | lrtobject.c | LuaRT C API object implementation
@@ -37,17 +37,8 @@ static void call_field(lua_State *L, int nargs, int nresults, const char *type, 
 				_type = lua_tostring(L, -1);
 				lua_pop(L, 1);
 			}
-			if (!(errmsg = strstr(err, "'?'")))
-				sprintf_s(buff, 256, "%s '%s.%s' : ", msg[cm], _type, field);
-			else {
-				sprintf_s(buff, 256, "%s '%s.%s'", msg[cm], _type, field);
-				err = errmsg+3;
-			}
-			if (!strstr(err, buff)) {
-				lua_pushstring(L, buff);
-				lua_concat(L, 2);
-			}
-			lua_pushstring(L, err);
+			sprintf_s(buff, 256, "%s '%s.%s'", msg[cm], _type, field);
+			luaL_gsub(L, err, "to '?'", buff);
 			lua_concat(L, 2);
 			lua_error(L);
 		} else luaL_error(L, msg[cm], field);
@@ -255,7 +246,7 @@ LUA_API void *lua_pushnewinstance(lua_State *L, const char *typename, int narg) 
 	lua_getfield(L, LUA_REGISTRYINDEX, typename);
 	for (int i = 0; i < narg; i++) 
 		lua_pushvalue(L, -narg-1);
-	call_field(L, narg, 1, typename, "constructor", Method); 
+	call_field(L, narg, 1, typename, "constructor", Method); 	
 	return lua_tocinstance(L, -1, NULL);
 }
 
@@ -559,12 +550,12 @@ void *lua_iscinstance(lua_State *L, int idx, luart_type t) {
 	return obj;
 }
 
-lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_CFunction event) {
+lua_Integer lua_registerevent(lua_State *L, const char *methodname, lua_Event event) {
 	luaL_getsubtable(L, LUA_REGISTRYINDEX, "LuaRT Events");
 	WM_LUAMAX += luaL_len(L, -1)+1;
 	if (methodname)
 		lua_pushstring(L, methodname);
-	else lua_pushcfunction(L, event);
+	else lua_pushlightuserdata(L, event);
 	lua_rawseti(L, -2, WM_LUAMAX);
 	lua_pop(L, 1);
 	return WM_LUAMAX;

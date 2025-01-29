@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | lrtapi.c | LuaRT API implementation
@@ -64,9 +64,18 @@ LUA_API int lua_optstring(lua_State *L, int idx, const char *options[], int def)
 	return def;
 } 
 
-LUA_API int lua_pushtask(lua_State *L, lua_CFunction taskfunc, int nargs) {
-	lua_pushcclosure(L, taskfunc, nargs);
-	lua_pushinstance(L, Task, 1);
+static int WaitTask(lua_State *L) {
+	return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), (lua_KFunction)lua_touserdata(L, lua_upvalueindex(2)));
+}
+
+LUA_API int lua_pushtask(lua_State *L, lua_KFunction taskfunc, void *userdata, lua_CFunction gc) {
+	lua_pushlightuserdata(L, userdata);
+	lua_pushlightuserdata(L, taskfunc);
+	lua_pushcclosure(L, WaitTask, 2);
+	Task *t = lua_pushinstance(L, Task, 1);
+	t->userdata = userdata;
+	if (gc)
+		t->gc_func = gc;
 	lua_pushvalue(L, -1);
 	lua_call(L, 0, 0);
 	return 1;	
@@ -90,26 +99,49 @@ LUALIB_API void luaL_require(lua_State *L, const char *modname) {
 	luaL_requiref(L, modname, module_error, 0);
 }
 
-//-------------------------------------------------[LuaL_require alternative with luaL_requiref]
-int lua_schedule(lua_State *L) {
+LUA_API void lua_setupdate(lua_CFunction func) {
+	set_lua_update(func);
+}
+
+//-------------------------------------------------[lua_schedule() function]
+LUA_API int lua_schedule(lua_State *L) {
 	return update_tasks(L);
+}
+
+//-------------------------------------------------[lua_throwevent() function]
+LUA_API int lua_throwevent(lua_State *L, const char *name, int nparams) {
+  if (lua_getfield(L, -nparams, name) == LUA_TFUNCTION) {
+    int nres;
+    Task *t = (Task *)lua_pushinstance(L, Task, 1);
+
+    lua_pop(L, 2);
+    t->status = TRunning;
+    lua_xmove(L, t->L, nparams);
+    int status = lua_resume(t->L, L, nparams, &nres);
+    if (status > LUA_YIELD)
+      lua_error(t->L);
+    t->status = TTerminated;
+	lua_xmove(t->L, L, nres);
+	return nres;
+  } else lua_pop(L, 1);
+  return 0;
+} 
+
+//-------------------------------------------------[lua_wait() function]
+LUA_API int lua_wait(lua_State *L, int idx) {
+	return waitfor_task(L, idx);
 }
 
 //-------------------------------------------------[lua_sleep() function]
 int do_sleep(lua_State *L, lua_Integer delay) {
-	Task *t;
+	Task *t = search_task(L);
 
-	if ((t = search_task(L)) && !t->isevent) {
-		t->sleep =  GetTickCount64() + delay;
-		t->status = TSleep;
-		Sleep(1);
-		if (lua_isyieldable(L))
-			return lua_yield(L, 0);		
-	} else {
-		ULONGLONG start = GetTickCount64();
-		while (GetTickCount64() < start+delay)
-			update_tasks(L);
-	}
+	t->sleep =  GetTickCount64() + delay;
+	t->status = TSleep;
+	if (lua_isyieldable(L))
+		return lua_yield(L, 0);
+	else while (t->status == TSleep)
+		update_tasks(L);
 	return 0;
 }
 
@@ -291,6 +323,34 @@ static int luaB_Object(lua_State *L) {
 	return 1;
 }
 
+//----------------------------[debug.settaskhook() function]
+
+static int settaskhook(lua_State *L) {
+	if (lua_isnoneornil(L, 1)) {
+    	lua_pushnil(L);
+		lua_setfield(L, LUA_REGISTRYINDEX, "_TASKHOOK");
+		unhook_tasks(L);
+		return 0;
+    }
+    luaL_checktype(L, 1, LUA_TFUNCTION);
+	const char *smask = luaL_checkstring(L, 2);
+    int count = (int)luaL_optinteger(L, 3, 0);
+	int mask = 0;
+	if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
+	if (strchr(smask, 'r')) mask |= LUA_MASKRET;
+	if (strchr(smask, 'l')) mask |= LUA_MASKLINE;
+	if (count > 0) mask |= LUA_MASKCOUNT;
+	lua_createtable(L, 0, 3);
+	lua_pushvalue(L, 1);
+	lua_setfield(L, -2, "hook");
+	lua_pushinteger(L, count);
+	lua_setfield(L, -2, "count");
+	lua_pushinteger(L, mask);
+	lua_setfield(L, -2, "mask");
+	lua_setfield(L, LUA_REGISTRYINDEX, "_TASKHOOK");
+	return 0;
+}
+
 //-------------------------------------------------[LuaRT base library extension]
 static const luaL_Reg baselib_ext[] = {
 	{"is",		luaB_is},
@@ -353,5 +413,9 @@ LUALIB_API void luaL_openlibs(lua_State *L) {
 	/* set LuaRT _VERSION */
 	lua_pushliteral(L, LUA_VERSION);
 	lua_setfield(L, -2, "_VERSION");
+	lua_pop(L, 1);
+	lua_getglobal(L, "debug");
+	lua_pushcfunction(L, settaskhook);
+	lua_setfield(L, -2, "settaskhook");
 	lua_pop(L, 1);
 }

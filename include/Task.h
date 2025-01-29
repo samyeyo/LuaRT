@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Task.h | LuaRT Task object header
@@ -27,11 +27,12 @@ typedef struct _Task {
 	int			ref;
 	int 		taskref;
 	Task 		*waiting;
-	BOOL		isevent;
 	ULONGLONG	sleep;
+	void		*userdata;
+	lua_CFunction gc_func;
  } Task;
 
-extern luart_type TTask;
+LUA_API luart_type TTask;
 
 //---------------------------------------- Task object
 LUA_CONSTRUCTOR(Task);
