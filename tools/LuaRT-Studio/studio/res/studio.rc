@@ -1,0 +1,15 @@
+icon ICON "studio.ico"
+1 24 studio.manifest
+1 VERSIONINFO
+{
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040904E4"
+        {
+            VALUE "FileDescription",  "LuaRT Studio IDE"
+            VALUE "LegalCopyright",   "Copyright � 2022 Samir Tine"
+            VALUE "LegalTrademarks",  "LuaRT�"
+            VALUE "OriginalFilename", "LuaRT Studio.exe"
+        }
+    }
+}
