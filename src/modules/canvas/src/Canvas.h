@@ -1,6 +1,6 @@
 /*
  | Canvas for LuaRT
- | Luart.org, Copyright (c) Tine Samir 2024.
+ | Luart.org, Copyright (c) Tine Samir 2025.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Canvas.h | LuaRT binary module 
@@ -20,6 +20,7 @@
 
 #define RGBA(r,g,b,a) ((r << 24) | (g << 16) | (b << 8) | a)
 
+float checkFloat(lua_State *L, int idx, double dpi);
 
 extern luart_type TCanvas;
 

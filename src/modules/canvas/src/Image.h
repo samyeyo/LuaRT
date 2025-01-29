@@ -1,6 +1,6 @@
  /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Image.h | LuaRT Image object header
@@ -23,6 +23,9 @@ typedef struct {
     luart_type  type;
     Direct2D    *d;
 	ID2D1Bitmap *Bitmap;
+    IWICBitmapDecoder	  *IWICDecoder;
+    IWICBitmapFrameDecode *IWICFrame;
+    IWICFormatConverter	  *IWICConverter;
 } Image;
 
 extern luart_type TImage;
