@@ -41,7 +41,7 @@ BEGIN
             VALUE "CompanyName", "https:\\www.luart.org"
             VALUE "FileVersion", LUA_VERSION_MAJOR " ," LUA_VERSION_MINOR " ," LUA_VERSION_RELEASE
             VALUE "InternalName", "LuaRT"
-            VALUE "LegalCopyright", "Copyright (C) Samir Tine 2024"
+            VALUE "LegalCopyright", "Copyright (C) Samir Tine 2022"
             VALUE "ProductName", "LuaRT"
             VALUE "ProductVersion", LUA_VERSION_MAJOR " ," LUA_VERSION_MINOR " ," LUA_VERSION_RELEASE
         END
