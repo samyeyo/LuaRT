@@ -9,6 +9,7 @@
 - Better Windows clipboard support (text and file list format)
 - Record sounds with various encodings in `audio` module
 - Compiled executables with `rtc` can now embed and use DLL dependencies seamlessly
+- Faster Tasks scheduling
 - Faster `canvas` module with lots of bugfixes
 
 #### LuaRT interpreter
@@ -27,9 +28,13 @@
 - New: QuickRT uses now an asynchronous loop, to use `Task` instances and any other asynchronous functions
 - Fixed: Objets are now correctly pretty printed (Fixes #221)
 
+#### RTBuilder
+- 
+
 #### LuaRT C API
 - New: `lua_wait()` to wait for a Task to finish from the C side
 - New: `lua_throwevent()` to launch a new ui event when implementing third party widgets
+- New: `lua_update()` to set an update C function during Task scheduling
 - Updated: `lua_pushTask()` now push a Task with the provided continuation C function and starts it, with a context and optional cleanup `lua_CFunction`
 
 #### `C` module
@@ -79,6 +84,9 @@
 
 #### `crypto` module
 - Fixed : `Cipher.constructor()` won't crash anymore if the `mode` parameter is invalid
+
+#### `net` module
+- New: property `Http.content` to get the current response content
 
 #### `ini` module
 - Updated : INI property names and values are now trimmed
