@@ -2,6 +2,7 @@
 	#define WIDGET_IMPLEMENTATION
 #endif
 #include <Widget.h>
+#include "ui.h"
 #include "DarkMode.h"
 #include "IatHook.h"
 #include <windows.h>
@@ -219,7 +220,7 @@ extern "C" {
 
 					_SetWindowCompositionAttribute = reinterpret_cast<fnSetWindowCompositionAttribute>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetWindowCompositionAttribute"));
 
-					if ((g_buildNumber > 17763) &&_OpenNcThemeData &&
+					if (_OpenNcThemeData &&
 						_RefreshImmersiveColorPolicyState &&
 						_ShouldAppsUseDarkMode &&
 						_AllowDarkModeForWindow &&
@@ -229,7 +230,7 @@ extern "C" {
 						g_darkModeSupported = TRUE;
 						_RefreshImmersiveColorPolicyState();
 				
-						DarkMode = IsDarkModeEnabled();
+						g_darkModeEnabled = DarkMode = IsDarkModeEnabled();
 						isdarkScrollBar = DarkMode;
 					}
 				}
@@ -417,8 +418,9 @@ extern "C" {
 					DeleteObject(soft);
 					DeleteObject(brush);
 					EndPaint(hwnd, &ps);
-					return 0;
+					return FALSE;
 				}
+				break;
 			}
 			case WM_NCDESTROY: {
 				RemoveWindowSubclass(hwnd, StatusProc, uIdSubclass);
@@ -432,13 +434,18 @@ extern "C" {
 		switch (uMsg)
 		{
 
+		case WM_CTLCOLORDLG:
+		case WM_CTLCOLORSTATIC:
 		case WM_CTLCOLOREDIT:
+		case WM_CTLCOLORLISTBOX:
+		case WM_CTLCOLORBTN:
+		case WM_CTLCOLORSCROLLBAR:		
 			{
 				HDC hdc = (HDC)wParam;
 				SetBkMode(hdc, TRANSPARENT);
 				SetTextColor(hdc, 0xFFFFFF);
 				SetBkColor(hdc, 0x383838);
-				return (LRESULT)CreateSolidBrush(0x383838);
+				return (LRESULT)CBDARK_BRUSH;
 			}
 		case WM_DRAWITEM:
 			{
@@ -491,35 +498,35 @@ extern "C" {
 		Widget *w = (Widget*)dwRefData;
 		RECT r = {0}, rt;
 		Widget *wp = (Widget*)GetWindowLongPtr(GetParent(hwnd), GWLP_USERDATA);
-		
 		RECT rect;
+		static COLORREF frame = GetSysColor(COLOR_ACTIVEBORDER);
+
 		GetClientRect(hwnd, &rect);
 		SelectObject(hdc, w->font);
 		int len = GetWindowTextLengthW(hwnd);
 		wchar_t *buff = (wchar_t *)malloc((len + 1)*sizeof(wchar_t));
 		GetWindowTextW(hwnd, buff, len + 1);
 		DrawTextW(hdc, buff, -1, &r, DT_SINGLELINE | DT_CALCRECT);
-		HBRUSH brush =  (wp && wp->brush) ? wp->brush : (HBRUSH)GetStockObject(BLACK_BRUSH);
 		HPEN old = (HPEN)SelectObject(hdc, GetStockPen(DC_PEN));
-		SetDCPenColor(hdc, 0x848484);
-		SelectObject(hdc, brush);
-		FillRect(hdc, &rect, brush);
+		SetDCPenColor(hdc,  DarkMode ? 0x848484 : frame);
+		SelectObject(hdc, w->brush);
+		FillRect(hdc, &rect, w->brush);
 		Rectangle(hdc, rect.left+4, ++rect.top+r.bottom/2, rect.right-4, rect.bottom-r.bottom/2);
 		SelectObject(hdc, old);
 		if (len) {
 			r.left = 10;
 			r.right += 11;
 			r.bottom -= r.top;
-			SetBkColor(hdc, 0);
-			SetTextColor(hdc, 0xFFFFFF);
+			SetBkColor(hdc, DarkMode ? 0 : GetSysColor(COLOR_BTNFACE));
+			SetTextColor(hdc, DarkMode ? 0xFFFFFF : 0);
 			rt = r,
 			rt.left = 8;			
-			FillRect(hdc, &rt, brush);
+			FillRect(hdc, &rt, w->brush);
 			DrawTextW(hdc, buff, -1, &r, DT_SINGLELINE);
 		}
 		free(buff);
 		EndPaint(hwnd, &ps);
-		return TRUE;
+		return FALSE;
 	}
 
 	static void drawTab(HWND hwnd, HDC hdc, int i, PAINTSTRUCT *ps, RECT *rc, HIMAGELIST himl, BOOL isSelected, int cx, int cy) {

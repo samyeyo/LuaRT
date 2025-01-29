@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Items.c | LuaRT Tree, List, Combobox, Tab and associated items object implementation
@@ -76,6 +76,7 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 		}
 		case WM_LBUTTONDOWN:lua_paramevent(w, onMouseDown, 0, MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam)));
 							lua_paramevent(w, onClick, GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam));
+							SetFocus(hWnd);
 							return FALSE;
 		case WM_LBUTTONUP:
 		case WM_MBUTTONUP:
@@ -97,15 +98,14 @@ LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 			lParam = MAKELPARAM(GET_X_LPARAM(lParam), AdjustTab_height(w)+GET_Y_LPARAM(lParam));		
 		case WM_MOUSELEAVE:
 			return WindowProc(hWnd, Msg, 0, lParam);
-		case WM_KEYDOWN:
-			SendMessage(GetParent(w->handle), WM_KEYDOWN, wParam, lParam);
-			return FALSE;
 		case WM_SYSKEYDOWN:
 			SendMessage(GetParent(w->handle), WM_SYSKEYDOWN, wParam, lParam);
 			return FALSE;		
 		case WM_SETFOCUS:
 			SetFocus(GetNextDlgTabItem(hWnd, (HWND)wParam, FALSE));
-
+		case WM_LUADROP:
+			SendMessage(GetParent(w->handle), WM_LUADROP, wParam, lParam);
+			return FALSE;
 	}
 	return WindowProc(hWnd, Msg, wParam, lParam);
 }
@@ -797,7 +797,7 @@ LUA_PROPERTY_SET(Listbox, items) {
 			w->user = CreateWindowExW(0, L"Window", NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 2, 20.0*GetDPIForSystem()+4, 0, 0, w->handle, NULL, GetModuleHandle(NULL), NULL);
 			SetWindowLongPtr(w->user, GWLP_WNDPROC, (ULONG_PTR)PageProc);
 			SetWindowLongPtr(w->user, GWLP_USERDATA, (ULONG_PTR)w);		
-			page_resize(w, FALSE);
+			page_resize(w, TRUE);
 			BringWindowToTop(w->user);
 		}
     }
@@ -897,7 +897,7 @@ LUA_METHOD(Item, edit) {
 LUA_METHOD(Item, loadicon) {	
 	Widget *w = lua_self(L, 1, Widget);
 	HANDLE h = w->handle;
-	HICON icon = widget_loadicon(L);
+	HICON icon = widget_loadicon(L, FALSE);
 	void *item = NULL;
 	UINT msg = 0;
 	int idx = w->index;

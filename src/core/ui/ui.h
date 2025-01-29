@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024.
+ | Luart.org, Copyright (c) Tine Samir 2025.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Widget.h | LuaRT Widget object header file
@@ -34,6 +34,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 extern IWICImagingFactory *ui_factory;
 extern HBITMAP ConvertToBitmap(void *pSource);
 extern const char *cursors[], *luart_wtypes[], *events[];
+extern HBRUSH DARK_BRUSH;
+extern HBRUSH CBDARK_BRUSH;
 
 #define NCURSORS 14
 static const PSTR cursors_values[] = {
@@ -65,7 +67,7 @@ void UpdateFont(Widget *w, LOGFONTW *l);
 void SetFontFromWidget(Widget *w, Widget *wp);
 LRESULT CALLBACK WidgetProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 BOOL CALLBACK EnumMonitor(HMONITOR h, HDC hdc, LPRECT r, LPARAM data);
-
+const char *VKString(int vk);
 LUA_METHOD(Widget, __metanewindex); //----- for event registration
 LUA_METHOD(Widget, show);
 LUA_METHOD(Widget, hide);
@@ -106,7 +108,11 @@ LUA_PROPERTY_GET(Widget, bgcolor);
 LUA_PROPERTY_SET(Widget, bgcolor);
 LUA_PROPERTY_GET(Panel, border);
 LUA_PROPERTY_SET(Panel, border);
+LUA_PROPERTY_GET(Widget, allowdrop);
+LUA_PROPERTY_SET(Widget, allowdrop);
 LUA_METHOD(Widget, center);
+LUA_METHOD(Widget, vscroll);
+LUA_METHOD(Widget, hscroll);
 
 LUA_CONSTRUCTOR(Window);
 LUA_PROPERTY_GET(Window, childs);
@@ -155,7 +161,7 @@ extern void pushDate(lua_State *L, HANDLE h);
 INT_PTR widget_setcolors(Widget *w, HDC dc, HWND h);
 Widget *check_widget(lua_State *L, int idx, WidgetType t);
 Widget *Widget_create(lua_State *L, WidgetType type, DWORD exstyle, const wchar_t *classname, DWORD style, int caption, int autosize);
-HICON widget_loadicon(lua_State *L);
+HICON widget_loadicon(lua_State *L, BOOL islarge);
 void fontstyle_createtable(lua_State *L, LOGFONTW *l);
 void fontstyle_fromtable(lua_State *L, int idx, LOGFONTW *l);
 LUA_API int fontsize_fromheight(int height);
@@ -176,61 +182,6 @@ LUA_CONSTRUCTOR(MenuItem);
 LUA_METHOD(Widget, __gc);
 
 //--------------------------------------------------| GUI Events
-
-#define	WM_LUAMIN			(WM_USER+2)
-#define WM_LUAHIDE 			(WM_LUAMIN)
-#define WM_LUASHOW 			(WM_LUAMIN + 1)
-#define WM_LUAMOVE 			(WM_LUAMIN + 2)
-#define WM_LUARESIZE 		(WM_LUAMIN + 3)
-#define WM_LUAHOVER 		(WM_LUAMIN + 4)
-#define WM_LUALEAVE 		(WM_LUAMIN + 5)
-#define WM_LUACLOSE 		(WM_LUAMIN + 6)
-#define WM_LUACLICK 		(WM_LUAMIN + 7)
-#define WM_LUADBLCLICK		(WM_LUAMIN + 8)
-#define WM_LUACONTEXT 		(WM_LUAMIN + 9)
-#define WM_LUACREATE	 	(WM_LUAMIN + 10)
-#define WM_LUACARET 		(WM_LUAMIN + 11)
-#define WM_LUACHANGE 		(WM_LUAMIN + 12)
-#define WM_LUASELECT 		(WM_LUAMIN + 13)
-#define WM_LUATRAYCLICK 	(WM_LUAMIN + 14)
-#define WM_LUATRAYDBLCLICK	(WM_LUAMIN + 15)
-#define WM_LUATRAYCONTEXT 	(WM_LUAMIN + 16)
-#define WM_LUATRAYHOVER 	(WM_LUAMIN + 17)
-#define WM_LUAMENU 			(WM_LUAMIN + 18)
-#define WM_LUAKEY 			(WM_LUAMIN + 19)
-#define WM_LUAMOUSEUP 		(WM_LUAMIN + 20)
-#define WM_LUAMOUSEDOWN 	(WM_LUAMIN + 21)
-#define WM_LUAMAXIMIZE  	(WM_LUAMIN + 22)
-#define WM_LUAMINIMIZE   	(WM_LUAMIN + 23)
-#define WM_LUARESTORE    	(WM_LUAMIN + 24)
-
-typedef enum {
-	onHide			= WM_LUAHIDE,
-    onShow 			= WM_LUASHOW, 
-    onMove 			= WM_LUAMOVE, 
-    onResize		= WM_LUARESIZE,
-    onHover 		= WM_LUAHOVER,
-    onLeave			= WM_LUALEAVE,
-    onClose 		= WM_LUACLOSE,
-    onClick 		= WM_LUACLICK,
-    onDoubleClick 	= WM_LUADBLCLICK,
-    onContext 		= WM_LUACONTEXT,
-    onCreate		= WM_LUACREATE,
-    onCaret 		= WM_LUACARET,
-    onChange 		= WM_LUACHANGE,
-    onSelect 		= WM_LUASELECT,
-    onTrayClick		= WM_LUATRAYCLICK,
-    onTrayDoubleClick=WM_LUATRAYDBLCLICK,
-    onTrayContext 	= WM_LUATRAYCONTEXT,
-    onTrayHover 	= WM_LUATRAYHOVER,
-	onMenu			= WM_LUAMENU,
-	onKey			= WM_LUAKEY,
-    onMouseUp       = WM_LUAMOUSEUP,
-    onMouseDown     = WM_LUAMOUSEDOWN,
-    onMaximize      = WM_LUAMAXIMIZE,
-    onMinimize      = WM_LUAMINIMIZE,
-    onRestore       = WM_LUARESTORE,
-} WidgetEvent;
 
 //---- call close event a associated with window w
 #define lua_closeevent(w, e) PostMessage(w->handle, WM_LUACLOSE, 0, 0)

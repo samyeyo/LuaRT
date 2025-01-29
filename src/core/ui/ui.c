@@ -1,10 +1,14 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024.
+ | Luart.org, Copyright (c) Tine Samir 2025.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | ui.c | LuaRT ui module
 */
+
+#ifdef UI
+	#define LUA_LIB
+#endif
 
 #include <luart.h>
 #include <Widget.h>
@@ -19,6 +23,7 @@
 #include <commctrl.h>
 #include <commdlg.h>
 #include <shlobj.h>
+#include <shlwapi.h>
 #include <richedit.h>
 #include <wincodec.h>
 #include <uxtheme.h>
@@ -26,6 +31,7 @@
 #include <vssym32.h>
 #include <wincodec.h>
 #include "..\resources\resource.h"
+
 #include "DarkMode.h"
 
 static HMODULE richeditlib;
@@ -51,6 +57,8 @@ int UIPanel;
 
 DWORD uiLayout = 0;
 const char *themes[] = { "light", "dark" };
+HBRUSH DARK_BRUSH;
+HBRUSH CBDARK_BRUSH;
 
 BOOL SaveImg(wchar_t *fname, HBITMAP hBitmap) {
 	BITMAP Bitmap;
@@ -198,6 +206,7 @@ LRESULT CALLBACK WndProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			GetClientRect(hWnd, &r);
 			FillRect(BeginPaint(hWnd, &ps), &r, GetStockBrush(BLACK_BRUSH));
 			EndPaint(hWnd, &ps);
+			return FALSE;
 		}
 
 		case WM_CTLCOLOR:
@@ -299,10 +308,12 @@ static int dialog(lua_State *L, BOOL save, DWORD flags) {
 	wchar_t *filter = NULL;
 	BOOL ismultiple = FALSE;
 	HWND current = GetFocus();
-
+	
+	SetForegroundWindow(current);
 	ofn.lStructSize = sizeof(ofn);
 	ofn.lpstrFile = szFile;
 	ofn.lpstrFile[0] = '\0';
+	ofn.hInstance = GetModuleHandle(NULL);
 	ofn.hwndOwner = current;
 	ofn.nMaxFile = sizeof(szFile);
 
@@ -368,14 +379,61 @@ static int dialog(lua_State *L, BOOL save, DWORD flags) {
 }
 
 LUA_METHOD(ui, opendialog) {
-	return dialog(L, FALSE, OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_NOCHANGEDIR);
+	return dialog(L, FALSE, OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_NOCHANGEDIR|OFN_EXPLORER);
 }
 
 LUA_METHOD(ui, savedialog) {
-	return dialog(L, TRUE, OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR);
+	return dialog(L, TRUE, OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR|OFN_EXPLORER);
 }
 
 LUA_METHOD(ui, dirdialog) {
+    HRESULT hr;
+	IFileDialog* pFileDialog = NULL;
+	wchar_t *title = lua_gettop(L) ? lua_towstring(L, 1) : NULL;
+	wchar_t *path = lua_gettop(L) == 2 ? luaL_checkDirname(L, 2) : NULL;
+	IShellItem *pCurFolder = NULL; 
+
+	lua_pushnil(L);
+	hr = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,&IID_IFileDialog, (void**)&pFileDialog);
+	if (SUCCEEDED(hr)) {
+		DWORD dwOptions;
+		hr = pFileDialog->lpVtbl->GetOptions(pFileDialog, &dwOptions);
+		if (SUCCEEDED(hr))
+			pFileDialog->lpVtbl->SetOptions(pFileDialog, dwOptions | FOS_PICKFOLDERS);
+		if (title) {
+			hr = pFileDialog->lpVtbl->SetTitle(pFileDialog, title);
+			free(title);
+		}
+		if (path) {
+			hr = SHCreateItemFromParsingName((PCWSTR)path, NULL, &IID_IShellItem, (void**)&pCurFolder);
+			if (SUCCEEDED(hr))
+    			pFileDialog->lpVtbl->SetFolder(pFileDialog, pCurFolder);
+		}
+		hr = pFileDialog->lpVtbl->Show(pFileDialog, GetActiveWindow());
+		if (path) {
+			pCurFolder->lpVtbl->Release(pCurFolder);
+			free(path);
+		}
+		if (SUCCEEDED(hr)) {
+			IShellItem* pItem = NULL;
+			hr = pFileDialog->lpVtbl->GetResult(pFileDialog, &pItem);
+			if (SUCCEEDED(hr)) {
+				PWSTR pszFilePath = NULL;
+				hr = pItem->lpVtbl->GetDisplayName(pItem, SIGDN_FILESYSPATH, &pszFilePath);
+				if (SUCCEEDED(hr)) {
+					lua_pushwstring(L, pszFilePath);
+					lua_pushinstance(L, Directory, 1);
+					CoTaskMemFree(pszFilePath);
+				}
+				pItem->lpVtbl->Release(pItem);
+			}
+		}
+		pFileDialog->lpVtbl->Release(pFileDialog);
+    }
+    return 1;
+}
+
+LUA_METHOD(ui, selectdir) {
 	wchar_t path[MAX_PATH];
 	LPITEMIDLIST pitems;
 	LPMALLOC _malloc;
@@ -428,39 +486,63 @@ LUA_METHOD(ui, remove) {
 static const char *mouse_buttons[] = { "left", "right", "middle", NULL };
 extern const char *VKString(int vk);
 
+static WINDOWPOS winpos = {0};
+
+void stackdump(lua_State* L)
+{
+	int top = lua_gettop(L);
+	for (int i = 0; i < top; i++) {
+		int positive = top - i;
+		int negative = -(i + 1);
+		int type = lua_type(L, positive);
+		int typeN = lua_type(L, negative);
+		const char* typeName = lua_typename(L, type);
+		printf("%d/%d: type=%s", positive, negative, typeName);
+		switch (type) {
+			case LUA_TNUMBER:
+				printf(" value=%f", lua_tonumber(L, positive));
+				break;
+			case LUA_TSTRING:
+				printf(" value=%s", lua_tostring(L, positive));
+				break;
+			case LUA_TFUNCTION:
+				if (lua_iscfunction(L, positive)) {
+					printf(" C:%p", lua_tocfunction(L, positive));
+				}
+				break;
+			default:  printf(" value=%s", luaL_typename(L, positive));
+		}
+		printf("\n");
+	}
+}
+
+#ifdef UI
+LUA_API int do_update(lua_State *L) {
+#else
 int do_update(lua_State *L) {
-	int type;
+#endif
+	Widget *w = NULL;
+	int type, nargs = 0;
 	MSG msg;
 
-	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 		if ((msg.message >= WM_LUAMIN) && (msg.message <= WM_LUAMAX)) {
-			Widget *w = NULL;
-			int n = lua_gettop(L), nargs;
+			int n = lua_gettop(L);
 			if (msg.hwnd) {
 				if (!(w = (Widget*)GetWindowLongPtr(msg.hwnd, GWLP_USERDATA)))
 					goto do_msg; //--- private control msg
 				if (lua_rawgeti(L, LUA_REGISTRYINDEX, w->ref) != LUA_TTABLE)
-					continue;
+					return 0;
 				else {
-					int count = lua_gettop(L);
 					const char *methodname = lua_getevent(L, msg.message, &type);
-					if (type == LUA_TFUNCTION) {
-						lua_pushvalue(L, -2);
-						lua_pushlightuserdata(L, &msg);
-						if (lua_pcall(L, 2, LUA_MULTRET, 0))
-							lua_error(L);
-						count = lua_gettop(L)-count;
-						if (count == 1) {
-							if (lua_isnil(L, -1))
-								lua_pop(L, 1);
-							else lua_insert(L, -2);
-						}
-						else if (count > 1) {
-							lua_pushvalue(L, -count-1);
-							lua_remove(L, -count-2);
-							lua_insert(L, -count);
-						}
+					if (type == LUA_TLIGHTUSERDATA) {
+						lua_Event ev = lua_touserdata(L, -1);
+						lua_pop(L, 1);
+						int count = ev(L, w, &msg);
+						goto do_msg;
 					} else if (lua_getfield(L, -1, methodname)) {
+			            lua_pushinstance(L, Task, 1);
+						lua_remove(L, -2);
 						lua_insert(L, -2);
 						switch (msg.message) {
 							case WM_LUADBLCLICK:
@@ -474,10 +556,24 @@ int do_update(lua_State *L) {
 													lua_pushinteger(L,  GET_Y_LPARAM(msg.lParam));
 													break;
 							case WM_LUACLICK:
+							case WM_LUAMOVE:						
 	push_params:									lua_pushinteger(L, msg.wParam);
 													lua_pushinteger(L, msg.lParam);
+													break;
+							case WM_LUAHOVER:	lua_pushinteger(L, GET_X_LPARAM(msg.lParam));
+												lua_pushinteger(L, GET_Y_LPARAM(msg.lParam));
+												lua_createtable(L, 0, 5);
+												lua_pushboolean(L, msg.wParam & MK_CONTROL);
+												lua_setfield(L, -2, "control");
+												lua_pushboolean(L, msg.wParam & MK_SHIFT);
+												lua_setfield(L, -2, "shift");
+												lua_pushboolean(L, msg.wParam & MK_RBUTTON);
+												lua_setfield(L, -2, "right");
+												lua_pushboolean(L, msg.wParam & MK_LBUTTON);
+												lua_setfield(L, -2, "left");
+												lua_pushboolean(L, msg.wParam & MK_MBUTTON);
+												lua_setfield(L, -2, "middle");
 												break;
-							case WM_LUAHOVER:	goto push_params;
 							case WM_LUACHANGE:	if (w->wtype == UICombo)
 													GetText(L, (HANDLE)SendMessage(w->handle, CBEM_GETEDITCONTROL, 0, 0));
 												else if (w->wtype == UITree) {
@@ -502,30 +598,69 @@ int do_update(lua_State *L) {
 							case WM_LUAKEY:		if (!msg.wParam)
 													lua_pushlstring(L, (const char*)&msg.lParam, 1);
 												else lua_pushstring(L, (const char *)msg.wParam);
+												break;
+							case WM_LUADROP:	{
+													char *data = (char *)msg.wParam;
+													size_t size = (size_t)msg.lParam;										
+													switch (data[0]) {
+														case CF_HDROP:	{
+																			UINT fileCount = DragQueryFileW((HDROP)(data+1), -1, NULL, 0);														
+																			lua_pushstring(L, "files");
+																			lua_createtable(L, fileCount, 0);
+																			for (UINT i = 0; i < fileCount; ++i) {
+																				wchar_t *filePath;
+																				UINT size = DragQueryFileW((HDROP)(data+1), i, NULL, 0)+1;
+																				filePath = calloc(1, size*sizeof(wchar_t));
+																				DragQueryFileW((HDROP)(data+1), i, filePath, size);
+																				lua_pushwstring(L, filePath);
+																				if (PathIsDirectoryW(filePath))
+																					lua_pushinstance(L, Directory, 1);
+																				else
+																					lua_pushinstance(L, File, 1);
+																				lua_rawseti(L, -3, i+1);
+																				lua_pop(L, 1);
+																				free(filePath);															
+																			}
+																			break;
+																		}
+														case CF_UNICODETEXT:	
+																		lua_pushstring(L, "text");
+																		lua_pushlwstring(L, (wchar_t*)(data+1), size/sizeof(wchar_t));
+																		break;
+														case CF_TEXT:	
+																		lua_pushstring(L, "text");
+																		lua_pushlstring(L, (data+1), size);
+																		break;
+														default:	lua_pushstring(L, "unknown");
+													}
+													free(data);
+												}
 						}
 					} else lua_pop(L, 1);
 				}
 			} else if (msg.message == WM_LUAMENU) {
-				int type = 	lua_rawgeti(L, LUA_REGISTRYINDEX, msg.wParam);
+				int type = lua_rawgeti(L, LUA_REGISTRYINDEX, msg.wParam);
 				if (type == LUA_TTABLE && lua_getfield(L, -1, "onClick")) {
-					lua_insert(L, -2);
+						lua_pushinstance(L, Task, 1);
+						lua_pushvalue(L, -3);
+						nargs = 1;
 					if (msg.lParam > -1) {
 						lua_pushinteger(L, msg.lParam);
 						lua_pushinstance(L, MenuItem, 2);
 						lua_remove(L, -2);
+						nargs++;
 					}
-				}
+				} else lua_pushinstance(L, Task, 1);
+				if (lua_pcall(L, nargs, 0, 0))
+					lua_error(L);
+				lua_pop(L, 1);
+				return 0;
 			} else goto do_msg;
 			if ((nargs = lua_gettop(L)-n-1) || lua_isfunction(L, -1)) {
-				Task *t = search_task(L);
-				if (t)
-					t->isevent = TRUE;
 				if (lua_pcall(L, nargs, LUA_MULTRET, 0))
 					lua_error(L);
-				if (t)
-					t->isevent = FALSE;
-				if (msg.message == WM_LUACHANGE && w->wtype == UIEdit)
-					SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
+				if (msg.message == WM_LUACHANGE && (w->wtype == UIEdit))
+						SendMessage(w->handle, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_MOUSEEVENTS);
 				else if (msg.message == WM_LUACLOSE) {
 					int result = lua_gettop(L);
 					if (!result || lua_toboolean(L, -1)) {
@@ -559,7 +694,7 @@ int do_update(lua_State *L) {
 					if (w && (w->wtype != UIEdit)) {
 						SetFocus(GetNextDlgTabItem(parent, msg.hwnd, GetAsyncKeyState(VK_SHIFT) & 0x8000 ? TRUE : FALSE));
 						lua_paramevent(wp, onKey, VKString(VK_TAB), VK_TAB);
-						continue;
+						return 0;
 					}
 				}
 				if (TranslateAcceleratorW(wp->handle, wp->accel_table, &msg))
@@ -570,7 +705,6 @@ dispatch:	DispatchMessage(&msg);
 		}
 		lua_pop(L, lua_gettop(L));
 	}
-	Sleep(1);
 	return 0;
 }
 
@@ -579,12 +713,7 @@ LUA_METHOD(ui, update) {
 }
 
 static int RunTaskContinue(lua_State* L, int status, lua_KContext ctx) {
-	do_update(L);
 	return ((Widget *)ctx)->ismain && IsWindowVisible(((Widget *)ctx)->handle) ? lua_yieldk(L, 0, ctx, RunTaskContinue) : 0;
-}
-
-int WaitTask(lua_State *L) {
-	return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), RunTaskContinue);
 }
 
 LUA_METHOD(ui, run) {
@@ -592,11 +721,56 @@ LUA_METHOD(ui, run) {
 
 	w->ismain = TRUE;
 	Widget_show(L);
-	lua_pushlightuserdata(L, w);
-	lua_pushcclosure(L, WaitTask, 1);
-	lua_pushinstance(L, Task, 1);
+	lua_pushtask(L, RunTaskContinue, w, NULL);
 	lua_pushvalue(L, -1);
 	lua_call(L, 0, 0);
+	return 1;
+}
+
+static void prepare_drag(lua_State *L, int idx, IDataObject **dobj, IDropSource **dsrc, FORMATETC *fmtetc, STGMEDIUM *stgmed) {
+	extern HRESULT CreateDropSource(IDropSource **ppDropSource);
+	extern HRESULT CreateDataObject(FORMATETC *fmtetc, STGMEDIUM *stgmeds, IDataObject **ppDataObject);
+	extern HGLOBAL table_to_HDROPFormat(lua_State *L, int idx);
+
+	switch(lua_type(L, idx)) {
+		case LUA_TSTRING:	{	
+								int len;
+								wchar_t *data = lua_tolwstring(L, idx, &len);
+								size_t size = (len+1)*sizeof(wchar_t);
+								fmtetc->cfFormat = CF_UNICODETEXT;
+								stgmed->hGlobal = GlobalAlloc(GHND | GMEM_SHARE, size);
+								memcpy(GlobalLock(stgmed->hGlobal), data, size);
+								GlobalUnlock(stgmed->hGlobal);
+								free(data);
+								break;
+							}
+		case LUA_TTABLE:	{
+								fmtetc->cfFormat = CF_HDROP;
+								stgmed->hGlobal = table_to_HDROPFormat(L, idx);
+								break;
+							}
+		default:			luaL_typeerror(L, idx, "string or File expected");
+	}
+	
+	CreateDropSource(dsrc);
+	CreateDataObject(fmtetc, stgmed, dobj);
+}
+
+LUA_METHOD(ui, drag) {
+	IDataObject *dobj = NULL;
+	IDropSource *dsrc = NULL;
+	DWORD		 dwEffect;
+	DWORD		 dwResult;
+	FORMATETC fmtetc = { CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+	STGMEDIUM stgmed = { TYMED_HGLOBAL, { 0 }, 0 };
+
+	prepare_drag(L, 1, &dobj, &dsrc, &fmtetc, &stgmed);
+	dwResult = DoDragDrop(dobj, dsrc, DROPEFFECT_COPY, &dwEffect);
+	lua_pushboolean(L, dwEffect && dwResult == DRAGDROP_S_DROP);
+	if (!dwEffect)
+		GlobalFree(stgmed.hGlobal);
+	dobj->lpVtbl->Release(dobj);
+	dsrc->lpVtbl->Release(dsrc);
 	return 1;
 }
 
@@ -664,7 +838,7 @@ LUA_METHOD(ui, fontdialog) {
 		lua_pushwstring(L, cf.lpLogFont->lfFaceName);
 		lua_pushinteger(L, fontsize_fromheight(cf.lpLogFont->lfHeight));
 		fontstyle_createtable(L, cf.lpLogFont);
-		lua_pushinteger(L, GetRValue(cf.rgbColors) << 16 | GetGValue(cf.rgbColors) << 8 | GetBValue(cf.rgbColors));//cf.rgbColors);
+		lua_pushinteger(L, GetRValue(cf.rgbColors) << 16 | GetGValue(cf.rgbColors) << 8 | GetBValue(cf.rgbColors));
 		free(cf.lpLogFont);
 		SetFocus(cf.hwndOwner);
 		return 4;
@@ -685,7 +859,7 @@ LUA_CONSTRUCTOR(Label) {
 
 LUA_CONSTRUCTOR(Picture) {
 	int nargs = lua_gettop(L);
-	Widget *w = Widget_create(L, UIPicture, 0, WC_STATICW, SS_NOTIFY | SS_BITMAP | SS_REALSIZECONTROL | WS_CHILD, TRUE, TRUE);
+	Widget *w = Widget_create(L, UIPicture, 0, WC_STATICW, SS_NOTIFY | SS_BITMAP | SS_REALSIZECONTROL | WS_CHILD | WS_CLIPCHILDREN, TRUE, TRUE);
 	BITMAP bm;
 	w->status = (HANDLE)LoadImg(luaL_checkFilename(L, 3));
 	GetObject(w->status, sizeof(BITMAP), &bm);
@@ -710,7 +884,8 @@ extern LRESULT CALLBACK PageProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPar
 
 LUA_CONSTRUCTOR(Panel)
 {
-	SetWindowLongPtr(Widget_create(L, UIPanel, WS_EX_COMPOSITED, L"Window", WS_CHILD, FALSE, FALSE)->handle, GWLP_WNDPROC, (LONG_PTR)PageProc);
+	Widget *w = Widget_create(L, UIPanel, WS_EX_COMPOSITED, L"Window", WS_CHILD, FALSE, FALSE);
+	SetWindowLongPtr(w->handle, GWLP_WNDPROC, (LONG_PTR)PageProc);
     return 1;
 }
 
@@ -737,13 +912,13 @@ LUA_CONSTRUCTOR(Groupbox) {
 }
 
 LUA_CONSTRUCTOR(Calendar) {
-	Widget_create(L, UIDate, 0, MONTHCAL_CLASSW, WS_TABSTOP | WS_CHILD | MCS_NOTODAYCIRCLE, FALSE, TRUE);
+	Widget_create(L, UIDate, 0, MONTHCAL_CLASSW, WS_TABSTOP | MCS_NOTODAYCIRCLE, FALSE, TRUE);
 	return 1;
 }
 
 LUA_CONSTRUCTOR(Tab) {
 	luaL_checktype(L, 3, LUA_TTABLE);
-	Widget *w = Widget_create(L, UITab, 0, WC_TABCONTROLW, WS_TABSTOP | WS_CHILD | WS_CLIPSIBLINGS, TRUE, TRUE);
+	Widget *w = Widget_create(L, UITab, 0, WC_TABCONTROLW, WS_TABSTOP | WS_CLIPSIBLINGS, TRUE, TRUE);
 	LONG style = GetWindowLongPtr(w->handle, GWL_STYLE ) & ~WS_BORDER;
 	SetWindowLongPtr(w->handle, GWL_STYLE, style);
 	return 1;
@@ -751,10 +926,13 @@ LUA_CONSTRUCTOR(Tab) {
 
 LUA_CONSTRUCTOR(Listbox) {
 	luaL_checktype(L, 3, LUA_TTABLE);
-	Widget *w = Widget_create(L, UIList, 0, WC_LISTVIEWW, WS_BORDER | WS_TABSTOP | WS_CHILD | WS_HSCROLL | WS_VSCROLL | LVS_NOCOLUMNHEADER | LVS_REPORT | LVS_SHOWSELALWAYS | WS_TABSTOP | LVS_SINGLESEL | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_DOUBLEBUFFER, TRUE, FALSE);
+	Widget *w = Widget_create(L, UIList, 0, WC_LISTVIEWW, WS_BORDER | WS_TABSTOP | WS_CHILD | WS_HSCROLL | WS_VSCROLL | LVS_NOCOLUMNHEADER | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_DOUBLEBUFFER, TRUE, FALSE);
 	HIMAGELIST imglist = ImageList_Create(1, 1, ILC_COLOR32|ILC_MASK, ImageList_GetImageCount(w->imglist), 1);
 	ListView_SetExtendedListViewStyleEx(w->handle, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
 	ListView_SetImageList(w->handle, imglist, LVSIL_SMALL);
+	lua_pushstring(L, "scroll");
+	lua_pushcfunction(L, Widget_vscroll);
+	lua_rawset(L, -3);
 	return 1;
 }
 
@@ -809,7 +987,10 @@ IWICImagingFactory *ui_factory;
 
 int ui_finalize(lua_State *L) {
 	ui_factory->lpVtbl->Release(ui_factory);
+	DeleteObject(DARK_BRUSH);
+	DeleteObject(CBDARK_BRUSH);	
 	FreeLibrary(richeditlib);
+	OleUninitialize();
 	return 0;
 }
 
@@ -875,6 +1056,26 @@ LUA_PROPERTY_GET(ui, systheme) {
 	return 1;
 }
 
+static void UpdateListColor(Widget *w, HWND h, BOOL isDark) {
+	AllowDarkModeForWindow(h, isDark);
+	if (!SetWindowTheme(h, isDark ? L"DarkMode_Explorer" : L"Explorer", NULL))
+		SetWindowTheme(h, isDark ? L"DarkMode_ItemsView" : L"Explorer", NULL);
+	HTHEME hTheme = OpenThemeData(NULL, isDark ? L"DarkMode::ItemsView" : L"Explorer::ListView");
+	if (hTheme) {
+		COLORREF color;
+		if (FAILED(GetThemeColor(hTheme, 0, 0, TMT_TEXTCOLOR, &color)))
+			color = 0;
+		if (w)
+			w->color = color;
+		ListView_SetTextColor(h, color);
+		if (SUCCEEDED(GetThemeColor(hTheme, 0, 0, TMT_FILLCOLOR, &color))) {
+			ListView_SetTextBkColor(h, color);
+			ListView_SetBkColor(h, color);
+		}
+		CloseThemeData(hTheme);
+	}	
+}
+
 BOOL CALLBACK AdjustThemeProc(HWND h, LPARAM isDark) {
 	Widget *w = (Widget*)GetWindowLongPtr(h, GWLP_USERDATA);
 	WidgetType wtype = w ? w->wtype : GetWidgetTypeFromHWND(h);
@@ -886,13 +1087,11 @@ BOOL CALLBACK AdjustThemeProc(HWND h, LPARAM isDark) {
 			FixDarkScrollBar(isDark);
 			if (w) {
 				if (isDark) {
-					if (w->brush == GetSysColorBrush(COLOR_BTNFACE))
-						w->brush = GetStockObject(BLACK_BRUSH);
+					w->brush = GetStockObject(BLACK_BRUSH);
 					if (w->status)
 						SetWindowSubclass(w->status, StatusProc, 4444, (DWORD_PTR)w);
 				} else {
-					if (w->brush == GetStockObject(BLACK_BRUSH))
-						w->brush = GetSysColorBrush(COLOR_BTNFACE);
+					w->brush = GetSysColorBrush(COLOR_BTNFACE);
 					if (w->status)
 						SendMessageW(w->status, WM_NCACTIVATE, TRUE, 0);
 					if (w->status)
@@ -932,8 +1131,20 @@ color:		if (isDark) {
 			} else SetWindowTheme(h, L"Explorer", NULL);
 			if (w)
 				w->index = !isDark;
+		} else if (wtype == UIDate) {
+			if (isDark) {
+				SetWindowTheme(h, L"", L"");
+				SendMessage(h, MCM_SETCOLOR, MCSC_MONTHBK, 0x202020);
+				SendMessage(h, MCM_SETCOLOR, MCSC_TITLEBK, 0x202020);
+				SendMessage(h, MCM_SETCOLOR, MCSC_BACKGROUND, 0x202020);
+				SendMessage(h, MCM_SETCOLOR, MCSC_TEXT, 0xFFFFFF);
+				SendMessage(h, MCM_SETCOLOR, MCSC_TITLETEXT, 0xFFFFFF);
+			} else {
+				SetWindowTheme(h, L"Explorer", NULL);
+				SendMessage(h, MCM_SETCOLOR, MCSC_BACKGROUND, 0xFFFFFF);
+			}
 		} else if (wtype == UIPanel)
-			w->brush = isDark ? CreateSolidBrush(0x181818) : GetSysColorBrush(COLOR_BTNFACE);
+			w->brush = isDark ? DARK_BRUSH : GetSysColorBrush(COLOR_BTNFACE);
 		else if (wtype == UIEntry) {
 			SetWindowTheme(h, isDark ? L"DarkMode_CFD" : L"Explorer", NULL);
 			if (!w)
@@ -941,10 +1152,17 @@ color:		if (isDark) {
 		}
 		else if (wtype == UICheck || wtype == UIRadio || wtype == UIGroup) {
 			SetWindowTheme(h, isDark ? L"*" : L"Explorer", isDark ? L"*" : NULL);
+			if (w->wtype == UIGroup) {
+				Widget *wp = (Widget*)GetWindowLongPtr(GetParent(h), GWLP_USERDATA);
+				w->brush = (wp && wp->brush) ? wp->brush : (DarkMode ? (HBRUSH)GetStockObject(BLACK_BRUSH) : (HBRUSH)GetSysColorBrush(COLOR_BTNFACE));
+			}
 			if (w)
 				goto color;
 		} else if (wtype == UICombo) {
-			SendMessage(h, CBEM_SETWINDOWTHEME, 0, (LPARAM)(isDark ? L"DarkMode_Explorer": L"Explorer"));
+			SetWindowTheme(h, L"Explorer", NULL);
+			AllowDarkModeForWindow(h, TRUE);
+			SendMessage(h, CBEM_SETWINDOWTHEME, 0, (LPARAM)L"Explorer");//(isDark ? L"DarkMode_Explorer": L"Explorer"));
+			SendMessage(h, WM_THEMECHANGED, 0, 0);
 			HWND cb = (HWND)SendMessageW(w->handle, CBEM_GETCOMBOCONTROL, 0, 0);
 			if (isDark)
 				SetWindowSubclass(cb, ComboBoxSubclassProc, 1234, (DWORD_PTR)w);
@@ -956,10 +1174,13 @@ color:		if (isDark) {
 				AllowDarkModeForWindow(cbi.hwndList, isDark);
 				AllowDarkModeForWindow(cbi.hwndItem, isDark);
 				AllowDarkModeForWindow(cbi.hwndCombo, isDark);
-				SetWindowTheme((HANDLE)SendMessageW(h, CBEM_GETEDITCONTROL, 0, 0), isDark ? L"DarkMode_Explorer": L"Explorer", NULL);
-				SetWindowTheme(cbi.hwndList, isDark ? L"DarkMode_Explorer": L"Explorer", NULL);
-				SetWindowTheme(cbi.hwndItem, isDark ? L"DarkMode_CFD": L"Explorer", NULL);
+				SetWindowTheme(cbi.hwndList, L"Explorer", NULL);
+				SetWindowTheme(cbi.hwndItem, isDark ? L"DarkMode_CFD" : L"Explorer", NULL);
 				SetWindowTheme(cbi.hwndCombo, isDark ? L"DarkMode_CFD" : L"Explorer", NULL);
+				SendMessage(cbi.hwndList, WM_THEMECHANGED, 0, 0);
+				SendMessage(cbi.hwndItem, WM_THEMECHANGED, 0, 0);
+				SendMessage(cbi.hwndCombo, WM_THEMECHANGED, 0, 0);
+				UpdateListColor(w, cbi.hwndList,isDark);
 			}
 		} else if (w && wtype == UITab) {
 			if (isDark)
@@ -975,23 +1196,7 @@ color:		if (isDark) {
 			}
 			page_resize(w, TRUE);
 		} else if (wtype == UIList) {
-			AllowDarkModeForWindow(h, isDark);
-			if (!SetWindowTheme(h, isDark ? L"DarkMode_Explorer" : L"Explorer", NULL))
-				SetWindowTheme(h, isDark ? L"DarkMode_ItemsView" : L"Explorer", NULL);
-			HTHEME hTheme = OpenThemeData(NULL, isDark ? L"DarkMode::ItemsView" : L"Explorer::ListView");
-			if (hTheme) {
-				COLORREF color;
-				if (FAILED(GetThemeColor(hTheme, 0, 0, TMT_TEXTCOLOR, &color)))
-					color = 0;
-				if (w)
-					w->color = color;
-				ListView_SetTextColor(h, color);
-				if (SUCCEEDED(GetThemeColor(hTheme, 0, 0, TMT_FILLCOLOR, &color))) {
-					ListView_SetTextBkColor(h, color);
-					ListView_SetBkColor(h, color);
-				}
-				CloseThemeData(hTheme);
-			}
+			UpdateListColor(w, h, isDark);
 		} else if (wtype == UITree) {
 			if (!SetWindowTheme(h, isDark ? L"DarkMode_Explorer" : w->item.iconstyle ? L"Explorer" : NULL, NULL))
 				SetWindowTheme(h, isDark ? L"DarkMode_ItemsView" : L"Explorer", NULL);
@@ -1060,6 +1265,7 @@ MODULE_FUNCTIONS(ui)
 	METHOD(ui, confirm)
 	METHOD(ui, opendialog)
 	METHOD(ui, dirdialog)
+	METHOD(ui, selectdir)
 	METHOD(ui, savedialog)
 	METHOD(ui, fontdialog)
 	METHOD(ui, colordialog)
@@ -1068,6 +1274,7 @@ MODULE_FUNCTIONS(ui)
 	METHOD(ui, update)
 	METHOD(ui, remove)
 	METHOD(ui, run)
+	METHOD(ui, drag)
 END
 
 /* ------------------------------------------------------------------------ */
@@ -1077,14 +1284,13 @@ int luaopen_ui(lua_State *L) {
 	int i = -1;
 
 	InitDarkMode();
+	OleInitialize(NULL);
 	wcex.cbSize = sizeof(WNDCLASSEX);
-	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WindowProc;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = GetModuleHandle(NULL);
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = DarkMode ? GetStockObject(BLACK_BRUSH) : NULL;
 	wcex.lpszMenuName = 0;
 	wcex.lpszClassName = "Window";
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(WINICON));
@@ -1127,6 +1333,8 @@ int luaopen_ui(lua_State *L) {
 	lua_setfield(L, LUA_REGISTRYINDEX, "MenuItem");
 	if (FAILED(CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (LPVOID*)&ui_factory)))
         luaL_error(L, "Failed to open 'ui' module : WIC Imaging Factory could not be created");
+	DARK_BRUSH = CreateSolidBrush(0x181818);			
+	CBDARK_BRUSH = CreateSolidBrush(0x383838);			
 	lua_widgetconstructor = Widget__constructor;
 	lua_widgetinitialize = Widget_init;
 	lua_widgetdestructor = Widget_destructor;

@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Menu.c | LuaRT Menu object implementation
@@ -437,7 +437,7 @@ LUA_METHOD(MenuItem, loadicon) {
 
 	if (w->icon)
 		DestroyIcon(w->icon);
-	w->icon = widget_loadicon(L);
+	w->icon = widget_loadicon(L, FALSE);
 	DeleteObject(w->item.mi->hbmpItem);
 	if (w->icon && SUCCEEDED(ui_factory->lpVtbl->CreateBitmapFromHICON(ui_factory, w->icon, &ibmp)))
 	{
