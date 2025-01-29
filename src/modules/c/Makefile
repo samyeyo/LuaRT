@@ -1,4 +1,4 @@
-﻿# | webview module for LuaRT
+﻿# | c module for LuaRT
 # | Luart.org, Copyright (c) Tine Samir 2024.
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
@@ -11,22 +11,22 @@
 # |-------------------------------------------------------------
 VERBOSE= >nul 2>&1
 
-MODULE=		webview
-VERSION=	1.0
-SRC= 		src\handler.obj src\webview.obj
+MODULE=		C 
+VERSION=	0.7
+SRC= 		src\C.obj src\Library.obj src\Struct.obj src\Value.obj src\Union.obj src\Array.obj src\Pointer.obj
 
 !if "$(BUILD)" == "debug"
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /DLUA_BUILD_AS_DLL /I"./WebView/include" /I"$(LUART_PATH)\include" /I"." /Z7
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"src/include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG
 VERBOSE=
 PROGRESS= 
 !else
-CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /DLUA_BUILD_AS_DLL /I."/WebView/include" /I"$(LUART_PATH)\include" /I"." /MD /Gy /GR- /GL /GS- /GF /Oi /O2
-LDFLAGS= /nologo /OPT:REF /OPT:ICF /LTCG
+CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I"src/include" /I"." /MD /Gy /GR- /GL /GS- /Oi /O2
+LDFLAGS= /nologo /NODEFAULTLIB:libcmt /OPT:REF /OPT:ICF /LTCG
 PROGRESS= "■"
 !endif
 
-LIBS= "$(LUART_PATH)\lib\lua54.lib" "Webview\$(PLATFORM)\WebView2LoaderStatic.lib" user32.lib kernel32.lib advapi32.lib shlwapi.lib urlmon.lib
+LIBS= "$(LUART_PATH)\lib\lua54.lib" "src/lib/$(PLATFORM)/libdyncall_s.lib" "src/lib/$(PLATFORM)/libdynload_s.lib" user32.lib shlwapi.lib
 RM= del /Q
 CP= copy /Y
 LD= link.exe
@@ -41,12 +41,12 @@ infomodule:
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building module $(MODULE) $(VERSION)	  "
 
-.cpp.obj: 
+.c.obj: 
 	@$(CC) $(CFLAGS) /c /Fo$@ $< $(VERBOSE)
 	@echo|set /p dummy=$(PROGRESS)
 
 $(MODULE).dll: infomodule $(SRC)
-	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ $(VERBOSE)
+	@$(LD) /DLL $(LDFLAGS) $(SRC) $(LIBS) /OUT:$@ $(VERBOSE) 
 	
 install: $(MODULE).dll
 !if !exists("$(LUART_PATH)\modules\$(MODULE)")

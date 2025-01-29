@@ -11,22 +11,19 @@
 # |-------------------------------------------------------------
 VERBOSE= >nul 2>&1
 
-#---- LuaRT toolchain path
-LUART_PATH=..\..\..
-
 MODULE=		net
 VERSION=	1.5
 SRC= 		src\Http.obj src\net.obj src\Socket.obj src\Ftp.obj
-
-
 
 !if "$(BUILD)" == "debug"
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I".\lib" /Z7 
 LDFLAGS= /nologo /DEBUG
 VERBOSE=
+PROGRESS= 
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0600 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"$(LUART_PATH)\include" /I".\lib" /MD /Gy /GR- /GL /GS- /GF /Oi /O2
 LDFLAGS= /nologo /OPT:REF /OPT:ICF /LTCG
+PROGRESS= "■"
 !endif
 
 LIBS= "$(LUART_PATH)\lib\lua54.lib" ws2_32.lib Secur32.lib dnsapi.lib iphlpapi.lib urlmon.lib wininet.lib crypt32.lib shlwapi.lib ole32.lib sensapi.lib advapi32.lib
@@ -46,11 +43,11 @@ infomodule:
 
 .c.obj: 
 	@$(CC) $(CFLAGS) /c /Fo$@ $< $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 
 .cpp.obj: 
 	@$(CC) $(CFLAGS) /EHsc /c /Fo$@ $< $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 
 $(MODULE).dll: infomodule $(SRC)
 	@$(LD) /DLL $(LDFLAGS) $(LIBS) $(SRC) /OUT:$@ $(VERBOSE)

@@ -1,5 +1,5 @@
 ﻿# | LuaRT - A Windows programming framework for Lua
-# | Luart.objrg, Copyright (c) Tine Samir 2024
+# | Copyright (c) Tine Samir 2024
 # | See Copyright Notice in LICENSE.TXT
 # |--------------------------------------------------------------
 # | LuaRT Core Makefile for the toolchain, the Core framework and the tools
@@ -49,21 +49,25 @@ _ARCH = x86
 
 #---- LuaRT version
 LUART_MAJOR= 1
-LUART_MINOR= 8
+LUART_MINOR= 9
 LUART_RELEASE= 0 
-VERSION= $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
+!if "$(VERSION)" == ""
+VERSION=$(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE)
+!endif
 DEFINES_RES= /d LUART_MINOR="$(LUART_MINOR)" /d LUART_MAJOR="$(LUART_MAJOR)" /d LUART_RELEASE="$(LUART_RELEASE)"
 
 !if "$(BUILD)" == "debug"
 CFLAGS = /nologo /D_WIN32_WINNT=0x0603 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DZIP_SHARED /DZIP_BUILD_SHARED /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /Z7
 LDFLAGS= /nologo /DEBUG /NODEFAULTLIB:msvcrt
 VERBOSE= 
+PROGRESS=
 !else
 CFLAGS = /nologo /D_WIN32_WINNT=0x0603 /DLUA_COMPAT_5_3 /DLUA_ARCH=\"$(_ARCH)\" /DZIP_SHARED /DZIP_BUILD_SHARED /DLUART_MINOR=$(LUART_MINOR) /DLUART_MAJOR=$(LUART_MAJOR) /DLUART_RELEASE=$(LUART_RELEASE) /I"..\..\include" /I"." /MD /Gy /GF /Oi /O2 /GA
 LDFLAGS= /nologo /OPT:REF /OPT:ICF
+PROGRESS= "■"
 !endif
 
-DLL_LIBS =	shlwapi.lib advapi32.lib gdi32.lib comctl32.lib kernel32.lib user32.lib oleaut32.lib ole32.lib credui.lib crypt32.lib wininet.lib
+DLL_LIBS =	shlwapi.lib advapi32.lib gdi32.lib comctl32.lib kernel32.lib user32.lib oleaut32.lib ole32.lib credui.lib crypt32.lib wininet.lib shell32.lib
 
 LIBS	= 	lua54.lib ole32.lib comctl32.lib shell32.lib
 UI_LIBS = 	gdi32.lib uxtheme.lib shell32.lib user32.lib kernel32.lib dwmapi.lib windowscodecs.lib comdlg32.lib ole32.lib shlwapi.lib oleaut32.lib shcore.lib
@@ -74,7 +78,7 @@ STATIC_LIBS=ole32.lib comctl32.lib crypt32.lib credui.lib wininet.lib ws2_32.lib
 LUA_A=		lua54.dll
 LUA_O=		lua\lapi.obj lua\lcode.obj lua\lctype.obj lua\ldebug.obj lua\ldo.obj lua\ldump.obj lua\lfunc.obj lua\lgc.obj lua\llex.obj lua\lmem.obj lua\lobject.obj lua\lopcodes.obj lua\lparser.obj lua\lstate.obj lua\lstring.obj lua\ltable.obj lua\ltm.obj lua\lundump.obj lua\lvm.obj lua\lzio.obj	
 LIB_O=		lua\lauxlib.obj lua\lbaselib.obj lua\lcorolib.obj lua\ldblib.obj lua\lmathlib.obj lua\loadlib.obj lua\ltablib.obj string\string.obj string\lstrlib.obj sys\sys.obj console\console.obj lua\liolib.obj lua\loslib.obj lua\lutf8lib.obj compression\compression.obj compression\Zip.obj compression\lib\miniz.obj compression\lib\zip.obj lrtapi.obj lrtobject.obj sys\Date.obj sys\File.obj sys\Pipe.obj sys\Directory.obj sys\Buffer.obj sys\Com.obj lembed.obj sys\async.obj sys\Task.obj
-UI_O=  		ui\ui.obj ui\Widget.obj ui\Entry.obj ui\Items.obj ui\Menu.obj ui\Window.obj ui\Darkmode.obj
+UI_O=  		ui\ui.obj ui\Widget.obj ui\Entry.obj ui\Items.obj ui\Menu.obj ui\Window.obj ui\Darkmode.obj ui\DragDrop.obj
 
 BASE_O= 	$(LUA_O) $(LIB_O)
 STATIC_O=	..\modules\net\src\Socket.obj ..\modules\net\src\Http.obj ..\modules\net\src\Ftp.obj ..\modules\net\src\net.obj ..\modules\crypto\src\Cipher.obj ..\modules\crypto\src\crypto.obj
@@ -85,7 +89,8 @@ LUAWRT_T=	wluart.exe
 ALL_T= 		$(LUA_A) $(LUART_T) $(LUAWRT_T) luart-static.exe wluart-static.exe $(DEST)\rtc.exe $(DEST)\wrtc.exe
 
 !if "$(STATIC)" == "" && "$(BUILD)" == ""
-!message ━━━━━━━━━━━━━━━━━━━━  Building LuaRT $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE) for $(PLATFORM)  ━━━━━━━━━━━━━━━━━━━━
+!message 
+!message --------------------  Building LuaRT $(LUART_MAJOR).$(LUART_MINOR).$(LUART_RELEASE) for $(PLATFORM)  --------------------
 !endif
 
 all: rtc toolchain
@@ -100,7 +105,7 @@ default: toolchain
 
 infolua: utf8
 	@cmd /c echo.
-	@echo|set /p dummy="▸  Building Lua 5.4.6 VM          "
+	@echo|set /p dummy="▸  Building Lua 5.4.7 VM          "
 
 infocore:
 	@cmd /c echo.
@@ -119,12 +124,12 @@ infosetup: utf8
 	@echo|set /p dummy="▸  Building LuaRT installer       "
 
 .cpp.obj:
-	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< $(VERBOSE)
-	@echo|set /p dummy="■"
+	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< $(VERBOSE) /EHsc
+	@echo|set /p dummy=$(PROGRESS)
 
 .c.obj: 
 	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fo$@ $< $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 
 lua: infolua $(LUA_O) 
 
@@ -151,24 +156,24 @@ tools: infotoolchain toolchain rtc
 	@echo|set /p dummy=" "
 
 $(LUA_A): $(BASE_O)
-	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(BASE_O) /OUT:$@ $(VERBOSE)
-	@echo|set /p dummy="■"
+	@$(LD) /DLL $(LDFLAGS) $(BASE_O) $(DLL_LIBS) /OUT:$@ $(VERBOSE)
+	@echo|set /p dummy=$(PROGRESS)
 	@-copy /Y $@ "$(DEST)\$@" >nul
 	@-copy /Y lua54.lib "..\..\lib\lua54.lib" >nul
 
 $(LUART_T): $(LUA_A)
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /i "lua/" resources/resource.rc >nul 2>&1
-	@echo|set /p dummy="■"
-	@$(CC) $(CFLAGS) luart.c /link $(LDFLAGS) resource.res $(LIBS) /OUT:$@ $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
+	@$(CC) $(CFLAGS) luart.c /DRTC /link $(LDFLAGS) resource.res $(LIBS) /OUT:$@ $(VERBOSE)
+	@echo|set /p dummy=$(PROGRESS)
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 $(LUAWRT_T): $(BASE_O) $(UI_O)
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) /c /DRTWIN $(CFLAGS) luart.c /Fowluart.obj $(VERBOSE)
 	@$(LD) $(LDFLAGS) resource.res wluart.obj $(UI_O) $(LIBS) $(UI_LIBS) /OUT:$@ /SUBSYSTEM:windows $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@-copy /Y $@ "$(DEST)\$@" >nul
 
 !if "$(BUILD)" == "debug"
@@ -179,16 +184,16 @@ rtc:
 !else
 luart-static: $(BASE_O) $(UI_O) $(STATIC_O) infostatic
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) /c /DRTWIN /DLUART_STATIC $(CFLAGS) luart.c /Fowluart-static.obj $(VERBOSE)
 	@$(LD) $(LDFLAGS) resource.res wluart-static.obj $(BASE_O) $(STATIC_O) $(UI_O) $(UI_LIBS) $(STATIC_LIBS) /OUT:wluart-static.exe /SUBSYSTEM:windows $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@-copy /Y wluart-static.exe $(DEST)\wluart-static.exe >nul
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /i "lua/" resources/resource.rc >nul 2>&1
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) /c $(CFLAGS) /DLUART_STATIC luart.c /Foluart-static.obj  $(VERBOSE)
 	@$(LD) $(LDFLAGS) resource.res luart-static.obj $(BASE_O) $(STATIC_O) $(STATIC_LIBS) /OUT:luart-static.exe $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@-copy /Y luart-static.exe $(DEST)\luart-static.exe >nul
 
 rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
@@ -199,15 +204,15 @@ rtc: toolchain luart-static ..\..\tools\rtc\src\rtc.lua
 	@cmd /c echo.
 	@echo|set /p dummy="▸  Building rtc compiler          "
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTC /i "lua/" resources/resource.rc >nul 2>&1
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) $(CFLAGS) /D RTC luart.c /link $(LDFLAGS) resource.res $(BASE_O) $(STATIC_O) $(STATIC_LIBS) /OUT:luart.exe $(VERBOSE)
 	@luart.exe ..\..\tools\rtc\src\rtc.lua ..\..\tools\rtc\src\rtc.lua -o rtc.exe ..\..\tools\rtc\src  $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTC /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) /c /DRTWIN /DRTC $(CFLAGS) luart.c /Fowluart.obj $(VERBOSE)
 	@$(LD) $(LDFLAGS) resource.res wluart.obj $(BASE_O) $(STATIC_O) $(UI_O) $(UI_LIBS) $(STATIC_LIBS) /OUT:wluart.exe /SUBSYSTEM:windows $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@luart.exe ..\..\tools\rtc\src\rtc.lua -o wrtc.exe -w -i ..\..\tools\rtc\src\img\rtc.ico ..\..\tools\rtc\src\rtc.lua ..\..\tools\rtc\src $(VERBOSE)
 	@-copy /Y rtc.exe "$(DEST)\rtc.exe" >nul	
 	@-copy /Y wrtc.exe "$(DEST)\wrtc.exe" >nul	
@@ -223,46 +228,49 @@ buildtools: rtc
 	@cd ..\..\src\core
 	@echo|set /p dummy="▸  Building QuickRT/LuaRT Studio  "
 	@$(CC) /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c $(VERBOSE)
-	@echo|set /p dummy="■"
+	@$(CC) /DUI /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Foui\ui.obj ui\ui.c $(VERBOSE)
+	@echo|set /p dummy=$(PROGRESS)
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@rtc -i ..\..\tools\QuickRT\contrib\quickrt.ico ..\..\tools\QuickRT\src\quickrt.lua -o ..\..\tools\QuickRT\QuickRT.exe ..\..\tools\QuickRT\src $(VERBOSE)
 	@-copy /Y lua54.dll ..\..\tools\QuickRT\lua54.dll >nul	
-	@echo|set /p dummy="■"	
+	@echo|set /p dummy=$(PROGRESS)	
 	@$(CC) /DRTCOMPAT /DAIO /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) /DRTWIN /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fosys\File.obj sys\File.c $(VERBOSE)
-	@echo|set /p dummy="■"	
+	@echo|set /p dummy=$(PROGRESS)	
 	@$(LD) /DLL $(LDFLAGS) $(DLL_LIBS) $(UI_LIBS) $(BASE_O) $(UI_O) /OUT:lua54.dll $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Folrtapi.obj lrtapi.c $(VERBOSE)
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@$(CC) /DLUA_BUILD_AS_DLL $(CFLAGS) /c /Fosys\File.obj sys\File.c $(VERBOSE)
-	@echo|set /p dummy="■"	
+	@echo|set /p dummy=$(PROGRESS)	
 	@rc /fo .\\resource.res $(DEFINES_RES) /r /v /d RTWIN /i "lua/" resources/resource.rc >nul 2>&1
-	@echo|set /p dummy="■"
-	@$(CC) $(CFLAGS) luart.c /link $(LDFLAGS) resource.res $(LIBS) /OUT:luart.exe $(VERBOSE)
-	@echo|set /p dummy="■"
-	@copy /Y luart.exe "..\..\tools\LuaRT-Studio\bin\luart.exe" >nul	
-	@-copy /Y ..\..\bin\wrtc.exe "..\..\tools\LuaRT-Studio\bin\wrtc.exe" >nul	
-	@-copy /Y lua54.dll "..\..\tools\LuaRT-Studio\bin\lua54.dll" >nul	
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
+	@$(CC) $(CFLAGS) /DUI luart.c /link $(LDFLAGS) resource.res $(LIBS) /OUT:luart.exe  $(VERBOSE)
+	@echo|set /p dummy=$(PROGRESS)
+	@-xcopy "..\..\tools\LuaRT-Studio\$(PLATFORM)\*" "..\..\tools\LuaRT-Studio" /s /e /Y >nul 2>&1
+	@-copy /Y luart.exe ..\..\tools\LuaRT-Studio\bin\luart.exe >nul
+	@-copy /Y ..\..\bin\wrtc.exe ..\..\tools\LuaRT-Studio\bin\wrtc.exe >nul
+	@-copy /Y lua54.dll ..\..\tools\LuaRT-Studio\bin\lua54.dll >nul	
+	@echo|set /p dummy=$(PROGRESS)
 	@-$(RM) lua54.dll >nul 2>&1
-	@rmdir  "..\..\tools\LuaRT-Studio\examples\" /s /q
-	@xcopy "..\..\examples"  "..\..\tools\LuaRT-Studio\examples\" /s /e /y >nul
-	@echo|set /p dummy="■"
-	@xcopy "..\..\modules"  "..\..\tools\LuaRT-Studio\modules\" /s /e /y >nul
-	@echo|set /p dummy="■"
+	@rd ..\..\tools\LuaRT-Studio\examples /s /q 
+	@xcopy ..\..\examples ..\..\tools\LuaRT-Studio\examples\ /s /e /y >nul
+	@echo|set /p dummy=$(PROGRESS)
+	@xcopy ..\..\modules ..\..\tools\LuaRT-Studio\modules\ /s /e /y >nul
+	@echo|set /p dummy=$(PROGRESS)
 	@..\..\bin\rtc.exe -s -w -o rtcheck.exe -i ..\..\setup\img\update.ico ..\..\setup\update.lua ..\..\setup\img\ 2>&1 >nul
-	@-copy /Y rtcheck.exe "..\..\tools\LuaRT-Studio\bin\rtcheck.exe" 2>&1 >nul
+	@-copy /Y rtcheck.exe ..\..\tools\LuaRT-Studio\bin\rtcheck.exe 2>&1 >nul
 	@-move /Y rtcheck.exe ..\..\bin 2>&1 >nul
-	@echo|set /p dummy="■"
+	@echo|set /p dummy=$(PROGRESS)
 	@cmd /c echo.
 
 setup: buildtools infosetup
 	@..\..\bin\luart.exe makedist.lua $(VERSION) $(PLATFORM)
-	@echo|set /p dummy="■"
-	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).zip ..\..\LuaRT-$(VERSION)-$(PLATFORM).zip >nul
+	@echo|set /p dummy=$(PROGRESS)
+	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).zip ..\..\LuaRT-$(VERSION)-$(PLATFORM).zip >nul 2>&1
+	@-move /Y LuaRT-$(VERSION)-$(PLATFORM).exe ..\..\LuaRT-$(VERSION)-$(PLATFORM).exe >nul 2>&1
 	@cmd /c echo.
 
 clean: utf8

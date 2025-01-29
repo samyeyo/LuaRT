@@ -1,6 +1,6 @@
 --[[
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | makedist.lua | Builds the LuaRT setup executable
@@ -64,7 +64,34 @@ z:write(parent.."/modules", "modules")
 console.write("■")
 z:write(parent.."/examples", "examples")
 console.write("■")
-z:write(parent.."/tools/LuaRT-Studio", "LuaRT-Studio")
+z:write(parent.."/tools/LuaRT-Studio/bin", "LuaRT-Studio/bin")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/api", "LuaRT-Studio/api")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/build", "LuaRT-Studio/build")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/cfg", "LuaRT-Studio/cfg")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/examples", "LuaRT-Studio/examples")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/interpreters", "LuaRT-Studio/interpreters")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/lualibs", "LuaRT-Studio/lualibs")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/modules", "LuaRT-Studio/modules")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/packages", "LuaRT-Studio/packages")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/src", "LuaRT-Studio/src")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/spec", "LuaRT-Studio/spec")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/studio", "LuaRT-Studio/studio")
+console.write("■")
+z:write(parent.."/tools/LuaRT-Studio/CHANGELOG.md", "LuaRT-Studio/CHANGELOG.md")
+z:write(parent.."/tools/LuaRT-Studio/README.md", "LuaRT-Studio/README.md")
+z:write(parent.."/tools/LuaRT-Studio/LICENSE", "LuaRT-Studio/LICENSE")
+z:write(parent.."/tools/LuaRT-Studio/LuaRT Studio.exe", "LuaRT-Studio/LuaRT Studio.exe")
 console.write("■")
 z:write(parent.."/tools/QuickRT/lua54.dll", "QuickRT/lua54.dll")
 console.write("■")
@@ -90,10 +117,12 @@ file_add("../../setup/install.wlua", "local VERSION = '"..VERSION.."'")
 local exe = 'LuaRT-'..VERSION..'-'..PLATFORM
 sys.cmd('..\\..\\bin\\rtc.exe -i "resources/box.ico" -s -w -o "'..exe..'.exe" ../../setup/install.wlua ../../setup >nul')
 
-local compressed = compression.Zip(exe..".zip", "write")
-compressed:write(exe..".exe")
-compressed:close()
-console.write("■")
+if not sys.env.GITHUB_ACTIONS then
+    local compressed = compression.Zip(exe..".zip", "write")
+    compressed:write(exe..".exe")
+    compressed:close()
+    sys.File(exe..'.exe'):remove()
+    console.write("■")
+end
 
-sys.File(exe..'.exe'):remove()
 dist:removeall()
