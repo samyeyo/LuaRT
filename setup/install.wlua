@@ -1,4 +1,4 @@
-﻿local VERSION = '1.8.0'
+﻿local VERSION = '1.9.0'
 
 --[[
     | LuaRT - A Windows programming framework for Lua
@@ -15,7 +15,16 @@ local compression = require "compression"
 
 local File = embed == nil and sys.File  or embed.File
 
-local win = ui.Window("", "raw", 400, 240)
+local factor
+if ui.dpi < 1.5 then
+    factor = 1
+elseif ui.dpi < 1.75 then
+    factor = 1.5
+elseif ui.dpi >= 1.75 then
+    factor = 2
+end
+
+local win = ui.Window("", "raw", 400, 155*factor)
 win.font = "Segoe UI"
 win.installation = false
 
@@ -26,7 +35,7 @@ local update = sys.registry.read("HKEY_CURRENT_USER", "Software\\Microsoft\\Wind
 if update then
     local p = sys.Pipe('luart -e print(_VERSION)') or false
     if p then
-        local current = (await(p:read()) or VERSION):match("%d%.%d%.%d")
+        local current = (await(p:read(300)) or VERSION):match("%d%.%d%.%d")
         local numver = VERSION:gsub("%.", "")
         local numcurr = current:gsub("%.", "")
         if current == VERSION then
@@ -39,15 +48,6 @@ if update then
     else
         caption = "Repair"
     end
-end
-
-local factor
-if ui.dpi < 1.5 then
-    factor = 1
-elseif ui.dpi < 1.75 then
-    factor = 1.5
-elseif ui.dpi >= 1.75 then
-    factor = 2
 end
 
 local img = ui.Picture(win, File(("img/logox"..factor..".png"):gsub(",", ".")).fullpath)
@@ -133,7 +133,6 @@ function button:onClick()
         isopen(dir.fullpath.."/RTBuilder/RTBuilder.exe", "RTBuilder")      
         win.installation = true
         local label = ui.Label(win, "test")
-        label.y = 200
         label.autosize = false        
         label.fontsize = 8
         label.textalign = "left"
@@ -143,12 +142,14 @@ function button:onClick()
         bar:center()
         label.x = bar.x
         label.width = bar.width
-        bar.y = 180
+        bar.y = 150*factor
+        label.y = bar.y + bar.height + 3
         bar.position = 75
         bar.themed = false
         bar.fgcolor = 0xEFB42C
         bar.bgcolor = win.bgcolor
         self:hide()
+        ui.update()
         local archive = compression.Zip(File("luaRT.zip"))
         bar.range = {0, archive.count}
         local size = 0
@@ -199,6 +200,10 @@ function button:onClick()
         win.installation = false
         label.text = "LuaRT "..VERSION.." has been successfully installed"
         label.textalign = "center"
+        local btn = ui.Button(win, "Getting started with LuaRT")
+        btn:center()
+        btn.y = label.y + label.height + 12
+        btn.onClick = function(self) sys.cmd("start https://www.luart.org/doc/tour.html"); win:hide() end
     end
 end
 

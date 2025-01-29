@@ -1,4 +1,4 @@
-﻿local VERSION = '1.8.0'
+﻿local VERSION = '1.9.0'
 --[[
     | LuaRT - A Windows programming framework for Lua
     | Luart.org, Copyright (c) Tine Samir 2023.
@@ -23,11 +23,6 @@ if exe.fullpath ~= tmpexe.fullpath then
     sys.exit()
 end
 
-local win = ui.Window("", "raw", 320, 200)
-win.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
-win.font = "Segoe UI"
-win.installation = false
-
 local factor
 if ui.dpi < 1.5 then
     factor = 1
@@ -36,6 +31,11 @@ elseif ui.dpi < 1.75 then
 elseif ui.dpi >= 1.75 then
     factor = 2
 end
+
+local win = ui.Window("", "raw", 400, 155*factor)
+win.bgcolor = ui.theme == "light" and 0xFFFFFF or 0
+win.font = "Segoe UI"
+win.installation = false
 
 local img = ui.Picture(win, File(("logox"..factor..".png"):gsub(",", ".")).fullpath)
 win.width = img.width
