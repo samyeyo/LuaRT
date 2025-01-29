@@ -1,6 +1,6 @@
  /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Database.c | LuaRT Database object implementation
@@ -60,16 +60,16 @@ static sqlite3_stmt *run_query(lua_State *L, Database *db) {
 		switch ((type = lua_type(L, i))) {
 			case LUA_TSTRING:	{
 									wchar_t *text = lua_tolwstring(L, i, &len);
-									CHECK_STMT(db, sqlite3_bind_text16(stmt, i-2, text, len*sizeof(wchar_t), SQLITE_STATIC), stmt);
+									CHECK_STMT(db, sqlite3_bind_text16(stmt, i-2, text, len*sizeof(wchar_t), SQLITE_TRANSIENT), stmt);
 									free(text);
 									break;
 								}
 			case LUA_TNUMBER:	if (lua_isinteger(L, i))
-									CHECK_STMT(db, sqlite3_bind_int64(stmt, i-2, lua_tointeger(L, i)), stmt);
+									CHECK_STMT(db, sqlite3_bind_int64(stmt, i-2,lua_tointeger(L, i)), stmt);
 								else
 									CHECK_STMT(db, sqlite3_bind_double(stmt, i-2, lua_tonumber(L, i)), stmt);
 								break;
-			default:			CHECK_STMT(db, sqlite3_bind_text(stmt, i-2, luaL_tolstring(L, i, NULL), -1, SQLITE_STATIC), stmt);
+			default:			CHECK_STMT(db, sqlite3_bind_text(stmt, i-2, luaL_tolstring(L, i, NULL), -1, SQLITE_TRANSIENT), stmt);
 								lua_pop(L, 1);
 		}
 	}
@@ -80,12 +80,15 @@ static int push_row(lua_State *L, Database *db, sqlite3_stmt *stmt, int count) {
 	if (sqlite3_step(stmt) == SQLITE_ROW ) {
 		lua_createtable(L, 0, count);
 		for (int i = 0; i < count; i++) {
-			lua_pushwstring(L, sqlite3_column_name16(stmt, i));
+			const wchar_t *name = sqlite3_column_name16(stmt, i);
+			lua_pushwstring(L, name);
 			switch(sqlite3_column_type(stmt, i)) {
 				case SQLITE_INTEGER:	lua_pushinteger(L, sqlite3_column_int64(stmt, i)); break;
 				case SQLITE_FLOAT:		lua_pushnumber(L, sqlite3_column_double(stmt, i)); break;
+				case SQLITE_TEXT:		lua_pushwstring(L, sqlite3_column_text16(stmt, i)); break;
 				default:				lua_pushlstring(L, sqlite3_column_blob(stmt, i), sqlite3_column_bytes(stmt, i));
 			}
+			printf("%ls = %s\n", name, lua_tostring(L, -1));
 			lua_rawset(L, -3);
 		}
 

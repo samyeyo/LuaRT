@@ -1,6 +1,6 @@
 /*
  | Sqlite for LuaRT
- | Luart.org, Copyright (c) Tine Samir 2024.
+ | Luart.org, Copyright (c) Tine Samir 2025.
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Sqlite.c | LuaRT sqlite binary module
