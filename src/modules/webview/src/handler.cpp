@@ -1,6 +1,6 @@
 /*
  | Webview for LuaRT - HTML/JS/CSS render Widget
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE
  |-------------------------------------------------
  | handler.cpp | Webview2 c++ interface class wrapper
@@ -111,8 +111,8 @@ static HRESULT STDMETHODCALLTYPE EventInterfaces_WebResourceRequested_Invoke(ICo
 					args->lpVtbl->put_Response(args, response);
 					result = S_OK;
 					free(buffer);
-					free(uri);
 				}  		
+				free(uri);
 				GlobalFree(wuri);
 			}
 		}

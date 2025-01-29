@@ -1,6 +1,6 @@
 /*
  | Webview for LuaRT - HTML/JS/CSS render Widget
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | webview.c | LuaRT binary module with Widget implementation
@@ -59,19 +59,13 @@ static int EvalTaskContinue(lua_State* L, int status, lua_KContext ctx) {
     return lua_yieldk(L, 0, ctx, EvalTaskContinue);
 }
 
-static int WaitTask(lua_State *L) {	
-    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), EvalTaskContinue);
-}
-
 LUA_METHOD(Webview, eval) {
    	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
 	wchar_t *js = lua_towstring(L, 2);
 	ExecuteScriptCompletedCallback *ExecCB = new ExecuteScriptCompletedCallback();
   	if (wv->webview2)
 		wv->webview2->lpVtbl->ExecuteScript(wv->webview2, js, ExecCB); 
-	lua_pushlightuserdata(L, ExecCB);
-	lua_pushcclosure(L, WaitTask, 1);
-	lua_pushinstance(L, Task, 1);
+	lua_pushtask(L, EvalTaskContinue, ExecCB, NULL);
 	lua_pushvalue(L, -1);
 	lua_call(L, 0, 0); 
 	free(js);
@@ -306,9 +300,31 @@ LUA_PROPERTY_SET(Webview, statusbar) {
 	return 0;
 }
 
+LUA_PROPERTY_GET(Webview, useragent) {
+	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
+	if (wv->settings) {
+	wchar_t *result = NULL;
+	wv->settings->lpVtbl->get_UserAgent(wv->settings, &result);
+	lua_pushwstring(L, result);
+	CoTaskMemFree(result);
+	} else lua_pushnil(L);
+	return 1;
+}
+
+LUA_PROPERTY_SET(Webview, useragent) {
+	WebviewHandler *wv = static_cast<WebviewHandler*>(lua_self(L, 1, Widget)->user);
+	int result = FALSE;
+	if (wv->settings) {
+		wchar_t *ua = toUTF16(lua_tostring(L, 2));
+		result = SUCCEEDED(wv->settings->lpVtbl->put_UserAgent(wv->settings, ua));
+		GlobalFree(ua);
+	}
+	lua_pushboolean(L, result);
+	return 1;
+}
+
 LUA_METHOD(Webview, __gc) {
   Widget *w = lua_widgetdestructor(L);
-
   delete (WebviewHandler *)w->user;
   free(w);
   return 0;
@@ -335,48 +351,36 @@ OBJECT_MEMBERS(Webview)
   READONLY_PROPERTY(Webview, title)
   READONLY_PROPERTY(Webview, cangoback)
   READONLY_PROPERTY(Webview, cangoforward)
+  READWRITE_PROPERTY(Webview, useragent)
 END
 
 OBJECT_METAFIELDS(Webview)
   METHOD(Webview, __gc)
 END
 
-static int event_stringarg(lua_State *L, const char *eventname) {
-  if (lua_getfield(L, 1, eventname)) {
-  	MSG *msg = (MSG *)lua_touserdata(L, 2);
+int event_onReady(lua_State *L, Widget *w, MSG *msg) {
+  lua_throwevent(L, "onReady", 1);
+  return 0;
+}
+
+int event_onFullscreen(lua_State *L, Widget *w, MSG *msg) {
+	lua_pushboolean(L, msg->wParam);
+	lua_throwevent(L, "onFullScreenChange", 2);
+	return 0;
+}
+
+int event_onLoaded(lua_State *L, Widget *w, MSG *msg) {
+	lua_pushboolean(L, msg->wParam);
+	lua_pushinteger(L, msg->lParam);
+	lua_throwevent(L, "onLoaded", 3);
+	return 0;
+}
+
+int event_onMessage(lua_State *L, Widget *w, MSG *msg) {
     lua_pushwstring(L, (wchar_t*)msg->wParam);
     free((wchar_t*)msg->wParam);
-    return 2;
-  }
-  return 1;
-}
-
-int event_onReady(lua_State *L) {
-  lua_getfield(L, 1, "onReady");
-  return 1;
-}
-
-
-int event_onFullscreen(lua_State *L) {
-  	if (lua_getfield(L, 1, "onFullScreenChange")) {
-		lua_pushboolean(L, ((MSG *)lua_touserdata(L, 2))->wParam);
-		return 2;
-  	}
-  	return 1;
-}
-
-int event_onLoaded(lua_State *L) {
-	if (lua_getfield(L, 1, "onLoaded")) {
-		MSG *msg = (MSG *)lua_touserdata(L, 2);
-		lua_pushboolean(L, msg->wParam);
-		lua_pushinteger(L, msg->lParam);
-		return 3;
-	}
-  return 1;
-}
-
-int event_onMessage(lua_State *L) {
-  return event_stringarg(L, "onMessage");
+	lua_throwevent(L, "onMessage", 2);
+	return 0;
 }
 
 extern "C" {

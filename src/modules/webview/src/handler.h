@@ -1,6 +1,6 @@
 /*
  | Webview for LuaRT - HTML/JS/CSS render Widget
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE
  |--------------------------------------------------------
  | handler.h | Webview2 c++ interface class wrapper header
