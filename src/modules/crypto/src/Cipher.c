@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Cipher.c | LuaRT Cipher object implementation
@@ -22,7 +22,7 @@ typedef struct {
 /* -- crypt library functions ----------------------------------------------- */
 
 const DWORD KEY_MODES_VAL[] = { CRYPT_MODE_CBC, CRYPT_MODE_CFB, CRYPT_MODE_ECB, CRYPT_MODE_CTS};
-const char *KEY_MODES[] = {"cbc", "cfb", "ecb", "cts"};
+const char *KEY_MODES[] = {"cbc", "cfb", "ecb", "cts", NULL};
 
 static const crypt_Reg crypt_funcs[] = {
   { "aes128",	16,	16,		16,	CALG_AES_128 },
