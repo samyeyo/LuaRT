@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | string.c | LuaRT string module based adapted from Lua 5.4 string module
@@ -2008,6 +2008,18 @@ int str_split(lua_State *L) {
     return 1;  
 }
 
+int str_normalize(lua_State *L) {
+	char *buff;
+  wchar_t *str = lua_towstring(L, 1);
+	int size = WideCharToMultiByte(20127, 0, str, -1, NULL, 0, NULL, NULL);
+	buff = (char *)malloc(size);
+	WideCharToMultiByte(20127, 0, str, -1, buff, size, NULL, NULL);
+  lua_pushstring(L, buff);
+	free(buff);
+  free(str);
+  return 1;
+}
+
 /* }====================================================== */
 
 extern const luaL_Reg strlib[];
@@ -2033,6 +2045,7 @@ static const luaL_Reg wstrlib[] = {
   {"unpack", str_unpack},
   {"usearch", str_search},
   {"split", str_split},
+  {"normalize", str_normalize},
   {NULL, NULL}
 };
 
