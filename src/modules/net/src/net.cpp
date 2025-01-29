@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | net.c | LuaRT net module
@@ -25,7 +25,7 @@
 #include <iphlpapi.h>
 
 static WSADATA wsadata;
-static const char *ip_type[] = {"ipv4", "ipv6"};
+static const char *ip_type[] = {"ipv4", "ipv6", NULL};
 
 extern "C" {
 	extern int dns(lua_State *L, const char *str, WORD type);

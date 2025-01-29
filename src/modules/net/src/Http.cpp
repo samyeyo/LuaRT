@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Http.cpp | LuaRT Http object implementation
@@ -367,8 +367,14 @@ static int WaitTask(lua_State *L) {
             char *pos;
             if (header && (pos = strchr(header, '=')+1))
                 h->fname = pos;
-            else h->fname = PathFindFileNameA(h->url.c_str());
+            else
+                h->fname = PathFindFileNameA(h->url.c_str());
             h->file = fopen(h->fname.c_str(), "wb");
+            if (!h->file) {
+                h->fname = "download.bin";
+                if ( !(h->file = fopen(h->fname.c_str(), "wb")) )
+                    luaL_error(L, "failed to create downloaded file on disk");
+            }
             free(header);
         }
     }   				
@@ -548,6 +554,10 @@ LUA_METHOD(Http, post) {
 LUA_METHOD(Http, download) {
     Http *h = lua_self(L, 1, Http);
     h->download = true;
+    if (lua_gettop(L) > 2) {
+        h->fname = luaL_checkstring(L, 3);
+        h->file = fopen(h->fname.c_str(), "wb");
+    }
     return do_request(L, h, "GET");
 }
 
@@ -570,6 +580,14 @@ LUA_PROPERTY_GET(Http, received) {
     lua_pushinteger(L, lua_self(L, 1, Http)->recvsize);
     return 1;
 }
+
+//----------------------------------[ Http.content property ]
+LUA_PROPERTY_GET(Http, content) {
+    Http *h = lua_self(L, 1, Http);
+    lua_pushlstring(L, h->received.c_str(), h->recvsize);
+    return 1;
+}
+
 //----------------------------------[ Http.headers property ]
 static char *get_header(Http *h, const char *field) {	
 	if ( (h->header.find(field) == h->header.end()) && h->hRequest) {
@@ -737,6 +755,7 @@ OBJECT_MEMBERS(Http)
     READONLY_PROPERTY(Http, hostname)
     READONLY_PROPERTY(Http, port)
     READONLY_PROPERTY(Http, received)
+    READONLY_PROPERTY(Http, content)
     READONLY_PROPERTY(Http, headers)
     READWRITE_PROPERTY(Http, cookies)
 END

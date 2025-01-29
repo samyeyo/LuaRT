@@ -1,6 +1,6 @@
 /*
  | LuaRT - A Windows programming framework for Lua
- | Luart.org, Copyright (c) Tine Samir 2024
+ | Luart.org, Copyright (c) Tine Samir 2025
  | See Copyright Notice in LICENSE.TXT
  |-------------------------------------------------
  | Ftp.cpp | LuaRT Ftp object implementation
@@ -17,9 +17,24 @@
 
 luart_type TFtp;
 
+static asyncTask *newFTPTask(Ftp *f) {
+    asyncTask *task = new asyncTask;
+    task->ftp = f;
+    return task;
+}
+
+static int gc_asyncTask(lua_State *L) {
+    asyncTask *t = (asyncTask*)lua_self(L, 1, Task)->userdata;
+    CloseHandle(t->thread);
+    free(t->str1);
+    free(t->str2);
+    free(t);
+    return 0;
+}
+
 static int FtpTaskContinue(lua_State* L, int status, lua_KContext ctx) {
     asyncTask *t = (asyncTask*)ctx;
-    
+
     if ( WaitForSingleObject(t->thread, 0) == WAIT_OBJECT_0) {
         TaskResult result;
         GetExitCodeThread(t->thread, (LPDWORD)&result); 
@@ -40,14 +55,8 @@ static int FtpTaskContinue(lua_State* L, int status, lua_KContext ctx) {
     return lua_yieldk(L, 0, ctx, FtpTaskContinue);
 }
 
-static int WaitTask(lua_State *L) {	
-    return lua_yieldk(L, 0, (lua_KContext)lua_touserdata(L, lua_upvalueindex(1)), FtpTaskContinue);
-}
-
 static void push_waitTask(lua_State *L, asyncTask *t, LPTHREAD_START_ROUTINE thread) {
-    lua_pushlightuserdata(L, t);
-    lua_pushcclosure(L, WaitTask, 1);
-    lua_pushinstance(L, Task, 1);
+    lua_pushtask(L, FtpTaskContinue, t, gc_asyncTask);
     lua_pushvalue(L, -1);
     if ((t->thread = CreateThread(NULL, 0, thread, t, 0, NULL)))
         lua_call(L, 0, 0); 
@@ -55,12 +64,6 @@ static void push_waitTask(lua_State *L, asyncTask *t, LPTHREAD_START_ROUTINE thr
         luaL_getlasterror(L, GetLastError());
         luaL_error(L, "async error : %s", lua_tostring(L, -1));
     }   
-}
-
-static asyncTask *newFTPTask(Ftp *f) {
-    asyncTask *task = new asyncTask;
-    task->ftp = f;
-    return task;
 }
 
 static void log(Ftp *f) {
