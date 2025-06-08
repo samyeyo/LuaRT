@@ -508,6 +508,18 @@ LUA_PROPERTY_GET(Window, topmost) {
 	return 1;
 }
 
+LUA_PROPERTY_GET(Window, maximizable) {
+	Widget *w = lua_self(L, 1, Widget);
+	lua_pushboolean(L, GetWindowLongPtr(w->handle, GWL_STYLE) & WS_MAXIMIZEBOX);
+	return 1;
+}
+
+LUA_PROPERTY_GET(Window, minimizable) {
+	Widget *w = lua_self(L, 1, Widget);
+	lua_pushboolean(L, GetWindowLongPtr(w->handle, GWL_STYLE) & WS_MINIMIZEBOX);
+	return 1;
+}
+
 LUA_PROPERTY_SET(Window, topmost) {
 	SetWindowPos(lua_self(L, 1, Widget)->handle, lua_toboolean(L, 2) ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	return 0;
@@ -533,6 +545,30 @@ LUA_PROPERTY_SET(Window, fullscreen) {
 		SetWindowLongPtr(h, GWL_STYLE, dwStyle | w->style);
 		SetWindowLongPtr(h, GWL_EXSTYLE, GetWindowLongPtr(h, GWL_EXSTYLE) | WS_EX_LAYERED);
 		SetWindowPos(h, NULL, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+	}
+	return 0;
+}
+
+LUA_PROPERTY_SET(Window, maximizable) {
+	Widget *w = lua_self(L, 1, Widget);
+	HWND h = w->handle;
+	int ismaximizable = lua_toboolean(L, 2);
+	if (ismaximizable) {
+		SetWindowLongPtr(h, GWL_STYLE, GetWindowLongPtr(h, GWL_STYLE) | WS_MAXIMIZEBOX);
+	} else {
+		SetWindowLongPtr(h, GWL_STYLE, GetWindowLongPtr(h, GWL_STYLE) & ~WS_MAXIMIZEBOX);
+	}
+	return 0;
+}
+
+LUA_PROPERTY_SET(Window, minimizable) {
+	Widget *w = lua_self(L, 1, Widget);
+	HWND h = w->handle;
+	int isminimizable = lua_toboolean(L, 2);
+	if (isminimizable) {
+		SetWindowLongPtr(h, GWL_STYLE, GetWindowLongPtr(h, GWL_STYLE) | WS_MINIMIZEBOX);
+	} else {
+		SetWindowLongPtr(h, GWL_STYLE, GetWindowLongPtr(h, GWL_STYLE) & ~WS_MINIMIZEBOX);
 	}
 	return 0;
 }
@@ -819,6 +855,8 @@ OBJECT_MEMBERS(Window)
 	METHOD(Widget, center)
 	METHOD(Window, notify)
 	METHOD(Window, startmoving)
+	READWRITE_PROPERTY(Window, maximizable)
+	READWRITE_PROPERTY(Window, minimizable)
 	READWRITE_PROPERTY(Window, traytooltip)
 	READWRITE_PROPERTY(Window, fullscreen)
 	READWRITE_PROPERTY(Window, topmost)
