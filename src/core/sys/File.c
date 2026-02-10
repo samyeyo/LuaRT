@@ -390,6 +390,7 @@ int IOTaskContinue(lua_State* L, int status, lua_KContext ctx) {
 int gc_asyncTask(lua_State *L) {
     AsyncIO *async = (AsyncIO*)lua_self(L, 1, Task)->userdata;
     CloseHandle(async->thread);
+    free(async->from);
     free(async->to);
     free(async);
     return 0;
@@ -419,7 +420,7 @@ LUA_METHOD(File, copytask) {
 	File *f = lua_self(L, 1, File);
 	AsyncIO *async = calloc(1, sizeof(AsyncIO));
 	
-	async->from = f->fullpath;
+	async->from = wcsdup(f->fullpath);
 	async->to = lua_towstring(L, 2);
 	if (lua_isfunction(L, 3)) {
 		lua_pushvalue(L, 3);

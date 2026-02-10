@@ -54,12 +54,13 @@ int link(lua_State *L) {
 	HANDLE hExeFile;
 	BOOL result = FALSE;
 	
-	if (ReadFile(hFile, pBuffer, FileSize, &dwBytesRead, NULL)) {
-		hExeFile = BeginUpdateResourceW(fexe, FALSE);
-		*pBuffer = 0x4C;
-		result = UpdateResource(hExeFile, RT_RCDATA, MAKEINTRESOURCE(EMBED), MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), (LPVOID)pBuffer, FileSize);
+	if (pBuffer && ReadFile(hFile, pBuffer, FileSize, &dwBytesRead, NULL)) {
+		if ( (hExeFile = BeginUpdateResourceW(fexe, FALSE)) ) {
+			*pBuffer = 0x4C;
+			result = UpdateResource(hExeFile, RT_RCDATA, MAKEINTRESOURCE(EMBED), MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), (LPVOID)pBuffer, FileSize);
+			EndUpdateResource(hExeFile, FALSE);
+		}
 	}
-	EndUpdateResource(hExeFile, FALSE);
 	CloseHandle(hFile);
 	free(pBuffer);
 	free(fname);

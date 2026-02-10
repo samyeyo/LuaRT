@@ -60,7 +60,7 @@ static void table_toarray(lua_State *L, int idx, Buffer *b) {
 extern size_t posrelatI (lua_Integer pos, size_t len);
 extern size_t getendpos (lua_State *L, int arg, lua_Integer def, size_t len);
 
-void base64_decode(Buffer *b) {
+void base64_decode(lua_State *L, Buffer *b) {
 	DWORD len = 0, skip = 0, flags = 0;
 	if (CryptStringToBinaryA((LPCSTR)b->bytes, b->size, CRYPT_STRING_BASE64, NULL, &len, &skip, &flags))
     {
@@ -73,6 +73,7 @@ void base64_decode(Buffer *b) {
 		}
 		free(buff);
 	}
+	luaL_error(L, "base64 decoding failed");
 }
 
 unsigned char char2val(lua_State *L, unsigned char c)
@@ -136,7 +137,7 @@ static void buff_init(lua_State *L, int idx, Buffer *b) {
 											b->size = len*sizeof(wchar_t);
 											break;
 									case 2: b->bytes = src;
-											base64_decode(b);
+											base64_decode(L, b);
 											return;
 									case 3: b->bytes = src;
 											hex_decode(L, b);

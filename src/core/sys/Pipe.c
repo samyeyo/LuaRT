@@ -38,9 +38,15 @@ LUA_CONSTRUCTOR(Pipe) {
 	si.cb = sizeof(STARTUPINFOW);
     si.dwFlags |= STARTF_USESTDHANDLES;
 	si.hStdInput = p->in_read;
-    si.hStdError = p->out_write;
+    si.hStdError = p->err_write;
     si.hStdOutput = p->out_write;
 	if (CreateProcessW(NULL, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &p->pi) == FALSE) {
+		CloseHandle(p->out_read);
+		CloseHandle(p->out_write);
+		CloseHandle(p->in_read);
+		CloseHandle(p->in_write);
+		CloseHandle(p->err_read);
+		CloseHandle(p->err_write);
 		free(p);
 		lua_pushnil(L);
 	}
@@ -69,21 +75,21 @@ LUA_METHOD(Pipe, write) {
 
 //-------------------------------------[ Pipe.read() ]
 static int pipe_read(lua_State *L, HANDLE h) {
-	DWORD read, done, avail = 1;
+	DWORD read, avail = 0;
 	char *buff;
 
-	while (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) && avail) {	
+	if (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) && avail) {
 		buff = calloc(1, avail+1);
-		done = 0;
-		while (!ReadFile(h, buff+done, avail-done, &read, NULL) || read == 0)
-			done += read;
-		int size = MultiByteToWideChar(CP_OEMCP, 0, buff, avail, NULL, 0);
-		wchar_t *newbuff = (wchar_t *)malloc(size*sizeof(wchar_t));
-		MultiByteToWideChar(CP_OEMCP, 0, buff, avail, newbuff, size);
-		lua_pushlwstring(L, newbuff, avail);
-		free(newbuff);			
+		if (ReadFile(h, buff, avail, &read, NULL) && read > 0) {
+			int size = MultiByteToWideChar(CP_OEMCP, 0, buff, read, NULL, 0);
+			wchar_t *newbuff = (wchar_t *)malloc(size*sizeof(wchar_t));
+			MultiByteToWideChar(CP_OEMCP, 0, buff, read, newbuff, size);
+			lua_pushlwstring(L, newbuff, size);
+			free(newbuff);
+			free(buff);
+			return 1;
+		}
 		free(buff);
-		return 1;
 	}
 	return 0;
 }
