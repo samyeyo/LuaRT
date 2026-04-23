@@ -291,6 +291,17 @@ LUA_METHOD(console, writecolor) {
 	return 0;
 }
 
+LUA_METHOD(console, writelncolor) {
+	int prev = color(L, 0, TRUE);
+	CONSOLE_SCREEN_BUFFER_INFO info;
+
+	color(L, 1, TRUE); //-- set color
+	con_write(L, File_writeln, 2);
+	GetConsoleScreenBufferInfo(std, &info);
+	SetConsoleTextAttribute(std, ((info.wAttributes & 0xFF) >> 4) * 16 + colors_values[prev]);
+	return 0;
+}
+
 LUA_METHOD(console, writeln) {
 	if (lua_gettop(L) == 0)
 		lua_pushstring(L, "\n");
@@ -515,6 +526,7 @@ MODULE_FUNCTIONS(console)
 	METHOD(console, write)
 	METHOD(console, writeln)
 	METHOD(console, writecolor)
+	METHOD(console, writelncolor)
 	METHOD(console, inverse)
 	METHOD(console, reset)
 	METHOD(console, locate)
