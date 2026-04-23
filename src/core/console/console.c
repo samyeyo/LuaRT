@@ -381,6 +381,13 @@ LUA_METHOD(console, hide) {
 	return 0;
 }
 
+LUA_METHOD(console, togglemaximize) {
+	HWND hwnd = GetConsoleWindow();
+	BOOL isMaximized = IsZoomed(hwnd);
+	ShowWindow(hwnd, isMaximized ? SW_RESTORE : SW_MAXIMIZE);
+	return 0;
+}
+
 LUA_PROPERTY_GET(console, visible) {
 	lua_pushboolean(L, IsWindowVisible(GetConsoleWindow()));
 	return 1;
@@ -410,6 +417,20 @@ LUA_PROPERTY_SET(console, fullscreen) {
 	}
 	return 0;
 }
+
+LUA_PROPERTY_GET(console, maximized) {
+	HWND hwnd = GetConsoleWindow();
+	lua_pushboolean(L, IsZoomed(hwnd));
+	return 1;
+}
+
+LUA_PROPERTY_SET(console, maximized) {
+	HWND hwnd = GetConsoleWindow();
+	BOOL value = lua_toboolean(L, 1);
+	ShowWindow(hwnd, value ? SW_MAXIMIZE : SW_RESTORE);
+	return 0;
+}
+
 
 LUA_API int fontsize_fromheight(int height) {
 	return height < 0 ? MulDiv(-height, 72, GetDeviceCaps(GetDC(0), LOGPIXELSY)) : height;
@@ -520,6 +541,7 @@ MODULE_FUNCTIONS(console)
 	METHOD(console, locate)
 	METHOD(console, show)
 	METHOD(console, hide)
+	METHOD(console, togglemaximize)
 END
 
 MODULE_PROPERTIES(console)
@@ -536,6 +558,7 @@ MODULE_PROPERTIES(console)
 	READWRITE_PROPERTY(console, bgcolor)
 	READWRITE_PROPERTY(console, echo)
 	READWRITE_PROPERTY(console, fullscreen)
+	READWRITE_PROPERTY(console, maximized)
 	READWRITE_PROPERTY(console, font)
 	READWRITE_PROPERTY(console, fontsize)
 	READWRITE_PROPERTY(console, cursor)
@@ -575,7 +598,7 @@ LUAMOD_API int luaopen_console(lua_State *L) {
 		HANDLE hConIn = CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		SetStdHandle(STD_OUTPUT_HANDLE, hConOut);
 		SetStdHandle(STD_ERROR_HANDLE, hConOut);
-		SetStdHandle(STD_INPUT_HANDLE, hConIn);		
+		SetStdHandle(STD_INPUT_HANDLE, hConIn);
 		SetConsoleOutputCP(65001);
 		setlocale(LC_ALL, ".UTF8");
 	}
