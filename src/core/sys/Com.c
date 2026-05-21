@@ -282,10 +282,10 @@ static BOOL GetResultType(COM *obj, wchar_t *field, HREFTYPE *restype) {
 				}
 				ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
 			}
+		ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);
 	}
 	if (!found)
 		restype = NULL;
-	ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);			
 	return found;	
 }
 
