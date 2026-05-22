@@ -905,10 +905,16 @@ int lua_preload_searcher(lua_State* L) {
         return LUA_ERRSYNTAX;
     }
 
-    if (luaL_loadbuffer(L, transformed, strlen(transformed), resolved) != LUA_OK) {
+    size_t res_len = strlen(resolved);
+    char* chunkname = (char*)malloc(res_len + 2);
+    chunkname[0] = '@';
+	memcpy(chunkname + 1, resolved, res_len + 1);
+
+    if (luaL_loadbuffer(L, transformed, strlen(transformed), chunkname) != LUA_OK) {
         free(transformed);
         return lua_error(L);
     }
+	free(chunkname);
 
     free(transformed);
     return 1;
