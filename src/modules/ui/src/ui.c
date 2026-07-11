@@ -1077,20 +1077,103 @@ BOOL CALLBACK EnumMonitor(HMONITOR h, HDC hdc, LPRECT r, LPARAM data) {
 	DWORD idx = 0;
 
 	mi.cbSize = sizeof(MONITORINFOEXW);
-	lua_createtable((lua_State *)data, 0, 3);
-	GetMonitorInfoW(h, (LPMONITORINFO)&mi);
 
-    DispDev.cb = sizeof(DISPLAY_DEVICE);
+	if (!GetMonitorInfoW(h, (LPMONITORINFO)&mi))
+        return TRUE;
+
+	lua_createtable((lua_State *)data, 0, 10);
+
+    DEVMODEW dm = {0};
+    dm.dmSize = sizeof(dm);
+
+    int width = 0, height = 0, colorDepth = 0, refreshRate = 0, orientation = 0;
+
+    if (EnumDisplaySettingsW(mi.szDevice, ENUM_CURRENT_SETTINGS, &dm))
+    {
+        width = dm.dmPelsWidth;
+        height = dm.dmPelsHeight;
+        colorDepth = dm.dmBitsPerPel;
+        refreshRate = dm.dmDisplayFrequency;
+
+        if (dm.dmFields & DM_DISPLAYORIENTATION)
+        {
+            switch (dm.dmDisplayOrientation)
+            {
+                case DMDO_DEFAULT:
+                    orientation = 0;
+                    break;
+                case DMDO_90:
+                    orientation = 90;
+                    break;
+                case DMDO_180:
+                    orientation = 180;
+                    break;
+                case DMDO_270:
+                    orientation = 270;
+                    break;
+            }
+        }
+    }
+    else
+    {
+        // Fallback to calculating width and hight from windows virtual workspace
+        // This may not always be accurate!
+        width = mi.rcMonitor.right - mi.rcMonitor.left;
+        height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+    }
+
+    DispDev.cb = sizeof(DISPLAY_DEVICEW);
     if (EnumDisplayDevicesW(mi.szDevice, idx, &DispDev, 0))
 		lua_pushwstring((lua_State *)data, DispDev.DeviceString);
-	else lua_pushwstring((lua_State *)data, mi.szDevice);
-	lua_setfield((lua_State *)data, -2, "name");
-	lua_pushinteger((lua_State *)data, mi.rcMonitor.right);
+    else
+        lua_pushwstring((lua_State *)data, mi.szDevice);
+    lua_setfield((lua_State *)data, -2, "name");
+	lua_pushwstring((lua_State *)data, mi.szDevice);
+	lua_setfield((lua_State *)data, -2, "device");
+	lua_pushinteger((lua_State *)data, width);
 	lua_setfield((lua_State *)data, -2, "width");
-	lua_pushinteger((lua_State *)data, mi.rcMonitor.bottom);
+	lua_pushinteger((lua_State *)data, height);
 	lua_setfield((lua_State *)data, -2, "height");
+    if (colorDepth)
+    {
+        lua_pushinteger((lua_State *)data, colorDepth);
+        lua_setfield((lua_State *)data, -2, "colorDepth");
+    }
+    if (refreshRate)
+    {
+        lua_pushinteger((lua_State *)data, refreshRate);
+        lua_setfield((lua_State *)data, -2, "refreshRate");
+    }
+    if (dm.dmFields & DM_DISPLAYORIENTATION)
+    {
+        lua_pushinteger((lua_State *)data, orientation);
+        lua_setfield((lua_State *)data, -2, "orientation");
+    }
 	lua_pushboolean((lua_State *)data, mi.dwFlags & MONITORINFOF_PRIMARY);
 	lua_setfield((lua_State *)data, -2, "primary");
+
+    lua_createtable((lua_State *)data, 0, 4);
+	lua_pushinteger((lua_State *)data, mi.rcMonitor.left);
+	lua_setfield((lua_State *)data, -2, "x");
+	lua_pushinteger((lua_State *)data, mi.rcMonitor.top);
+	lua_setfield((lua_State *)data, -2, "y");
+	lua_pushinteger((lua_State *)data, mi.rcMonitor.right - mi.rcMonitor.left);
+	lua_setfield((lua_State *)data, -2, "width");
+	lua_pushinteger((lua_State *)data, mi.rcMonitor.bottom - mi.rcMonitor.top);
+	lua_setfield((lua_State *)data, -2, "height");
+    lua_setfield((lua_State*)data, -2, "monitorArea");
+
+    lua_createtable((lua_State *)data, 0, 4);
+	lua_pushinteger((lua_State *)data, mi.rcWork.left);
+	lua_setfield((lua_State *)data, -2, "x");
+	lua_pushinteger((lua_State *)data, mi.rcWork.top);
+	lua_setfield((lua_State *)data, -2, "y");
+	lua_pushinteger((lua_State *)data, mi.rcWork.right - mi.rcWork.left);
+	lua_setfield((lua_State *)data, -2, "width");
+	lua_pushinteger((lua_State *)data, mi.rcWork.bottom - mi.rcWork.top);
+	lua_setfield((lua_State *)data, -2, "height");
+    lua_setfield((lua_State*)data, -2, "workArea");
+
 	if (!hdc)
 		lua_rawseti((lua_State *)data, -2, luaL_len((lua_State *)data, -2)+1);
 	return TRUE;
