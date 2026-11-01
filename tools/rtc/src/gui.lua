@@ -111,7 +111,7 @@ win:center()
 
 win:showasync():wait()
 
-local directory = #embed.text > 0 and sys.Directory(embed.text) or nil
+local directory = #embed.text > 0 and sys.Directory(embed.text) or ""
 
 if radiodesktop.checked then
     target = "wluart"
@@ -121,16 +121,14 @@ end
 
 static = radiostatic.checked
 
-local libs = {}
 for mod in modules.text:gmatch("(%w+)") do
     libs[#libs+1] = mod
 end
 
-return { 
+return {
     sys.File(script.text),
     directory,
     target..".exe",
     output.text,
-    icon,
-    libs
+    icon
 }

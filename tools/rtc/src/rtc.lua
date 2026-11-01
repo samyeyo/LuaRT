@@ -8,14 +8,14 @@ local zip = require "compression"
 
 local output				-- output executable filename
 local icon					-- executable icon
-local directory				-- Directory to be embedded in the executable
+local directory	= ""		-- Directory to be embedded in the executable
 local file					-- main Lua File to be executed when running the executable
 local target = "luart.exe"	-- target interpreter for console or window subsystem
 local setoutput, set_icon, forceconsole = false, false, false
 local console, gui
 static = false
 
-local libs = {}
+libs = {}
 local files = {}
 local libpaths = { sys.File(arg[-1]).directory.parent.fullpath.."/modules" }
 
@@ -72,7 +72,7 @@ usage:	rtc.exe [-s][-c][-w][-i icon][-o output] [-lmodname] [directory] main.lua
 		elseif option:usub(1,1) == "-" then 
 			print("invalid option "..option)
 			sys.exit(-1)
-		elseif directory == nil and #files > 0 and not sys.File(option).exists then
+		elseif directory == "" and #files > 0 and not sys.File(option).exists then
 			directory = sys.Directory(normalize(option))
 			if not directory.exists then
 				error("cannot find directory "..option)
@@ -87,8 +87,9 @@ usage:	rtc.exe [-s][-c][-w][-i icon][-o output] [-lmodname] [directory] main.lua
 	end
 else
 	ui = require "ui"
-	local result = require("gui")
-	file, directory, target, output, icon, libs = table.unpack(result)
+	local data = require("gui")
+	file, directory, target, output, icon = table.unpack(data) 
+	ui.info("Compiling "..file.name.." to "..output)
 	files = { file }
 end
 
@@ -146,7 +147,7 @@ local function link_file(f, path)
 end
 
 for f in each(files) do
-	if directory == nil or f.directory.fullpath:usearch(directory.fullpath) == nil then
+	if directory == "" or f.directory.fullpath:usearch(directory.fullpath) == nil then
 		link_file(f)
 	end
 end
@@ -215,7 +216,7 @@ local function link_dir(d, path)
 	end
 end
 
-if directory ~= nil then
+if directory ~= nil or #directory > 0 then
 	link_dir(directory)
 end
 
