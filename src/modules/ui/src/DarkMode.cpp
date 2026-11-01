@@ -86,7 +86,7 @@ extern "C" {
 		{WC_TABCONTROLW,   &UITab},
 		{WC_TREEVIEWW,     &UITree},
 		{WC_COMBOBOXEXW,   &UICombo},
-		{L"RichEdit20W",   &UIEdit},   
+		{RICHEDIT_CLASSW,  &UIEdit},   
 		{WC_LISTVIEWW,     &UIList},
 	};
 
@@ -128,6 +128,9 @@ extern "C" {
 				DwmSetWindowAttribute(hWnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(int));
 			}
 			DwmFlush();
+			BOOL active = (GetForegroundWindow() == hWnd);
+			SendMessage(hWnd, WM_NCACTIVATE, !active, 0);
+			SendMessage(hWnd, WM_NCACTIVATE, active, 0);
 		}
     }	
 
