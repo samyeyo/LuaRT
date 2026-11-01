@@ -528,6 +528,7 @@ static WINDOWPOS winpos = {0};
 
 int do_update(lua_State *L) {
 	Widget *w = NULL;
+	DWORD oldMask;
 	int type, nargs = 0;
 	MSG msg;
 	int processed = 0;
@@ -595,7 +596,7 @@ int do_update(lua_State *L) {
 													else __push_item(L, w, 0, (HTREEITEM)msg.lParam);
 													lua_pushstring(L, msg.wParam ? "removed" : "edited");
 												} else if (w->wtype == UIEdit) {
-													DWORD oldMask = SendMessage(w->handle, EM_GETEVENTMASK, 0, 0);
+													oldMask = SendMessage(w->handle, EM_GETEVENTMASK, 0, 0);
 													SendMessage(w->handle, EM_SETEVENTMASK, 0, oldMask & ~ENM_CHANGE);
 												}
 												break;
@@ -691,8 +692,7 @@ int do_update(lua_State *L) {
 				if (lua_pcall(L, nargs, LUA_MULTRET, 0))
 					lua_error(L);
 				if (msg.message == WM_LUACHANGE && (w->wtype == UIEdit)) {
-					DWORD oldMask = SendMessage(w->handle, EM_GETEVENTMASK, 0, 0);
-					SendMessage(w->handle, EM_SETEVENTMASK, 0, oldMask & ~ENM_CHANGE);
+					SendMessage(w->handle, EM_SETEVENTMASK, 0, oldMask);
 				}
 				else if (msg.message == WM_LUACLOSE) {		
 					int result = lua_wait(L, t);		
@@ -1178,7 +1178,7 @@ BOOL CALLBACK AdjustThemeProc(HWND h, LPARAM isDark) {
 			SendMessage(h, EM_SETCHARFORMAT, 0, (LPARAM)&cf);
 			SendMessage(h, EM_SETBKGNDCOLOR, 0, (isDark ? 0x202020 : 0xFFFFFF));
 			SetWindowTheme(h, isDark ? L"DarkMode_Explorer" : L"Explorer", NULL);
-		} else if (wtype == UIButton)
+		} else if (wtype == UIButton && w->wtype == UIButton)
 			SetWindowTheme(h, isDark ? L"DarkMode_Explorer" : L"Explorer", NULL);
 		else if (w && wtype == UILabel) {
 color:		if (isDark) {
@@ -1226,7 +1226,7 @@ panel:
 			if (!w)
 				SetWindowLongPtr(h, GWL_STYLE, GetWindowLongPtr(h, GWL_STYLE) & ~WS_BORDER);
 		}
-		else if (wtype == UICheck || wtype == UIRadio || wtype == UIGroup) {
+		else if (wtype == UIButton && (w->wtype == UICheck || w->wtype == UIRadio || w->wtype == UIGroup)) {
 			SetWindowTheme(h, isDark ? L"*" : L"Explorer", isDark ? L"*" : NULL);
 			if (w->wtype == UIGroup) {
 				Widget *wp = (Widget*)GetWindowLongPtr(GetParent(h), GWLP_USERDATA);

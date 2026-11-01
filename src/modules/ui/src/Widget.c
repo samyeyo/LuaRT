@@ -222,7 +222,7 @@ int ProcessUIMessage(HWND hwnd, Widget *w, UINT uMsg, WPARAM wParam, LPARAM lPar
 				}
 				return 0;
 			} 				
-			else if (((w->wtype == UIEntry) || (w->wtype == UIEdit)) && (cmd == EN_CHANGE || (w->wtype == UIEntry && cmd == EN_SELCHANGE))) {
+			else if (((w->wtype == UIEntry) || (w->wtype == UIEdit)) && ((cmd == EN_CHANGE) || (w->wtype == UIEntry && cmd == EN_SELCHANGE))) {
 					lua_callevent(w, onChange);
 					return FALSE;
 			}
@@ -285,7 +285,7 @@ int ProcessUIMessage(HWND hwnd, Widget *w, UINT uMsg, WPARAM wParam, LPARAM lPar
 						lua_paramevent(widget, onDropItem, MAKEWPARAM(from, to+1), NULL);
 					}
 				}
-				break;
+				return TRUE;
 			}
 		case WM_MBUTTONUP:
 		case WM_RBUTTONUP:
@@ -313,6 +313,7 @@ int ProcessUIMessage(HWND hwnd, Widget *w, UINT uMsg, WPARAM wParam, LPARAM lPar
 					ListView_EnsureVisible(w->handle, index, FALSE);
 					ListView_SetItemState(w->handle, index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 				} 
+				return TRUE;
 			} else if (w->wtype == UICheck)
 				SendMessage(w->handle, WM_CHANGEUISTATE, MAKELONG(UIS_SET, UISF_HIDEFOCUS), 0);
 			break;
@@ -360,7 +361,7 @@ notify:		if ((w->wtype == UIEdit) && (lpNmHdr->code == EN_SELCHANGE)) {
 				SendMessage(w->handle, WM_CHANGEUISTATE, MAKELONG(UIS_SET, UISF_HIDEFOCUS), 0);
 				if (lpNmHdr->code == LVN_ITEMCHANGED && (((LPNMLISTVIEW)lParam)->uNewState & LVNI_SELECTED)) {
 					int i = SendMessage(w->handle, LVM_GETNEXTITEM, -1, LVNI_ALL | LVNI_SELECTED );
-					if (i != -1) 
+					if (i != -1)
 						lua_indexevent(w, onSelect, i);
 					return TRUE;
 				} 
@@ -1833,23 +1834,25 @@ LUA_METHOD(Widget, hscroll) {
 
 Widget *Widget_destructor(lua_State *L) {
 	Widget *w = lua_selfwidget(L, 1);
-	if (w->ref)
-		luaL_unref(L, LUA_REGISTRYINDEX, w->ref);
-	if (w->font)
-		DeleteObject(w->font);
-	if (w->icon)
-		DestroyIcon(w->icon);
-	if (w->imglist)
-		ImageList_Destroy(w->imglist);
-	if (w->brush)
-		DeleteObject(w->brush);
-	if (w->wtype == UIPicture)
-		DeleteObject(w->status);
-	if (w->user && (w->wtype == UITab))
-		DestroyWindow(w->user);
-	if (w->allowdrop)
-		RevokeDragDrop(w->handle);
-	DestroyWindow(w->handle);
+	if (w) {
+		if (w->ref)
+			luaL_unref(L, LUA_REGISTRYINDEX, w->ref);
+		if (w->font)
+			DeleteObject(w->font);
+		if (w->icon)
+			DestroyIcon(w->icon);
+		if (w->imglist)
+			ImageList_Destroy(w->imglist);
+		if (w->brush)
+			DeleteObject(w->brush);
+		if (w->wtype == UIPicture)
+			DeleteObject(w->status);
+		if (w->user && (w->wtype == UITab))
+			DestroyWindow(w->user);
+		if (w->allowdrop)
+			RevokeDragDrop(w->handle);
+		DestroyWindow(w->handle);
+	}
 	return w;
 }
 
