@@ -475,8 +475,6 @@ LUALIB_API void lua_openmodules(lua_State *L) {
 	lua_pop(L, 1);
 	lua_getglobal(L, "package");
 	lua_getfield(L, -1, "searchers");
-	lua_rawgeti(L, -1, 2);
-	original_searcher_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 	lua_pushcfunction(L, lua_preload_searcher);
 	lua_rawseti(L, -2, 2);
 	lua_pop(L, 2);

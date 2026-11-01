@@ -24,7 +24,6 @@
 
 #define STR_IMPORT_FMT    "local %s = require(\"%s\"); "
 
-extern int original_searcher_ref = LUA_NOREF;
 
 static inline int is_idchar(char c) {
     return isalnum((unsigned char)c) || c == '_';
@@ -863,17 +862,15 @@ LUA_API int luaL_loadfilep(lua_State* L, const char* filename, const char* mode)
 int lua_preload_searcher(lua_State* L) {
     const char* modname = luaL_checkstring(L, 1);
 
-    lua_rawgeti(L, LUA_REGISTRYINDEX, original_searcher_ref);
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "searchpath");
     lua_pushstring(L, modname);
-    if (lua_pcall(L, 1, 2, 0) != LUA_OK) {
-        lua_pushfstring(L, "\n\tsearcher error: %s", lua_tostring(L, -1));
-        return 1;
-    }
-
-    if (!lua_isfunction(L, -2) || !lua_isstring(L, -1)) return 2;
+    lua_getfield(L, -3, "path");
+    lua_call(L, 2, 1);
+    lua_remove(L, -2);
 
     const char* resolved = lua_tostring(L, -1);
-    lua_pop(L, 1);
+    if (!resolved) return 1;
 
     FILE* f = fopen(resolved, "rb");
     if (!f) {
@@ -905,7 +902,9 @@ int lua_preload_searcher(lua_State* L) {
         return LUA_ERRSYNTAX;
     }
 
-    if (luaL_loadbuffer(L, transformed, strlen(transformed), resolved) != LUA_OK) {
+    char chunkname[1024];
+    snprintf(chunkname, sizeof(chunkname), "@%s", resolved);
+    if (luaL_loadbuffer(L, transformed, strlen(transformed), chunkname) != LUA_OK) {
         free(transformed);
         return lua_error(L);
     }
