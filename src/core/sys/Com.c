@@ -81,7 +81,7 @@ static BOOL VariantToLua(lua_State *L, VARIANT *result, ITypeInfo *t, TYPEATTR *
 
 								for (UINT i = 0; !done && (i < attr->cVars); i++) {
 									ITypeInfo_GetVarDesc(t, i, &vardesc);
-									if (V_I8(result) == vardesc->lpvarValue->intVal) {
+									if (V_I4(result) == vardesc->lpvarValue->intVal) {
 										ITypeInfo_GetDocumentation(t, vardesc->memid, &name, NULL, NULL, NULL);
 										lua_pushwstring(L, name);
 										done = TRUE;
@@ -282,10 +282,10 @@ static BOOL GetResultType(COM *obj, wchar_t *field, HREFTYPE *restype) {
 				}
 				ITypeInfo_ReleaseFuncDesc(obj->typeinfo, funcdesc);
 			}
+		ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);			
 	}
 	if (!found)
 		restype = NULL;
-	ITypeInfo_ReleaseTypeAttr(obj->typeinfo, attr);			
 	return found;	
 }
 
